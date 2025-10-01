@@ -42,7 +42,9 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+# .env
+# Uncomment the line above if you want to exclude .env files from Git
+# WARNING: Including .env files in Git is a security risk!
 
 # IDE files
 .vscode/
