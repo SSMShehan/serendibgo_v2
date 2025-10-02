@@ -12,6 +12,14 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import Home from './pages/Home'
 import Tours from './pages/Tours'
 import TourDetails from './pages/TourDetails'
+import Guides from './pages/Guides'
+import GuideDetail from './pages/Guide/GuideDetail'
+import GuideDashboard from './pages/Guide/GuideDashboard'
+import GuideSupport from './pages/Guide/GuideSupport'
+import GuideNotifications from './pages/Guide/GuideNotifications'
+import Hotels from './pages/Hotels'
+import Vehicles from './pages/Vehicles'
+import MyBookings from './pages/MyBookings'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
@@ -42,6 +50,25 @@ function App() {
                 <Route index element={<Home />} />
                 <Route path="tours" element={<Tours />} />
                 <Route path="tours/:id" element={<TourDetails />} />
+                <Route path="guides" element={<Guides />} />
+                <Route path="guides/:id" element={<GuideDetail />} />
+                <Route path="guide-dashboard" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide-support" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideSupport />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide-notifications" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideNotifications />
+                  </ProtectedRoute>
+                } />
+                <Route path="hotels" element={<Hotels />} />
+                <Route path="vehicles" element={<Vehicles />} />
                 
                 {/* User Dashboard */}
                 <Route path="dashboard" element={
@@ -54,6 +81,13 @@ function App() {
                 <Route path="profile" element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                } />
+                
+                {/* My Bookings */}
+                <Route path="my-bookings" element={
+                  <ProtectedRoute>
+                    <MyBookings />
                   </ProtectedRoute>
                 } />
                 
