@@ -42,6 +42,9 @@ import AdminTours from './pages/admin/AdminTours'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminBookings from './pages/admin/AdminBookings'
 
+// Staff Pages
+import StaffDashboard from './pages/Staff/StaffDashboard'
+
 // Hotel Pages
 import HotelSearch from './pages/hotels/HotelSearch'
 import HotelOwnerRegistration from './pages/hotels/HotelOwnerRegistration'
@@ -62,6 +65,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              
               
               {/* Protected Routes with Layout */}
               <Route path="/" element={<Layout />}>
@@ -178,6 +182,13 @@ function App() {
                 <Route path="admin/bookings" element={
                   <ProtectedRoute allowedRoles={['admin', 'staff']}>
                     <AdminBookings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Staff Routes */}
+                <Route path="staff" element={
+                  <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                    <StaffDashboard />
                   </ProtectedRoute>
                 } />
                 
