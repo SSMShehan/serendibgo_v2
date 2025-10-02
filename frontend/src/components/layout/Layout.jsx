@@ -11,7 +11,7 @@ const Layout = () => {
   
   // Hide header for guide dashboard and related pages
   const shouldHideHeader = user?.role === 'guide' && (
-    location.pathname.startsWith('/guide-dashboard') ||
+    location.pathname.startsWith('/guide/dashboard') ||
     location.pathname.startsWith('/guide-support') ||
     location.pathname.startsWith('/guide-notifications')
   )

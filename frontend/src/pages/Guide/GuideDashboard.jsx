@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   User,
   MapPin,
@@ -43,6 +43,7 @@ import { useAuth } from '../../context/AuthContext'
 
 const GuideDashboard = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(false)
@@ -139,6 +140,13 @@ const GuideDashboard = () => {
       advanceBookingDays: userData.profile?.advanceBookingDays || 30
     })
   }
+
+  // Handle navigation state for activeTab
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab)
+    }
+  }, [location.state])
 
   // Get current user info
   useEffect(() => {
