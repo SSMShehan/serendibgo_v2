@@ -21,8 +21,23 @@ const Login = () => {
 
   const onSubmit = async (data) => {
     try {
-      await login(data)
-      navigate(from, { replace: true })
+      const response = await login(data)
+      const user = response.data.user
+      
+      // Redirect based on user role
+      let redirectPath = '/dashboard'
+      
+      if (user.role === 'hotel_owner') {
+        redirectPath = '/hotel-owner/dashboard'
+      } else if (user.role === 'admin') {
+        redirectPath = '/admin'
+      } else if (user.role === 'guide') {
+        redirectPath = '/guide/dashboard'
+      } else if (user.role === 'driver') {
+        redirectPath = '/driver/dashboard'
+      }
+      
+      navigate(redirectPath, { replace: true })
     } catch (error) {
       // Error is handled in the auth context
     }

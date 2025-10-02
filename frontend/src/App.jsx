@@ -2,6 +2,7 @@ import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { TourProvider } from './context/TourContext'
+import { HotelProvider } from './context/hotels/HotelContext'
 import { NotificationProvider } from './context/NotificationContext'
 
 // Layout Components
@@ -26,12 +27,22 @@ import AdminTours from './pages/admin/AdminTours'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminBookings from './pages/admin/AdminBookings'
 
+// Hotel Pages
+import HotelSearch from './pages/hotels/HotelSearch'
+import HotelOwnerRegistration from './pages/hotels/HotelOwnerRegistration'
+import HotelOwnerDashboard from './pages/hotels/HotelOwnerDashboard'
+import ManageRooms from './pages/hotels/ManageRooms'
+import ManageBookings from './pages/hotels/ManageBookings'
+import RoomAvailabilityCalendar from './pages/hotels/RoomAvailabilityCalendar'
+import EditHotel from './pages/hotels/EditHotel'
+
 function App() {
   return (
     <AuthProvider>
       <TourProvider>
-        <NotificationProvider>
-          <div className="min-h-screen bg-base-100" data-theme="serendibgo">
+        <HotelProvider>
+          <NotificationProvider>
+            <div className="min-h-screen bg-base-100" data-theme="serendibgo">
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
@@ -42,6 +53,10 @@ function App() {
                 <Route index element={<Home />} />
                 <Route path="tours" element={<Tours />} />
                 <Route path="tours/:id" element={<TourDetails />} />
+                
+                {/* Hotel Routes */}
+                <Route path="hotels" element={<HotelSearch />} />
+                <Route path="hotels/:id" element={<HotelSearch />} />
                 
                 {/* User Dashboard */}
                 <Route path="dashboard" element={
@@ -94,13 +109,51 @@ function App() {
                     <AdminBookings />
                   </ProtectedRoute>
                 } />
+                
+                {/* Hotel Owner Routes */}
+                <Route path="hotel-owner/register" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <HotelOwnerRegistration />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="hotel-owner/dashboard" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <HotelOwnerDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="hotel-owner/hotels/:hotelId/rooms" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <ManageRooms />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="hotel-owner/hotels/:hotelId/bookings" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <ManageBookings />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="hotel-owner/rooms/:roomId/availability" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <RoomAvailabilityCalendar />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="hotel-owner/hotels/:hotelId/edit" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <EditHotel />
+                  </ProtectedRoute>
+                } />
               </Route>
               
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
-        </NotificationProvider>
+          </NotificationProvider>
+        </HotelProvider>
       </TourProvider>
     </AuthProvider>
   )

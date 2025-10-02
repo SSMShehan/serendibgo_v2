@@ -12,6 +12,27 @@
   body {
     @apply bg-white text-gray-900;
   }
+  
+  /* Force all inputs to have white backgrounds and dark text */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    @apply bg-white text-gray-900;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-gray-500;
+  }
 }
 
 @layer components {

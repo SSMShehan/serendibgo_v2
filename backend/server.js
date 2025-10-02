@@ -19,6 +19,12 @@ const paymentRoutes = require('./src/routes/payments');
 const reviewRoutes = require('./src/routes/reviews');
 const adminRoutes = require('./src/routes/admin');
 
+// Hotel routes
+const hotelRoutes = require('./src/routes/hotels/hotels');
+const roomRoutes = require('./src/routes/hotels/rooms');
+const hotelBookingRoutes = require('./src/routes/hotels/hotelBookingRoutes');
+const roomAvailabilityRoutes = require('./src/routes/hotels/roomAvailabilityRoutes');
+
 // Import middleware
 const { errorHandler } = require('./src/middleware/errorHandler');
 
@@ -32,22 +38,26 @@ app.use(helmet());
 app.use(mongoSanitize());
 app.use(hpp());
 
-// Rate limiting
+// Rate limiting (more lenient for development)
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limit each IP to 1000 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks and in development
+    return req.path === '/api/health' || process.env.NODE_ENV === 'development';
+  }
 });
 app.use('/api/', limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
 // Body parsing middleware
@@ -84,6 +94,13 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Hotel API routes
+app.use('/api/hotels', hotelRoutes);
+app.use('/api/hotels', roomRoutes); // Mount room routes under /api/hotels
+app.use('/api/hotels', hotelBookingRoutes); // Mount hotel booking routes under /api/hotels
+app.use('/api/hotels', roomAvailabilityRoutes); // Mount room availability routes under /api/hotels
+app.use('/api/hotel-bookings', hotelBookingRoutes); // Also mount for general booking operations
 
 // 404 handler
 app.all('*', (req, res) => {

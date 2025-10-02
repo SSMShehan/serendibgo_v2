@@ -43,11 +43,11 @@ const Header = () => {
       case 'admin':
         return '/admin'
       case 'hotel_owner':
-        return '/dashboard/hotel'
+        return '/hotel-owner/dashboard'
       case 'guide':
-        return '/dashboard/guide'
+        return '/guide/dashboard'
       case 'driver':
-        return '/dashboard/driver'
+        return '/driver/dashboard'
       case 'staff':
         return '/dashboard/staff'
       default:
@@ -82,6 +82,12 @@ const Header = () => {
               className="text-gray-700 hover:text-primary transition-colors duration-200"
             >
               Tours
+            </Link>
+            <Link 
+              to="/hotels" 
+              className="text-gray-700 hover:text-primary transition-colors duration-200"
+            >
+              Hotels
             </Link>
             <Link 
               to="/about" 
@@ -232,6 +238,13 @@ const Header = () => {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Tours
+                </Link>
+                <Link
+                  to="/hotels"
+                  className="block px-3 py-2 text-gray-700 hover:text-primary transition-colors duration-200"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Hotels
                 </Link>
                 <Link
                   to="/about"
