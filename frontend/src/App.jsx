@@ -53,6 +53,8 @@ import Booking from './pages/Booking'
 import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
 
+// Staff Pages
+import StaffDashboard from './pages/Staff/StaffDashboard'
 
 function App() {
   return (
@@ -65,6 +67,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              
               
               {/* Protected Routes with Layout */}
               <Route path="/" element={<Layout />}>
@@ -222,6 +225,13 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
+                
+                {/* Staff Routes */}
+                <Route path="staff" element={
+                  <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                    <StaffDashboard />
+                  </ProtectedRoute>
+                } />
                 
                 {/* Hotel Owner Routes */}
                 <Route path="hotel-owner/register" element={

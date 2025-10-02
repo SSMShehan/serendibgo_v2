@@ -9,11 +9,15 @@ const Layout = () => {
   const location = useLocation()
   const { user } = useAuth()
   
-  // Hide header for guide dashboard and related pages
-  const shouldHideHeader = user?.role === 'guide' && (
-    location.pathname.startsWith('/guide/dashboard') ||
-    location.pathname.startsWith('/guide-support') ||
-    location.pathname.startsWith('/guide-notifications')
+  // Hide header for guide dashboard, staff dashboard and related pages
+  const shouldHideHeader = (
+    (user?.role === 'guide' && (
+      location.pathname.startsWith('/guide/dashboard') ||
+      location.pathname.startsWith('/guide-support') ||
+      location.pathname.startsWith('/guide-notifications')
+    )) ||
+    (user?.role === 'staff' && location.pathname.startsWith('/staff')) ||
+    (user?.role === 'admin' && location.pathname.startsWith('/staff'))
   )
 
   return (
