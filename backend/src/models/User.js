@@ -130,7 +130,24 @@ const userSchema = new mongoose.Schema({
     // For drivers
     driverLicense: String,
     vehicleTypes: [String],
-    licenseNumber: String
+    licenseNumber: String,
+    
+    // For staff
+    permissions: [String],
+    department: String,
+    position: String,
+    hireDate: Date,
+    salary: Number,
+    completedTasks: {
+      type: Number,
+      default: 0
+    }
+  },
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
   },
   isActive: {
     type: Boolean,
