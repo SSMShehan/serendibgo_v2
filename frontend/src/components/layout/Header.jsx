@@ -61,116 +61,102 @@ const Header = () => {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-lg rounded-b-3xl">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           {/* Logo - Left */}
           <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-                <MapPin className="w-6 h-6 text-white" />
+            <Link to="/" className="flex items-center space-x-2 group">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+                <MapPin className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors duration-300 tracking-tight">SerendibGo</span>
+              <span className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">SerendibGo</span>
             </Link>
           </div>
 
           {/* Navigation Links - Center */}
-          <nav className="hidden md:flex space-x-6">
+          <nav className="hidden lg:flex items-center space-x-1">
             <Link 
               to="/" 
-              className={`relative px-6 py-3 font-medium text-gray-700 transition-all duration-300 rounded-2xl group overflow-hidden ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isActiveLink('/') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg transform scale-105' 
-                  : 'hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-cyan-500 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5'
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              <span className="relative z-10">Home</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              {isActiveLink('/') && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full animate-pulse"></div>
-              )}
+              Home
             </Link>
             <Link 
               to="/tours" 
-              className={`relative px-6 py-3 font-medium text-gray-700 transition-all duration-300 rounded-2xl group overflow-hidden ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isActiveLink('/tours') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg transform scale-105' 
-                  : 'hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-cyan-500 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5'
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              <span className="relative z-10">Tour</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              {isActiveLink('/tours') && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full animate-pulse"></div>
-              )}
+              Tours
             </Link>
             <Link 
               to="/guides" 
-              className={`relative px-6 py-3 font-medium text-gray-700 transition-all duration-300 rounded-2xl group overflow-hidden ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isActiveLink('/guides') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg transform scale-105' 
-                  : 'hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-cyan-500 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5'
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              <span className="relative z-10">Guide</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              {isActiveLink('/guides') && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full animate-pulse"></div>
-              )}
+              Guides
             </Link>
             <Link 
               to="/hotels" 
-              className={`relative px-6 py-3 font-medium text-gray-700 transition-all duration-300 rounded-2xl group overflow-hidden ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isActiveLink('/hotels') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg transform scale-105' 
-                  : 'hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-cyan-500 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5'
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              <span className="relative z-10">Hotel</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              {isActiveLink('/hotels') && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full animate-pulse"></div>
-              )}
+              Hotels
             </Link>
             <Link 
               to="/vehicles" 
-              className={`relative px-6 py-3 font-medium text-gray-700 transition-all duration-300 rounded-2xl group overflow-hidden ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isActiveLink('/vehicles') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg transform scale-105' 
-                  : 'hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-cyan-500 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5'
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              <span className="relative z-10">Vehicle</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              {isActiveLink('/vehicles') && (
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full animate-pulse"></div>
-              )}
+              Vehicles
+            </Link>
+            <Link 
+              to="/custom-trip" 
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                isActiveLink('/custom-trip') 
+                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              Custom Trip
             </Link>
             {isAuthenticated && (
               <Link 
                 to="/my-bookings" 
-                className={`relative px-6 py-3 font-medium text-gray-700 transition-all duration-300 rounded-2xl group overflow-hidden ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   isActiveLink('/my-bookings') 
-                    ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg transform scale-105' 
-                    : 'hover:text-white hover:bg-gradient-to-r hover:from-blue-600 hover:to-cyan-500 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5'
+                    ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
+                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                 }`}
               >
-                <span className="relative z-10">My Booking</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                {isActiveLink('/my-bookings') && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full animate-pulse"></div>
-                )}
+                My Bookings
               </Link>
             )}
           </nav>
 
-          {/* Right Side - Auth & CTA */}
-          <div className="flex items-center space-x-3">
+          {/* Right Side - Auth & Actions */}
+          <div className="flex items-center space-x-2">
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
                 <div className="relative">
-                  <button className="p-3 text-gray-600 hover:text-blue-600 transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:scale-110">
+                  <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200 rounded-lg hover:bg-gray-100">
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
@@ -184,20 +170,20 @@ const Header = () => {
                 <div className="relative">
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center space-x-3 text-gray-700 hover:text-blue-600 transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:scale-105 p-3"
+                    className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors duration-200 rounded-lg hover:bg-gray-100 p-2"
                   >
-                    <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
                       <User className="w-4 h-4 text-white" />
                     </div>
-                    <span className="hidden lg:block font-medium text-sm">{user?.firstName}</span>
+                    <span className="hidden xl:block text-sm font-medium">{user?.firstName}</span>
                   </button>
 
                   {/* Dropdown Menu */}
                   {isProfileOpen && (
-                    <div className="absolute right-0 mt-3 w-56 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 py-3 z-50">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
                       <Link
                         to="/profile"
-                        className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors duration-200"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                         onClick={() => setIsProfileOpen(false)}
                       >
                         <User className="w-4 h-4 mr-3" />
@@ -205,7 +191,7 @@ const Header = () => {
                       </Link>
                       <Link
                         to={getDashboardLink()}
-                        className="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors duration-200"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                         onClick={() => setIsProfileOpen(false)}
                       >
                         <Settings className="w-4 h-4 mr-3" />
@@ -214,7 +200,7 @@ const Header = () => {
                       <hr className="my-1 border-gray-200" />
                       <button
                         onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-red-600 transition-colors duration-200"
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors duration-200"
                       >
                         <LogOut className="w-4 h-4 mr-3" />
                         Logout
@@ -224,16 +210,16 @@ const Header = () => {
                 </div>
               </>
             ) : (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-blue-600 transition-all duration-300 font-medium px-5 py-3 rounded-2xl hover:bg-gray-50 hover:scale-105"
+                  className="text-gray-700 hover:text-blue-600 transition-colors duration-200 font-medium px-3 py-2 rounded-lg hover:bg-blue-50"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 rounded-2xl font-semibold hover:from-blue-700 hover:to-cyan-600 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   Sign Up
                 </Link>
@@ -242,8 +228,8 @@ const Header = () => {
 
             {/* Book Now CTA Button */}
             <Link
-              to="/tours"
-              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 rounded-2xl font-bold hover:from-blue-700 hover:to-cyan-600 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+              to="/custom-trip"
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
             >
               Book Now
             </Link>
@@ -251,7 +237,7 @@ const Header = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-3 text-gray-600 hover:text-blue-600 transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:scale-110"
+              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200 rounded-lg hover:bg-gray-100"
             >
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -260,28 +246,30 @@ const Header = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-white/20 py-6 bg-white/80 backdrop-blur-xl rounded-b-3xl">
-            <div className="space-y-3">
+          <div className="lg:hidden border-t border-gray-200 py-4 bg-white">
+            <div className="space-y-2">
               {/* Mobile Search */}
-              <form onSubmit={handleSearch}>
+              <form onSubmit={handleSearch} className="px-4">
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Search tours..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-white/60 backdrop-blur-sm border border-white/30 rounded-2xl text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white/80 transition-all duration-300 shadow-sm"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
                   />
-                  <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 </div>
               </form>
 
               {/* Mobile Navigation Links */}
-              <div className="space-y-1">
+              <div className="px-4 space-y-1">
                 <Link
                   to="/"
-                  className={`block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105 ${
-                    isActiveLink('/') ? 'bg-gray-100 text-blue-600' : ''
+                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    isActiveLink('/') 
+                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -289,66 +277,87 @@ const Header = () => {
                 </Link>
                 <Link
                   to="/tours"
-                  className={`block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105 ${
-                    isActiveLink('/tours') ? 'bg-gray-100 text-blue-600' : ''
+                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    isActiveLink('/tours') 
+                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Tour
+                  Tours
                 </Link>
                 <Link
                   to="/guides"
-                  className={`block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105 ${
-                    isActiveLink('/guides') ? 'bg-gray-100 text-blue-600' : ''
+                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    isActiveLink('/guides') 
+                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Guide
+                  Guides
                 </Link>
                 <Link
                   to="/hotels"
-                  className={`block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105 ${
-                    isActiveLink('/hotels') ? 'bg-gray-100 text-blue-600' : ''
+                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    isActiveLink('/hotels') 
+                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Hotel
+                  Hotels
                 </Link>
                 <Link
                   to="/vehicles"
-                  className={`block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105 ${
-                    isActiveLink('/vehicles') ? 'bg-gray-100 text-blue-600' : ''
+                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    isActiveLink('/vehicles') 
+                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                   }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Vehicle
+                  Vehicles
+                </Link>
+                <Link
+                  to="/custom-trip"
+                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    isActiveLink('/custom-trip') 
+                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Custom Trip
                 </Link>
                 {isAuthenticated && (
                   <Link
                     to="/my-bookings"
-                    className={`block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105 ${
-                      isActiveLink('/my-bookings') ? 'bg-gray-100 text-blue-600' : ''
+                    className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                      isActiveLink('/my-bookings') 
+                        ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
+                        : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
                     }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    My Booking
+                    My Bookings
                   </Link>
                 )}
               </div>
 
               {/* Mobile Auth Links */}
               {!isAuthenticated && (
-                <div className="pt-3 border-t border-gray-200 space-y-2">
+                <div className="px-4 pt-3 border-t border-gray-200 space-y-2">
                   <Link
                     to="/login"
-                    className="block px-5 py-4 text-gray-700 font-medium transition-all duration-300 rounded-2xl hover:bg-gray-50 hover:text-blue-600 hover:scale-105"
+                    className="block px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login
                   </Link>
                   <Link
                     to="/register"
-                    className="block px-5 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl text-center font-semibold hover:from-blue-700 hover:to-cyan-600 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    className="block px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg text-center font-medium hover:from-blue-700 hover:to-cyan-600 transition-all duration-200"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up
@@ -357,10 +366,10 @@ const Header = () => {
               )}
 
               {/* Mobile Book Now Button */}
-              <div className="pt-3 border-t border-gray-200">
+              <div className="px-4 pt-3 border-t border-gray-200">
                 <Link
-                  to="/tours"
-                  className="block px-4 py-3 bg-slate-800 text-white rounded-lg text-center font-semibold hover:bg-slate-900 transition-colors duration-300 shadow-sm"
+                  to="/custom-trip"
+                  className="block px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg text-center font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all duration-200"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Book Now

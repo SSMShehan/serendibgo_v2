@@ -89,6 +89,43 @@ const userSchema = new mongoose.Schema({
       type: String,
       default: 'Available'
     },
+    workingDays: {
+      type: [String],
+      enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      default: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    },
+    blockedDates: [{
+      date: {
+        type: Date,
+        required: true
+      },
+      reason: {
+        type: String,
+        default: 'Not available'
+      }
+    }],
+    workingHours: {
+      start: {
+        type: String,
+        default: '09:00'
+      },
+      end: {
+        type: String,
+        default: '17:00'
+      }
+    },
+    maxBookingsPerDay: {
+      type: Number,
+      default: 3,
+      min: 1,
+      max: 10
+    },
+    advanceBookingDays: {
+      type: Number,
+      default: 30,
+      min: 1,
+      max: 365
+    },
     
     // For drivers
     driverLicense: String,

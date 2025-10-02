@@ -84,9 +84,61 @@ const GuideDashboard = () => {
   const [newCertification, setNewCertification] = useState('')
   const [newHighlight, setNewHighlight] = useState('')
 
+  // Availability states
+  const [availability, setAvailability] = useState({
+    workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+    workingHours: {
+      start: '09:00',
+      end: '17:00'
+    },
+    blockedDates: [],
+    recurringBlockouts: [],
+    maxBookingsPerDay: 3,
+    advanceBookingDays: 30
+  })
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [blockoutDate, setBlockoutDate] = useState('')
+  const [blockoutReason, setBlockoutReason] = useState('')
+  const [showCalendar, setShowCalendar] = useState(false)
+
   // Validation states
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
+
+  // Function to load profile data from user
+  const loadProfileData = (userData) => {
+    setProfile({
+      firstName: userData.firstName || '',
+      lastName: userData.lastName || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      avatar: userData.avatar || '',
+      profile: {
+        guideLicense: userData.profile?.guideLicense || '',
+        languages: userData.profile?.languages || [],
+        experience: userData.profile?.experience || 0,
+        specialties: userData.profile?.specialties || [],
+        location: userData.profile?.location || '',
+        pricePerDay: userData.profile?.pricePerDay || 0,
+        bio: userData.profile?.bio || '',
+        certifications: userData.profile?.certifications || [],
+        responseTime: userData.profile?.responseTime || 'Within 24 hours',
+        highlights: userData.profile?.highlights || [],
+        availability: userData.profile?.availability || 'Available'
+      }
+    })
+
+    // Load availability data
+    setAvailability({
+      workingDays: userData.profile?.workingDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      workingHours: userData.profile?.workingHours || { start: '09:00', end: '17:00' },
+      blockedDates: userData.profile?.blockedDates || [],
+      recurringBlockouts: userData.profile?.recurringBlockouts || [],
+      maxBookingsPerDay: userData.profile?.maxBookingsPerDay || 3,
+      advanceBookingDays: userData.profile?.advanceBookingDays || 30
+    })
+  }
 
   // Get current user info
   useEffect(() => {
@@ -106,27 +158,8 @@ const GuideDashboard = () => {
     console.log('User data loaded:', user)
     console.log('User profile data:', user.profile)
     
-    // Set initial profile data
-    setProfile({
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      email: user.email || '',
-      phone: user.phone || '',
-      avatar: user.avatar || '',
-      profile: {
-        guideLicense: user.profile?.guideLicense || '',
-        languages: user.profile?.languages || [],
-        experience: user.profile?.experience || 0,
-        specialties: user.profile?.specialties || [],
-        location: user.profile?.location || '',
-        pricePerDay: user.profile?.pricePerDay || 0,
-        bio: user.profile?.bio || '',
-        certifications: user.profile?.certifications || [],
-        responseTime: user.profile?.responseTime || 'Within 24 hours',
-        highlights: user.profile?.highlights || [],
-        availability: user.profile?.availability || 'Available'
-      }
-    })
+    // Load profile data
+    loadProfileData(user)
   }, [isLoading, isAuthenticated, user, navigate])
 
   // Close dropdown when clicking outside
@@ -142,6 +175,35 @@ const GuideDashboard = () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isProfileDropdownOpen])
+
+  // Listen for profile updates from other components
+  useEffect(() => {
+    const handleProfileUpdate = (event) => {
+      if (event.detail && event.detail.updatedData) {
+        // Reload profile data when updated from other components
+        loadProfileData(event.detail.updatedData)
+      }
+    }
+
+    window.addEventListener('guideProfileUpdated', handleProfileUpdate)
+    return () => {
+      window.removeEventListener('guideProfileUpdated', handleProfileUpdate)
+    }
+  }, [])
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showCalendar && !event.target.closest('.calendar-container')) {
+        setShowCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showCalendar])
 
   // Fetch guide stats when component loads
   useEffect(() => {
@@ -315,16 +377,20 @@ const GuideDashboard = () => {
 
   // Save Profile Information
   const handleSaveProfile = async () => {
+    // Mark all fields as touched to show validation errors
+    const touchedFields = { email: true, phone: true, bio: true }
+    setTouched(touchedFields)
+    
+    // Validate the form
     if (!validateForm('profile')) {
       showMessage('error', 'Please fix the validation errors before saving')
-      const touchedFields = { email: true, phone: true, bio: true }
-      setTouched(touchedFields)
       return
     }
 
     try {
       setSaving(true)
       
+      // Only send profile-specific fields, not pricing or other fields
       const updateData = {
         firstName: profile.firstName,
         lastName: profile.lastName,
@@ -337,12 +403,11 @@ const GuideDashboard = () => {
           experience: profile.profile.experience,
           specialties: profile.profile.specialties,
           location: profile.profile.location,
-          pricePerDay: profile.profile.pricePerDay, // Keep existing price
           bio: profile.profile.bio,
           certifications: profile.profile.certifications,
           responseTime: profile.profile.responseTime,
-          highlights: profile.profile.highlights,
-          availability: profile.profile.availability
+          highlights: profile.profile.highlights
+          // Note: NOT including pricePerDay, availability - these are handled by other forms
         }
       }
       
@@ -350,10 +415,33 @@ const GuideDashboard = () => {
       
       const response = await guideService.updateGuideProfile(updateData)
       
-      if (response.data && response.data.data) {
-        const savedProfile = response.data.data
+      if (response.success && response.data) {
+        const savedProfile = response.data
         
-        // Update user data
+        // Update local profile state with the saved profile data
+        setProfile(prev => ({
+          ...prev,
+          firstName: savedProfile.firstName || prev.firstName,
+          lastName: savedProfile.lastName || prev.lastName,
+          email: savedProfile.email || prev.email,
+          phone: savedProfile.phone || prev.phone,
+          avatar: savedProfile.avatar || prev.avatar,
+          profile: {
+            ...prev.profile,
+            guideLicense: savedProfile.profile?.guideLicense || prev.profile.guideLicense,
+            languages: savedProfile.profile?.languages !== undefined ? savedProfile.profile.languages : prev.profile.languages,
+            experience: savedProfile.profile?.experience || prev.profile.experience,
+            specialties: savedProfile.profile?.specialties !== undefined ? savedProfile.profile.specialties : prev.profile.specialties,
+            location: savedProfile.profile?.location || prev.profile.location,
+            bio: savedProfile.profile?.bio || prev.profile.bio,
+            certifications: savedProfile.profile?.certifications !== undefined ? savedProfile.profile.certifications : prev.profile.certifications,
+            responseTime: savedProfile.profile?.responseTime || prev.profile.responseTime,
+            highlights: savedProfile.profile?.highlights !== undefined ? savedProfile.profile.highlights : prev.profile.highlights
+            // Note: NOT updating pricePerDay, availability - these are handled by other forms
+          }
+        }))
+        
+        // Update user data in localStorage
         const updatedUser = {
           ...user,
           firstName: savedProfile.firstName || user.firstName,
@@ -364,48 +452,31 @@ const GuideDashboard = () => {
           profile: {
             ...user.profile,
             guideLicense: savedProfile.profile?.guideLicense || user.profile?.guideLicense,
-            languages: savedProfile.profile?.languages || user.profile?.languages,
+            languages: savedProfile.profile?.languages !== undefined ? savedProfile.profile.languages : user.profile?.languages,
             experience: savedProfile.profile?.experience || user.profile?.experience,
-            specialties: savedProfile.profile?.specialties || user.profile?.specialties,
+            specialties: savedProfile.profile?.specialties !== undefined ? savedProfile.profile.specialties : user.profile?.specialties,
             location: savedProfile.profile?.location || user.profile?.location,
-            pricePerDay: savedProfile.profile?.pricePerDay || user.profile?.pricePerDay,
             bio: savedProfile.profile?.bio || user.profile?.bio,
-            certifications: savedProfile.profile?.certifications || user.profile?.certifications,
+            certifications: savedProfile.profile?.certifications !== undefined ? savedProfile.profile.certifications : user.profile?.certifications,
             responseTime: savedProfile.profile?.responseTime || user.profile?.responseTime,
-            highlights: savedProfile.profile?.highlights || user.profile?.highlights,
-            availability: savedProfile.profile?.availability || user.profile?.availability
+            highlights: savedProfile.profile?.highlights !== undefined ? savedProfile.profile.highlights : user.profile?.highlights
+            // Note: NOT updating pricePerDay, availability - these are handled by other forms
           }
         }
         
         localStorage.setItem('user', JSON.stringify(updatedUser))
         
-        setProfile({
-          firstName: savedProfile.firstName || profile.firstName,
-          lastName: savedProfile.lastName || profile.lastName,
-          email: savedProfile.email || profile.email,
-          phone: savedProfile.phone || profile.phone,
-          avatar: savedProfile.avatar || profile.avatar,
-          profile: {
-            guideLicense: savedProfile.profile?.guideLicense || profile.profile.guideLicense,
-            languages: savedProfile.profile?.languages || profile.profile.languages,
-            experience: savedProfile.profile?.experience || profile.profile.experience,
-            specialties: savedProfile.profile?.specialties || profile.profile.specialties,
-            location: savedProfile.profile?.location || profile.profile.location,
-            pricePerDay: savedProfile.profile?.pricePerDay || profile.profile.pricePerDay,
-            bio: savedProfile.profile?.bio || profile.profile.bio,
-            certifications: savedProfile.profile?.certifications || profile.profile.certifications,
-            responseTime: savedProfile.profile?.responseTime || profile.profile.responseTime,
-            highlights: savedProfile.profile?.highlights || profile.profile.highlights,
-            availability: savedProfile.profile?.availability || profile.profile.availability
-          }
-        })
+        // Reload profile data to ensure form shows updated values
+        loadProfileData(updatedUser)
+        
+        showMessage('success', 'Profile information updated successfully!')
+        
+        window.dispatchEvent(new CustomEvent('guideProfileUpdated', {
+          detail: { guideId: user.id, updatedData: savedProfile }
+        }))
+      } else {
+        throw new Error('Invalid response format')
       }
-      
-      showMessage('success', 'Profile information updated successfully!')
-      
-      window.dispatchEvent(new CustomEvent('guideProfileUpdated', {
-        detail: { guideId: user.id, updatedData: savedProfile }
-      }))
     } catch (error) {
       console.error('Error updating profile:', error)
       showMessage('error', 'Failed to update profile. Please try again.')
@@ -416,34 +487,24 @@ const GuideDashboard = () => {
 
   // Save Pricing Information
   const handleSavePricing = async () => {
+    // Mark pricing fields as touched to show validation errors
+    const touchedFields = { pricePerDay: true }
+    setTouched(touchedFields)
+    
     if (!validateForm('pricing')) {
       showMessage('error', 'Please fix the validation errors before saving')
-      const touchedFields = { pricePerDay: true }
-      setTouched(touchedFields)
       return
     }
 
     try {
       setSaving(true)
       
+      // Only send pricing-specific fields
       const updateData = {
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        email: profile.email,
-        phone: profile.phone,
-        avatar: profile.avatar,
         profile: {
-          guideLicense: profile.profile.guideLicense,
-          languages: profile.profile.languages,
-          experience: profile.profile.experience,
-          specialties: profile.profile.specialties,
-          location: profile.profile.location,
-          pricePerDay: profile.profile.pricePerDay, // Only update price
-          bio: profile.profile.bio,
-          certifications: profile.profile.certifications,
-          responseTime: profile.profile.responseTime,
-          highlights: profile.profile.highlights,
+          pricePerDay: profile.profile.pricePerDay,
           availability: profile.profile.availability
+          // Note: NOT including other profile fields - these are handled by other forms
         }
       }
       
@@ -451,62 +512,42 @@ const GuideDashboard = () => {
       
       const response = await guideService.updateGuideProfile(updateData)
       
-      if (response.data && response.data.data) {
-        const savedProfile = response.data.data
+      if (response.success && response.data) {
+        const savedProfile = response.data
         
-        // Update user data
+        // Update local profile state with the saved pricing data
+        setProfile(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            pricePerDay: savedProfile.profile?.pricePerDay || prev.profile.pricePerDay,
+            availability: savedProfile.profile?.availability || prev.profile.availability
+          }
+        }))
+        
+        // Update user data in localStorage
         const updatedUser = {
           ...user,
-          firstName: savedProfile.firstName || user.firstName,
-          lastName: savedProfile.lastName || user.lastName,
-          email: savedProfile.email || user.email,
-          phone: savedProfile.phone || user.phone,
-          avatar: savedProfile.avatar || user.avatar,
           profile: {
             ...user.profile,
-            guideLicense: savedProfile.profile?.guideLicense || user.profile?.guideLicense,
-            languages: savedProfile.profile?.languages || user.profile?.languages,
-            experience: savedProfile.profile?.experience || user.profile?.experience,
-            specialties: savedProfile.profile?.specialties || user.profile?.specialties,
-            location: savedProfile.profile?.location || user.profile?.location,
             pricePerDay: savedProfile.profile?.pricePerDay || user.profile?.pricePerDay,
-            bio: savedProfile.profile?.bio || user.profile?.bio,
-            certifications: savedProfile.profile?.certifications || user.profile?.certifications,
-            responseTime: savedProfile.profile?.responseTime || user.profile?.responseTime,
-            highlights: savedProfile.profile?.highlights || user.profile?.highlights,
             availability: savedProfile.profile?.availability || user.profile?.availability
           }
         }
         
         localStorage.setItem('user', JSON.stringify(updatedUser))
         
-        setProfile({
-          firstName: savedProfile.firstName || profile.firstName,
-          lastName: savedProfile.lastName || profile.lastName,
-          email: savedProfile.email || profile.email,
-          phone: savedProfile.phone || profile.phone,
-          avatar: savedProfile.avatar || profile.avatar,
-          profile: {
-            guideLicense: savedProfile.profile?.guideLicense || profile.profile.guideLicense,
-            languages: savedProfile.profile?.languages || profile.profile.languages,
-            experience: savedProfile.profile?.experience || profile.profile.experience,
-            specialties: savedProfile.profile?.specialties || profile.profile.specialties,
-            location: savedProfile.profile?.location || profile.profile.location,
-            pricePerDay: savedProfile.profile?.pricePerDay || profile.profile.pricePerDay,
-            bio: savedProfile.profile?.bio || profile.profile.bio,
-            certifications: savedProfile.profile?.certifications || profile.profile.certifications,
-            responseTime: savedProfile.profile?.responseTime || profile.profile.responseTime,
-            highlights: savedProfile.profile?.highlights || profile.profile.highlights,
-            availability: savedProfile.profile?.availability || profile.profile.availability
-          }
-        })
+        // Reload profile data to ensure form shows updated values
+        loadProfileData(updatedUser)
+        
+        showMessage('success', 'Pricing updated successfully!')
+        
+        window.dispatchEvent(new CustomEvent('guideProfileUpdated', {
+          detail: { guideId: user.id, updatedData: savedProfile }
+        }))
+      } else {
+        throw new Error('Invalid response format')
       }
-      
-      showMessage('success', 'Pricing updated successfully!')
-      
-      window.dispatchEvent(new CustomEvent('guideProfileUpdated', {
-        detail: { guideId: user.id, updatedData: savedProfile }
-      }))
     } catch (error) {
       console.error('Error updating pricing:', error)
       showMessage('error', 'Failed to update pricing. Please try again.')
@@ -529,18 +570,215 @@ const GuideDashboard = () => {
     }
   }
 
-  // Save Availability Information (placeholder for future implementation)
+  // Save Availability Information
   const handleSaveAvailability = async () => {
     try {
       setSaving(true)
-      // Future implementation for availability
-      showMessage('success', 'Availability updated successfully!')
+      
+      // Only send availability-specific fields
+      const updateData = {
+        profile: {
+          availability: profile.profile.availability,
+          workingDays: availability.workingDays,
+          workingHours: availability.workingHours,
+          blockedDates: availability.blockedDates,
+          maxBookingsPerDay: availability.maxBookingsPerDay,
+          advanceBookingDays: availability.advanceBookingDays
+        }
+      }
+      
+      console.log('Saving availability data:', updateData)
+      
+      const response = await guideService.updateGuideProfile(updateData)
+      
+      if (response.success && response.data) {
+        const savedProfile = response.data
+        
+        // Update local profile state with the saved availability data
+        setProfile(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            availability: savedProfile.profile?.availability || prev.profile.availability
+          }
+        }))
+        
+        // Update availability state
+        setAvailability(prev => ({
+          ...prev,
+          workingDays: savedProfile.profile?.workingDays !== undefined ? savedProfile.profile.workingDays : prev.workingDays,
+          workingHours: savedProfile.profile?.workingHours || prev.workingHours,
+          blockedDates: savedProfile.profile?.blockedDates !== undefined ? savedProfile.profile.blockedDates : prev.blockedDates,
+          maxBookingsPerDay: savedProfile.profile?.maxBookingsPerDay || prev.maxBookingsPerDay,
+          advanceBookingDays: savedProfile.profile?.advanceBookingDays || prev.advanceBookingDays
+        }))
+        
+        // Update user data in localStorage
+        const updatedUser = {
+          ...user,
+          profile: {
+            ...user.profile,
+            availability: savedProfile.profile?.availability || user.profile?.availability,
+            workingDays: savedProfile.profile?.workingDays !== undefined ? savedProfile.profile.workingDays : user.profile?.workingDays,
+            workingHours: savedProfile.profile?.workingHours || user.profile?.workingHours,
+            blockedDates: savedProfile.profile?.blockedDates !== undefined ? savedProfile.profile.blockedDates : user.profile?.blockedDates,
+            maxBookingsPerDay: savedProfile.profile?.maxBookingsPerDay || user.profile?.maxBookingsPerDay,
+            advanceBookingDays: savedProfile.profile?.advanceBookingDays || user.profile?.advanceBookingDays
+          }
+        }
+        
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+        
+        // Reload profile data to ensure form shows updated values
+        loadProfileData(updatedUser)
+        
+        showMessage('success', 'Availability updated successfully!')
+        
+        window.dispatchEvent(new CustomEvent('guideProfileUpdated', {
+          detail: { guideId: user.id, updatedData: savedProfile }
+        }))
+      } else {
+        throw new Error('Invalid response format')
+      }
     } catch (error) {
       console.error('Error updating availability:', error)
       showMessage('error', 'Failed to update availability. Please try again.')
     } finally {
       setSaving(false)
     }
+  }
+
+  // Availability helper functions
+  const toggleWorkingDay = (day) => {
+    setAvailability(prev => ({
+      ...prev,
+      workingDays: prev.workingDays.includes(day)
+        ? prev.workingDays.filter(d => d !== day)
+        : [...prev.workingDays, day]
+    }))
+  }
+
+  const addBlockedDate = () => {
+    if (!blockoutDate || !blockoutReason.trim()) return
+    
+    const newBlockout = {
+      date: blockoutDate,
+      reason: blockoutReason
+    }
+    
+    setAvailability(prev => ({
+      ...prev,
+      blockedDates: [...prev.blockedDates, newBlockout]
+    }))
+    
+    setBlockoutDate('')
+    setBlockoutReason('')
+  }
+
+  const removeBlockedDate = (index) => {
+    setAvailability(prev => ({
+      ...prev,
+      blockedDates: prev.blockedDates.filter((_, i) => i !== index)
+    }))
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  // Calendar helper functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const isDateInPast = (date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return date < today
+  }
+
+  const isDateBlocked = (date) => {
+    return availability.blockedDates.some(blockout => 
+      new Date(blockout.date).toDateString() === date.toDateString()
+    )
+  }
+
+  const handleDateSelect = (day) => {
+    const dateToSelect = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day)
+    
+    if (isDateInPast(dateToSelect)) {
+      showMessage('error', 'Cannot select past dates')
+      return
+    }
+    
+    if (isDateBlocked(dateToSelect)) {
+      showMessage('error', 'This date is already blocked')
+      return
+    }
+    
+    setBlockoutDate(dateToSelect.toISOString().split('T')[0])
+    setShowCalendar(false)
+  }
+
+  const navigateMonth = (direction) => {
+    setSelectedDate(prev => {
+      const newDate = new Date(prev)
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1)
+      } else {
+        newDate.setMonth(prev.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(selectedDate)
+    const firstDay = getFirstDayOfMonth(selectedDate)
+    const days = []
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-10"></div>)
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day)
+      const isPast = isDateInPast(currentDate)
+      const isBlocked = isDateBlocked(currentDate)
+      const isSelected = blockoutDate === currentDate.toISOString().split('T')[0]
+      
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleDateSelect(day)}
+          disabled={isPast || isBlocked}
+          className={`h-10 w-10 rounded-lg text-sm font-medium transition-all duration-200 ${
+            isSelected
+              ? 'bg-blue-500 text-white'
+              : isPast
+              ? 'text-gray-300 cursor-not-allowed'
+              : isBlocked
+              ? 'bg-red-100 text-red-500 cursor-not-allowed'
+              : 'text-gray-700 hover:bg-blue-100 hover:text-blue-600'
+          }`}
+        >
+          {day}
+        </button>
+      )
+    }
+    
+    return days
   }
 
   const addItem = (type, value) => {
@@ -1301,11 +1539,11 @@ const GuideDashboard = () => {
                 </div>
 
                 {/* Save Button for Profile */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <div className="flex justify-end mt-6">
                   <button
                     onClick={handleSaveProfile}
                     disabled={saving}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     {saving ? (
                       <>
@@ -1339,11 +1577,11 @@ const GuideDashboard = () => {
                 </div>
 
                 {/* Save Button for Services */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <div className="flex justify-end mt-6">
                   <button
                     onClick={handleSaveServices}
                     disabled={saving}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     {saving ? (
                       <>
@@ -1414,11 +1652,11 @@ const GuideDashboard = () => {
                 </div>
 
                 {/* Save Button for Pricing */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <div className="flex justify-end mt-6">
                   <button
                     onClick={handleSavePricing}
                     disabled={saving}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     {saving ? (
                       <>
@@ -1445,18 +1683,216 @@ const GuideDashboard = () => {
                 </div>
                 <p className="text-slate-600 mb-8">Manage your availability and schedule.</p>
                 
-                <div className="text-center py-12">
-                  <Calendar className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-slate-700 mb-2">Calendar Management</h3>
-                  <p className="text-slate-500">This feature will be available soon. You'll be able to manage your availability calendar here.</p>
+                <div className="space-y-8">
+                  {/* Working Days */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Working Days</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                        <button
+                          key={day}
+                          onClick={() => toggleWorkingDay(day)}
+                          className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                            availability.workingDays.includes(day)
+                              ? 'bg-blue-500 border-blue-500 text-white'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300'
+                          }`}
+                        >
+                          <span className="capitalize font-medium">{day}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Working Hours */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Working Hours</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Start Time</label>
+                        <input
+                          type="time"
+                          value={availability.workingHours.start}
+                          onChange={(e) => setAvailability(prev => ({
+                            ...prev,
+                            workingHours: { ...prev.workingHours, start: e.target.value }
+                          }))}
+                          className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">End Time</label>
+                        <input
+                          type="time"
+                          value={availability.workingHours.end}
+                          onChange={(e) => setAvailability(prev => ({
+                            ...prev,
+                            workingHours: { ...prev.workingHours, end: e.target.value }
+                          }))}
+                          className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Booking Limits */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Booking Limits</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Max Bookings Per Day</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={availability.maxBookingsPerDay}
+                          onChange={(e) => setAvailability(prev => ({
+                            ...prev,
+                            maxBookingsPerDay: parseInt(e.target.value) || 1
+                          }))}
+                          className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Advance Booking Days</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={availability.advanceBookingDays}
+                          onChange={(e) => setAvailability(prev => ({
+                            ...prev,
+                            advanceBookingDays: parseInt(e.target.value) || 30
+                          }))}
+                          className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Blocked Dates */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Blocked Dates</h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative calendar-container">
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Date</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowCalendar(!showCalendar)}
+                            className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-left flex items-center justify-between"
+                          >
+                            <span className={blockoutDate ? 'text-slate-900' : 'text-slate-500'}>
+                              {blockoutDate ? formatDate(blockoutDate) : 'Select a date'}
+                            </span>
+                            <Calendar className="h-5 w-5 text-slate-400" />
+                          </button>
+                          
+                          {/* Calendar Dropdown */}
+                          {showCalendar && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-slate-200 rounded-xl shadow-lg z-10 p-4">
+                              {/* Calendar Header */}
+                              <div className="flex items-center justify-between mb-4">
+                                <button
+                                  onClick={() => navigateMonth('prev')}
+                                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                                >
+                                  <ChevronDown className="h-4 w-4 rotate-90" />
+                                </button>
+                                <h4 className="text-lg font-semibold text-slate-900">
+                                  {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </h4>
+                                <button
+                                  onClick={() => navigateMonth('next')}
+                                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                                >
+                                  <ChevronDown className="h-4 w-4 -rotate-90" />
+                                </button>
+                              </div>
+                              
+                              {/* Calendar Days Header */}
+                              <div className="grid grid-cols-7 gap-1 mb-2">
+                                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                  <div key={day} className="h-8 flex items-center justify-center text-xs font-medium text-slate-500">
+                                    {day}
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* Calendar Days */}
+                              <div className="grid grid-cols-7 gap-1">
+                                {renderCalendar()}
+                              </div>
+                              
+                              {/* Calendar Legend */}
+                              <div className="mt-4 pt-4 border-t border-slate-200">
+                                <div className="flex items-center justify-center space-x-4 text-xs text-slate-500">
+                                  <div className="flex items-center">
+                                    <div className="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                                    Selected
+                                  </div>
+                                  <div className="flex items-center">
+                                    <div className="w-3 h-3 bg-red-100 rounded mr-1"></div>
+                                    Blocked
+                                  </div>
+                                  <div className="flex items-center">
+                                    <div className="w-3 h-3 bg-gray-300 rounded mr-1"></div>
+                                    Past
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Reason</label>
+                          <input
+                            type="text"
+                            value={blockoutReason}
+                            onChange={(e) => setBlockoutReason(e.target.value)}
+                            placeholder="e.g., Personal leave, Holiday"
+                            className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={addBlockedDate}
+                        disabled={!blockoutDate || !blockoutReason.trim()}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Blocked Date
+                      </button>
+                    </div>
+
+                    {/* Blocked Dates List */}
+                    {availability.blockedDates.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {availability.blockedDates.map((blockout, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div>
+                              <span className="font-medium text-red-800">{formatDate(blockout.date)}</span>
+                              <span className="text-red-600 ml-2">- {blockout.reason}</span>
+                            </div>
+                            <button
+                              onClick={() => removeBlockedDate(index)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Save Button for Availability */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <div className="flex justify-end mt-6">
                   <button
                     onClick={handleSaveAvailability}
                     disabled={saving}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     {saving ? (
                       <>

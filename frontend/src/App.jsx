@@ -33,6 +33,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Booking from './pages/Booking'
 import Payment from './pages/Payment'
+import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
 
 // Admin Pages
@@ -151,6 +152,9 @@ function App() {
                     <Payment />
                   </ProtectedRoute>
                 } />
+                
+                {/* Custom Trip */}
+                <Route path="custom-trip" element={<CustomTrip />} />
                 
                 {/* Admin Routes */}
                 <Route path="admin" element={

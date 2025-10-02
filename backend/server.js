@@ -1,3 +1,6 @@
+// Load environment variables first
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,7 +11,6 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
-require('dotenv').config({ path: './.env' });
 
 // Import routes
 const authRoutes = require('./src/routes/auth');
@@ -118,6 +120,13 @@ app.use(errorHandler);
 // Database connection
 const connectDB = async () => {
   try {
+    console.log('MONGODB_URI:', process.env.MONGODB_URI);
+    
+    if (!process.env.MONGODB_URI) {
+      console.error('MONGODB_URI is not defined in environment variables');
+      process.exit(1);
+    }
+    
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -125,7 +134,11 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('Database connection error:', error);
-    process.exit(1);
+    console.log('Starting server without database connection for development...');
+    // Don't exit in development, allow server to start without DB
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
   }
 };
 

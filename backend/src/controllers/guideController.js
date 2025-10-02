@@ -100,6 +100,11 @@ const getGuides = asyncHandler(async (req, res) => {
         completedTours: bookingCount,
         bio: guide.profile?.bio || 'Professional tour guide with extensive local knowledge.',
         highlights: guide.profile?.highlights || [],
+        workingDays: guide.profile?.workingDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        blockedDates: guide.profile?.blockedDates || [],
+        workingHours: guide.profile?.workingHours || { start: '09:00', end: '17:00' },
+        maxBookingsPerDay: guide.profile?.maxBookingsPerDay || 3,
+        advanceBookingDays: guide.profile?.advanceBookingDays || 30,
         isVerified: guide.isVerified,
         createdAt: guide.createdAt
       };
@@ -166,6 +171,11 @@ const getGuideById = asyncHandler(async (req, res) => {
     completedTours: bookings.length,
     bio: guide.profile?.bio || 'Professional tour guide with extensive local knowledge.',
     highlights: guide.profile?.highlights || [],
+    workingDays: guide.profile?.workingDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    blockedDates: guide.profile?.blockedDates || [],
+    workingHours: guide.profile?.workingHours || { start: '09:00', end: '17:00' },
+    maxBookingsPerDay: guide.profile?.maxBookingsPerDay || 3,
+    advanceBookingDays: guide.profile?.advanceBookingDays || 30,
     isVerified: guide.isVerified,
     tours: tours,
     reviews: reviews,

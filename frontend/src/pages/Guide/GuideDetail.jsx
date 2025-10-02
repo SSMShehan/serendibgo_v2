@@ -40,6 +40,8 @@ const GuideDetail = () => {
     groupSize: 1,
     specialRequests: ''
   })
+  const [showBookingCalendar, setShowBookingCalendar] = useState(false)
+  const [selectedBookingDate, setSelectedBookingDate] = useState(new Date())
 
   // Fetch guide data from API
   useEffect(() => {
@@ -61,6 +63,20 @@ const GuideDetail = () => {
       window.removeEventListener('guideProfileUpdated', handleGuideUpdate)
     }
   }, [id])
+
+  // Close booking calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showBookingCalendar && !event.target.closest('.booking-calendar-container')) {
+        setShowBookingCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showBookingCalendar])
 
   const fetchGuide = async () => {
     try {
@@ -133,6 +149,130 @@ const GuideDetail = () => {
 
   const handleBookGuide = () => {
     setShowBookingModal(true)
+  }
+
+  // Booking calendar helper functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const isDateInPast = (date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return date < today
+  }
+
+  const isDateBlocked = (date) => {
+    if (!guide?.blockedDates) return false
+    return guide.blockedDates.some(blockout => 
+      new Date(blockout.date).toDateString() === date.toDateString()
+    )
+  }
+
+  const isWorkingDay = (date) => {
+    if (!guide?.workingDays) return true
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const dayName = dayNames[date.getDay()]
+    return guide.workingDays.includes(dayName)
+  }
+
+  const isDateAvailable = (date) => {
+    return !isDateInPast(date) && !isDateBlocked(date) && isWorkingDay(date)
+  }
+
+  const handleBookingDateSelect = (day) => {
+    const dateToSelect = new Date(selectedBookingDate.getFullYear(), selectedBookingDate.getMonth(), day)
+    
+    if (!isDateAvailable(dateToSelect)) {
+      if (isDateInPast(dateToSelect)) {
+        alert('Cannot select past dates')
+      } else if (isDateBlocked(dateToSelect)) {
+        alert('This date is not available (blocked by guide)')
+      } else if (!isWorkingDay(dateToSelect)) {
+        alert('Guide is not available on this day')
+      }
+      return
+    }
+    
+    setBookingData(prev => ({
+      ...prev,
+      date: dateToSelect.toISOString().split('T')[0]
+    }))
+    setShowBookingCalendar(false)
+  }
+
+  const navigateBookingMonth = (direction) => {
+    setSelectedBookingDate(prev => {
+      const newDate = new Date(prev)
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1)
+      } else {
+        newDate.setMonth(prev.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const renderBookingCalendar = () => {
+    const daysInMonth = getDaysInMonth(selectedBookingDate)
+    const firstDay = getFirstDayOfMonth(selectedBookingDate)
+    const days = []
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-10"></div>)
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(selectedBookingDate.getFullYear(), selectedBookingDate.getMonth(), day)
+      const isPast = isDateInPast(currentDate)
+      const isBlocked = isDateBlocked(currentDate)
+      const isWorking = isWorkingDay(currentDate)
+      const isSelected = bookingData.date === currentDate.toISOString().split('T')[0]
+      const isAvailable = isDateAvailable(currentDate)
+      
+      let buttonClass = 'h-10 w-10 rounded-lg text-sm font-medium transition-all duration-200 '
+      
+      if (isSelected) {
+        buttonClass += 'bg-blue-500 text-white'
+      } else if (isPast) {
+        buttonClass += 'text-gray-300 cursor-not-allowed'
+      } else if (isBlocked) {
+        buttonClass += 'bg-red-100 text-red-500 cursor-not-allowed'
+      } else if (!isWorking) {
+        buttonClass += 'bg-yellow-100 text-yellow-600 cursor-not-allowed'
+      } else if (isAvailable) {
+        buttonClass += 'text-gray-700 hover:bg-green-100 hover:text-green-600'
+      }
+      
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleBookingDateSelect(day)}
+          disabled={!isAvailable}
+          className={buttonClass}
+        >
+          {day}
+        </button>
+      )
+    }
+    
+    return days
+  }
+
+  const formatBookingDate = (dateString) => {
+    if (!dateString) return 'Select a date'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
   }
 
   const handleBookingSubmit = (e) => {
@@ -321,46 +461,115 @@ const GuideDetail = () => {
 
       {/* Booking Modal */}
       {showBookingModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 my-4">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200 p-8 rounded-t-3xl">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl font-bold">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200 p-4 sm:p-6 lg:p-8 rounded-t-3xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-lg sm:text-2xl font-bold">
                       {guide.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Book {guide.name}</h2>
-                    <p className="text-slate-600 font-medium">Complete your booking details below</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">Book {guide.name}</h2>
+                    <p className="text-sm sm:text-base text-slate-600 font-medium">Complete your booking details below</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowBookingModal(false)}
-                  className="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200"
+                  className="p-2 sm:p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200 self-end sm:self-start"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
               </div>
             </div>
 
-            <div className="p-8">
-              <form onSubmit={handleBookingSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-6 lg:p-8">
+              <form onSubmit={handleBookingSubmit} className="space-y-6 sm:space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div className="group">
                     <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-blue-500" />
                       Tour Date
                     </label>
-                    <input
-                      type="date"
-                      value={bookingData.date}
-                      onChange={(e) => setBookingData({...bookingData, date: e.target.value})}
-                      className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium"
-                      required
-                    />
+                    <div className="relative booking-calendar-container">
+                      <button
+                        type="button"
+                        onClick={() => setShowBookingCalendar(!showBookingCalendar)}
+                        className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium text-left flex items-center justify-between text-sm sm:text-base"
+                      >
+                        <span className={bookingData.date ? 'text-slate-900' : 'text-slate-500'}>
+                          {formatBookingDate(bookingData.date)}
+                        </span>
+                        <Calendar className="h-5 w-5 text-slate-400" />
+                      </button>
+                      
+                      {/* Booking Calendar Dropdown */}
+                      {showBookingCalendar && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-slate-200 rounded-2xl shadow-lg z-10 p-4">
+                          {/* Calendar Header */}
+                          <div className="flex items-center justify-between mb-4">
+                            <button
+                              onClick={() => navigateBookingMonth('prev')}
+                              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            <h4 className="text-lg font-semibold text-slate-900">
+                              {selectedBookingDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </h4>
+                            <button
+                              onClick={() => navigateBookingMonth('next')}
+                              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <ArrowLeft className="h-4 w-4 rotate-180" />
+                            </button>
+                          </div>
+                          
+                          {/* Calendar Days Header */}
+                          <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                              <div key={day} className="h-8 flex items-center justify-center text-xs font-medium text-slate-500">
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Calendar Days */}
+                          <div className="grid grid-cols-7 gap-1">
+                            {renderBookingCalendar()}
+                          </div>
+                          
+                          {/* Calendar Legend */}
+                          <div className="mt-4 pt-4 border-t border-slate-200">
+                            <div className="flex items-center justify-center space-x-4 text-xs text-slate-500">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                                Selected
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-green-100 rounded mr-1"></div>
+                                Available
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-red-100 rounded mr-1"></div>
+                                Blocked
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-yellow-100 rounded mr-1"></div>
+                                Non-working
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-gray-300 rounded mr-1"></div>
+                                Past
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="group">
@@ -371,7 +580,7 @@ const GuideDetail = () => {
                     <select
                       value={bookingData.duration}
                       onChange={(e) => setBookingData({...bookingData, duration: e.target.value})}
-                      className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium appearance-none"
+                      className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium appearance-none text-sm sm:text-base"
                       required
                     >
                       <option value="">Select duration</option>
@@ -393,7 +602,7 @@ const GuideDetail = () => {
                     max="20"
                     value={bookingData.groupSize}
                     onChange={(e) => setBookingData({...bookingData, groupSize: parseInt(e.target.value)})}
-                    className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium text-sm sm:text-base"
                     required
                   />
                 </div>
@@ -408,42 +617,43 @@ const GuideDetail = () => {
                     onChange={(e) => setBookingData({...bookingData, specialRequests: e.target.value})}
                     rows="4"
                     placeholder="Any special requirements or requests..."
-                    className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium resize-none"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium resize-none text-sm sm:text-base"
                   />
                 </div>
 
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-6 border border-green-200">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xl font-bold text-slate-900">Total Price</span>
-                    <span className="text-4xl font-bold text-green-600">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-4 sm:p-6 border border-green-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+                    <span className="text-lg sm:text-xl font-bold text-slate-900">Total Price</span>
+                    <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600">
                       LKR {(guide.price * bookingData.groupSize).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 font-medium">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <span className="text-sm sm:text-base text-slate-600 font-medium">
                       {bookingData.groupSize} person(s) × LKR {guide.price.toLocaleString()}
                     </span>
-                    <div className="flex items-center text-green-600 font-semibold">
+                    <div className="flex items-center text-green-600 font-semibold text-sm sm:text-base">
                       <Shield className="h-4 w-4 mr-1" />
                       Secure Payment
                     </div>
                   </div>
                 </div>
 
-                <div className="flex space-x-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
                   <button
                     type="button"
                     onClick={() => setShowBookingModal(false)}
-                    className="flex-1 px-6 py-4 border-2 border-slate-300 text-slate-700 rounded-2xl hover:bg-slate-50 hover:border-slate-400 transition-all duration-300 font-bold"
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 border-slate-300 text-slate-700 rounded-2xl hover:bg-slate-50 hover:border-slate-400 transition-all duration-300 font-bold text-sm sm:text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center"
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center text-sm sm:text-base"
                   >
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Submit Booking Request
+                    <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    <span className="hidden sm:inline">Submit Booking Request</span>
+                    <span className="sm:hidden">Submit</span>
                   </button>
                 </div>
               </form>

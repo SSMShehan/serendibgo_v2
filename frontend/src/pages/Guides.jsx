@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Star, Clock, Users, Search, Filter, Calendar, Phone, Mail, Award, Globe, Heart, ChevronDown, X, Shield, CheckCircle, Zap, Crown, Sparkles, Eye, BookOpen } from 'lucide-react'
+import { MapPin, Star, Clock, Users, Search, Filter, Calendar, Phone, Mail, Award, Globe, Heart, ChevronDown, X, Shield, CheckCircle, Zap, Crown, Sparkles, Eye, BookOpen, ArrowLeft } from 'lucide-react'
 import { guideService } from '../services/guideService'
 
 const Guides = () => {
@@ -19,6 +19,8 @@ const Guides = () => {
     groupSize: 1,
     specialRequests: ''
   })
+  const [showBookingCalendar, setShowBookingCalendar] = useState(false)
+  const [selectedBookingDate, setSelectedBookingDate] = useState(new Date())
 
   // Fetch guides from API
   useEffect(() => {
@@ -66,6 +68,20 @@ const Guides = () => {
     }
   }, [searchTerm, selectedLocation, selectedSpecialty])
 
+  // Close booking calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showBookingCalendar && !event.target.closest('.booking-calendar-container')) {
+        setShowBookingCalendar(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showBookingCalendar])
+
   const locations = ['All Locations', 'Colombo', 'Kandy', 'Galle', 'Anuradhapura', 'Trincomalee']
   const specialties = ['All Specialties', 'Cultural Tours', 'Historical Sites', 'Nature Tours', 'Wildlife', 'Food Tours', 'Religious Tours', 'Luxury Tours', 'Family Tours']
 
@@ -88,6 +104,136 @@ const Guides = () => {
       duration: '',
       groupSize: 1,
       specialRequests: ''
+    })
+  }
+
+  // Booking calendar helper functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  }
+
+  const isDateInPast = (date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return date < today
+  }
+
+  const isDateBlocked = (date) => {
+    // For now, no dates are blocked. You can add logic here to block specific dates
+    return false
+  }
+
+  const isWorkingDay = (date) => {
+    // For now, all days are working days. You can add logic here to exclude weekends or holidays
+    return true
+  }
+
+  const isDateAvailable = (date) => {
+    return !isDateInPast(date) && !isDateBlocked(date) && isWorkingDay(date)
+  }
+
+  const handleBookingDateSelect = (day) => {
+    const dateToSelect = new Date(selectedBookingDate.getFullYear(), selectedBookingDate.getMonth(), day)
+    
+    if (!isDateAvailable(dateToSelect)) {
+      if (isDateInPast(dateToSelect)) {
+        alert('Cannot select past dates')
+      } else if (isDateBlocked(dateToSelect)) {
+        alert('This date is not available')
+      } else {
+        alert('This date is not a working day')
+      }
+      return
+    }
+
+    setBookingData(prev => ({
+      ...prev,
+      date: dateToSelect.toISOString().split('T')[0]
+    }))
+    setShowBookingCalendar(false)
+  }
+
+  const navigateBookingMonth = (direction) => {
+    setSelectedBookingDate(prev => {
+      const newDate = new Date(prev)
+      if (direction === 'prev') {
+        newDate.setMonth(prev.getMonth() - 1)
+      } else {
+        newDate.setMonth(prev.getMonth() + 1)
+      }
+      return newDate
+    })
+  }
+
+  const renderBookingCalendar = () => {
+    const daysInMonth = getDaysInMonth(selectedBookingDate)
+    const firstDay = getFirstDayOfMonth(selectedBookingDate)
+    const days = []
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-10"></div>)
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = new Date(selectedBookingDate.getFullYear(), selectedBookingDate.getMonth(), day)
+      const isPast = isDateInPast(currentDate)
+      const isBlocked = isDateBlocked(currentDate)
+      const isWorking = isWorkingDay(currentDate)
+      const isSelected = bookingData.date === currentDate.toISOString().split('T')[0]
+      const isAvailable = isDateAvailable(currentDate)
+
+      let bgColor = 'bg-white'
+      let textColor = 'text-slate-900'
+      let cursor = 'cursor-pointer'
+
+      if (isSelected) {
+        bgColor = 'bg-blue-500'
+        textColor = 'text-white'
+      } else if (isPast) {
+        bgColor = 'bg-gray-300'
+        textColor = 'text-gray-500'
+        cursor = 'cursor-not-allowed'
+      } else if (isBlocked) {
+        bgColor = 'bg-red-100'
+        textColor = 'text-red-600'
+        cursor = 'cursor-not-allowed'
+      } else if (!isWorking) {
+        bgColor = 'bg-yellow-100'
+        textColor = 'text-yellow-600'
+        cursor = 'cursor-not-allowed'
+      } else {
+        bgColor = 'bg-green-100'
+        textColor = 'text-green-800'
+      }
+
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleBookingDateSelect(day)}
+          disabled={!isAvailable}
+          className={`h-10 w-10 ${bgColor} ${textColor} ${cursor} rounded-lg text-sm font-medium hover:opacity-80 transition-all duration-200 flex items-center justify-center`}
+        >
+          {day}
+        </button>
+      )
+    }
+    
+    return days
+  }
+
+  const formatBookingDate = (dateString) => {
+    if (!dateString) return 'Select a date'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
   }
 
@@ -411,211 +557,118 @@ const Guides = () => {
         )}
       </div>
 
-      {/* Booking Modal */}
-      {showBookingModal && selectedGuide && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200 p-8 rounded-t-3xl">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl font-bold">
-                      {selectedGuide.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Book {selectedGuide.name}</h2>
-                    <p className="text-slate-600 font-medium">Complete your booking details below</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowBookingModal(false)}
-                  className="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-8">
-              
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                  {/* Bio */}
-                  <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-3xl p-6 border border-slate-100">
-                    <div className="flex items-center mb-4">
-                      <BookOpen className="h-6 w-6 text-blue-600 mr-3" />
-                      <h3 className="text-2xl font-bold text-slate-900">About</h3>
-                    </div>
-                    <p className="text-slate-700 leading-relaxed text-lg font-medium">{selectedGuide.bio}</p>
-                  </div>
-                  
-                  {/* Highlights */}
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-3xl p-6 border border-yellow-100">
-                    <div className="flex items-center mb-4">
-                      <Award className="h-6 w-6 text-yellow-600 mr-3" />
-                      <h3 className="text-2xl font-bold text-slate-900">Key Highlights</h3>
-                    </div>
-                    <div className="space-y-3">
-                      {selectedGuide.highlights.map((highlight, index) => (
-                        <div key={index} className="flex items-center p-3 bg-white/60 rounded-2xl border border-yellow-200">
-                          <Zap className="h-5 w-5 text-yellow-500 mr-3" />
-                          <span className="text-slate-700 font-semibold">{highlight}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Specialties */}
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-6 border border-purple-100">
-                    <div className="flex items-center mb-4">
-                      <Award className="h-6 w-6 text-purple-600 mr-3" />
-                      <h3 className="text-2xl font-bold text-slate-900">Specialties</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {selectedGuide.specialties.map((specialty) => (
-                        <span key={specialty} className="px-4 py-3 bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 rounded-2xl font-bold border border-purple-300 shadow-sm">
-                      {specialty}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              
-                  {/* Languages */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-6 border border-blue-100">
-                    <div className="flex items-center mb-4">
-                      <Globe className="h-6 w-6 text-blue-600 mr-3" />
-                      <h3 className="text-2xl font-bold text-slate-900">Languages</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {selectedGuide.languages.map((lang) => (
-                        <span key={lang} className="px-4 py-3 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 rounded-2xl font-bold border border-blue-300 shadow-sm">
-                          {lang}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="lg:col-span-1">
-                  <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-3xl p-8 border border-slate-200 shadow-xl">
-                    <div className="text-center mb-8">
-                      <div className="relative mx-auto mb-6">
-                        <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl">
-                          <span className="text-white text-4xl font-bold">
-                            {selectedGuide.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                          <CheckCircle className="h-5 w-5 text-white" />
-                        </div>
-                      </div>
-                      <h3 className="text-2xl font-bold text-slate-900 mb-2">{selectedGuide.name}</h3>
-                      <div className="flex items-center justify-center mb-4">
-                        <Star className="h-6 w-6 text-yellow-400 fill-current" />
-                        <span className="ml-2 text-xl font-bold text-slate-700">{selectedGuide.rating}</span>
-                        <span className="ml-2 text-slate-500">({selectedGuide.reviewCount} reviews)</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4 mb-8">
-                      <div className="flex justify-between items-center p-3 bg-white/60 rounded-2xl border border-slate-200">
-                        <div className="flex items-center">
-                          <Clock className="h-5 w-5 text-purple-500 mr-2" />
-                          <span className="text-slate-600 font-medium">Experience</span>
-                        </div>
-                        <span className="font-bold text-slate-900">{selectedGuide.experience}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white/60 rounded-2xl border border-slate-200">
-                        <div className="flex items-center">
-                          <MapPin className="h-5 w-5 text-blue-500 mr-2" />
-                          <span className="text-slate-600 font-medium">Location</span>
-                        </div>
-                        <span className="font-bold text-slate-900">{selectedGuide.location}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white/60 rounded-2xl border border-slate-200">
-                        <div className="flex items-center">
-                          <Users className="h-5 w-5 text-green-500 mr-2" />
-                          <span className="text-slate-600 font-medium">Tours Completed</span>
-                        </div>
-                        <span className="font-bold text-slate-900">{selectedGuide.completedTours}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-white/60 rounded-2xl border border-slate-200">
-                        <div className="flex items-center">
-                          <Zap className="h-5 w-5 text-yellow-500 mr-2" />
-                          <span className="text-slate-600 font-medium">Response Time</span>
-                        </div>
-                        <span className="font-bold text-slate-900">{selectedGuide.responseTime}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center mb-8 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl border border-green-200">
-                      <div className="text-4xl font-bold text-green-600 mb-2">LKR {selectedGuide.price.toLocaleString()}</div>
-                      <div className="text-green-600 font-semibold">per day</div>
-                    </div>
-                    
-                    <button 
-                      onClick={() => {
-                        setShowDetailsModal(false)
-                        handleBookGuide(selectedGuide)
-                      }}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center"
-                    >
-                      <BookOpen className="h-5 w-5 mr-2" />
-                      Book This Guide
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Booking Modal */}
       {showBookingModal && selectedGuide && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 my-4">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200 p-8 rounded-t-3xl">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                    <span className="text-white text-2xl font-bold">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-200 p-4 sm:p-6 lg:p-8 rounded-t-3xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-white text-lg sm:text-2xl font-bold">
                       {selectedGuide.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-900">Book {selectedGuide.name}</h2>
-                    <p className="text-slate-600 font-medium">Complete your booking details below</p>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">Book {selectedGuide.name}</h2>
+                    <p className="text-sm sm:text-base text-slate-600 font-medium">Complete your booking details below</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowBookingModal(false)}
-                  className="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200"
+                  className="p-2 sm:p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all duration-200 self-end sm:self-start"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
               </div>
             </div>
-            
-            <div className="p-8">
-              
-              <form onSubmit={handleBookingSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div className="p-4 sm:p-6 lg:p-8">
+              <form onSubmit={handleBookingSubmit} className="space-y-6 sm:space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div className="group">
                     <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-blue-500" />
                       Tour Date
                     </label>
-                    <input
-                      type="date"
-                      value={bookingData.date}
-                      onChange={(e) => setBookingData({...bookingData, date: e.target.value})}
-                      className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium"
-                      required
-                    />
+                    <div className="relative booking-calendar-container">
+                      <button
+                        type="button"
+                        onClick={() => setShowBookingCalendar(!showBookingCalendar)}
+                        className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium text-left flex items-center justify-between text-sm sm:text-base"
+                      >
+                        <span className={bookingData.date ? 'text-slate-900' : 'text-slate-500'}>
+                          {formatBookingDate(bookingData.date)}
+                        </span>
+                        <Calendar className="h-5 w-5 text-slate-400" />
+                      </button>
+                      
+                      {/* Booking Calendar Dropdown */}
+                      {showBookingCalendar && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-slate-200 rounded-2xl shadow-lg z-10 p-4">
+                          {/* Calendar Header */}
+                          <div className="flex items-center justify-between mb-4">
+                            <button
+                              onClick={() => navigateBookingMonth('prev')}
+                              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                            </button>
+                            <h4 className="text-lg font-semibold text-slate-900">
+                              {selectedBookingDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </h4>
+                            <button
+                              onClick={() => navigateBookingMonth('next')}
+                              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <ArrowLeft className="h-4 w-4 rotate-180" />
+                            </button>
+                          </div>
+                          
+                          {/* Calendar Days Header */}
+                          <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                              <div key={day} className="h-8 flex items-center justify-center text-xs font-medium text-slate-500">
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Calendar Days */}
+                          <div className="grid grid-cols-7 gap-1">
+                            {renderBookingCalendar()}
+                          </div>
+                          
+                          {/* Calendar Legend */}
+                          <div className="mt-4 pt-4 border-t border-slate-200">
+                            <div className="flex items-center justify-center space-x-4 text-xs text-slate-500">
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                                Selected
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-green-100 rounded mr-1"></div>
+                                Available
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-red-100 rounded mr-1"></div>
+                                Blocked
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-yellow-100 rounded mr-1"></div>
+                                Non-working
+                              </div>
+                              <div className="flex items-center">
+                                <div className="w-3 h-3 bg-gray-300 rounded mr-1"></div>
+                                Past
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="group">
@@ -626,7 +679,7 @@ const Guides = () => {
                     <select
                       value={bookingData.duration}
                       onChange={(e) => setBookingData({...bookingData, duration: e.target.value})}
-                      className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium appearance-none"
+                      className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium appearance-none text-sm sm:text-base"
                       required
                     >
                       <option value="">Select duration</option>
@@ -636,7 +689,7 @@ const Guides = () => {
                     </select>
                   </div>
                 </div>
-                
+
                 <div className="group">
                   <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center">
                     <Users className="h-4 w-4 mr-2 text-green-500" />
@@ -648,11 +701,11 @@ const Guides = () => {
                     max="20"
                     value={bookingData.groupSize}
                     onChange={(e) => setBookingData({...bookingData, groupSize: parseInt(e.target.value)})}
-                    className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium text-sm sm:text-base"
                     required
                   />
                 </div>
-                
+
                 <div className="group">
                   <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center">
                     <Mail className="h-4 w-4 mr-2 text-orange-500" />
@@ -663,47 +716,48 @@ const Guides = () => {
                     onChange={(e) => setBookingData({...bookingData, specialRequests: e.target.value})}
                     rows="4"
                     placeholder="Any special requirements or requests..."
-                    className="w-full px-4 py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium resize-none"
+                    className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium resize-none text-sm sm:text-base"
                   />
                 </div>
-                
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-6 border border-green-200">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xl font-bold text-slate-900">Total Price</span>
-                    <span className="text-4xl font-bold text-green-600">
+
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-4 sm:p-6 border border-green-200">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+                    <span className="text-lg sm:text-xl font-bold text-slate-900">Total Price</span>
+                    <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600">
                       LKR {(selectedGuide.price * bookingData.groupSize).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 font-medium">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <span className="text-sm sm:text-base text-slate-600 font-medium">
                       {bookingData.groupSize} person(s) × LKR {selectedGuide.price.toLocaleString()}
                     </span>
-                    <div className="flex items-center text-green-600 font-semibold">
+                    <div className="flex items-center text-green-600 font-semibold text-sm sm:text-base">
                       <Shield className="h-4 w-4 mr-1" />
                       Secure Payment
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex space-x-6">
+
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
                   <button
                     type="button"
                     onClick={() => setShowBookingModal(false)}
-                    className="flex-1 px-6 py-4 border-2 border-slate-300 text-slate-700 rounded-2xl hover:bg-slate-50 hover:border-slate-400 transition-all duration-300 font-bold"
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 border-slate-300 text-slate-700 rounded-2xl hover:bg-slate-50 hover:border-slate-400 transition-all duration-300 font-bold text-sm sm:text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center"
+                    className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center text-sm sm:text-base"
                   >
-                    <BookOpen className="h-5 w-5 mr-2" />
-                    Submit Booking Request
+                    <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    <span className="hidden sm:inline">Submit Booking Request</span>
+                    <span className="sm:hidden">Submit</span>
                   </button>
                 </div>
               </form>
-        </div>
-      </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
