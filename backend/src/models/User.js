@@ -72,6 +72,23 @@ const userSchema = new mongoose.Schema({
     languages: [String],
     experience: Number, // years
     specialties: [String],
+    location: String,
+    pricePerDay: {
+      type: Number,
+      default: 0,
+      min: [0, 'Price cannot be negative']
+    },
+    bio: String,
+    certifications: [String],
+    responseTime: {
+      type: String,
+      default: 'Within 24 hours'
+    },
+    highlights: [String],
+    availability: {
+      type: String,
+      default: 'Available'
+    },
     
     // For drivers
     driverLicense: String,
