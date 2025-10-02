@@ -18,6 +18,12 @@ import GuideDetail from './pages/Guide/GuideDetail'
 import GuideDashboard from './pages/Guide/GuideDashboard'
 import GuideSupport from './pages/Guide/GuideSupport'
 import GuideNotifications from './pages/Guide/GuideNotifications'
+import GuideSettings from './pages/Guide/GuideSettings'
+import GuideSchedule from './pages/Guide/GuideSchedule'
+import GuideReviews from './pages/Guide/GuideReviews'
+import GuideProfile from './pages/Guide/GuideProfile'
+import GuideEarnings from './pages/Guide/GuideEarnings'
+import GuideAnalytics from './pages/Guide/GuideAnalytics'
 import Hotels from './pages/Hotels'
 import Vehicles from './pages/Vehicles'
 import MyBookings from './pages/MyBookings'
@@ -63,7 +69,7 @@ function App() {
                 <Route path="tours/:id" element={<TourDetails />} />
                 <Route path="guides" element={<Guides />} />
                 <Route path="guides/:id" element={<GuideDetail />} />
-                <Route path="guide-dashboard" element={
+                <Route path="guide/dashboard" element={
                   <ProtectedRoute allowedRoles={['guide']}>
                     <GuideDashboard />
                   </ProtectedRoute>
@@ -78,12 +84,39 @@ function App() {
                     <GuideNotifications />
                   </ProtectedRoute>
                 } />
-                <Route path="hotels" element={<Hotels />} />
-                <Route path="vehicles" element={<Vehicles />} />
-                
-                {/* Hotel Routes */}
+                <Route path="guide/settings" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideSettings />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide/schedule" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideSchedule />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide/reviews" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideReviews />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide/profile" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideProfile />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide/earnings" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideEarnings />
+                  </ProtectedRoute>
+                } />
+                <Route path="guide/analytics" element={
+                  <ProtectedRoute allowedRoles={['guide']}>
+                    <GuideAnalytics />
+                  </ProtectedRoute>
+                } />
                 <Route path="hotels" element={<HotelSearch />} />
                 <Route path="hotels/:id" element={<HotelSearch />} />
+                <Route path="vehicles" element={<Vehicles />} />
                 
                 {/* User Dashboard */}
                 <Route path="dashboard" element={

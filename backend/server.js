@@ -8,7 +8,7 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
+require('dotenv').config({ path: './.env' });
 
 // Import routes
 const authRoutes = require('./src/routes/auth');

@@ -1,4 +1,4 @@
-const Booking = require('../../models/hotels/Booking');
+const HotelBooking = require('../../models/hotels/HotelBooking');
 const Hotel = require('../../models/hotels/Hotel');
 const Room = require('../../models/hotels/Room');
 const { asyncHandler } = require('../../middleware/errorHandler');
@@ -94,7 +94,7 @@ const createBooking = asyncHandler(async (req, res) => {
     source: 'website'
   };
 
-  const booking = await Booking.create(bookingData);
+  const booking = await HotelBooking.create(bookingData);
 
   res.status(201).json({
     status: 'success',
@@ -114,7 +114,7 @@ const getMyBookings = asyncHandler(async (req, res) => {
   const filter = { guest: req.user.id };
   if (status) filter.status = status;
 
-  const bookings = await Booking.find(filter)
+  const bookings = await HotelBooking.find(filter)
     .populate('hotel', 'name location images')
     .populate('room', 'name roomType images')
     .sort({ createdAt: -1 })
@@ -122,7 +122,7 @@ const getMyBookings = asyncHandler(async (req, res) => {
     .skip((page - 1) * limit)
     .select('-__v');
 
-  const total = await Booking.countDocuments(filter);
+  const total = await HotelBooking.countDocuments(filter);
 
   res.status(200).json({
     status: 'success',
@@ -142,7 +142,7 @@ const getMyBookings = asyncHandler(async (req, res) => {
 // @route   GET /api/bookings/:id
 // @access  Private
 const getBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findById(req.params.id)
+  const booking = await HotelBooking.findById(req.params.id)
     .populate('guest', 'firstName lastName email phone')
     .populate('hotel', 'name location contact images')
     .populate('room', 'name roomType images amenities')
@@ -177,7 +177,7 @@ const getBooking = asyncHandler(async (req, res) => {
 // @route   PUT /api/bookings/:id
 // @access  Private
 const updateBooking = asyncHandler(async (req, res) => {
-  const booking = await Booking.findById(req.params.id);
+  const booking = await HotelBooking.findById(req.params.id);
 
   if (!booking) {
     return res.status(404).json({
@@ -196,7 +196,7 @@ const updateBooking = asyncHandler(async (req, res) => {
     });
   }
 
-  const updatedBooking = await Booking.findByIdAndUpdate(
+  const updatedBooking = await HotelBooking.findByIdAndUpdate(
     req.params.id,
     req.body,
     { new: true, runValidators: true }
@@ -217,7 +217,7 @@ const updateBooking = asyncHandler(async (req, res) => {
 const cancelBooking = asyncHandler(async (req, res) => {
   const { reason } = req.body;
 
-  const booking = await Booking.findById(req.params.id);
+  const booking = await HotelBooking.findById(req.params.id);
 
   if (!booking) {
     return res.status(404).json({
@@ -246,7 +246,7 @@ const cancelBooking = asyncHandler(async (req, res) => {
   const cancellationFee = booking.calculateCancellationFee();
   const refundAmount = booking.pricing.totalAmount - cancellationFee;
 
-  const updatedBooking = await Booking.findByIdAndUpdate(
+  const updatedBooking = await HotelBooking.findByIdAndUpdate(
     req.params.id,
     {
       status: 'cancelled',
@@ -297,7 +297,7 @@ const getHotelBookings = asyncHandler(async (req, res) => {
   const filter = { hotel: hotelId };
   if (status) filter.status = status;
 
-  const bookings = await Booking.find(filter)
+  const bookings = await HotelBooking.find(filter)
     .populate('guest', 'firstName lastName email phone')
     .populate('room', 'name roomType')
     .sort({ createdAt: -1 })
@@ -305,7 +305,7 @@ const getHotelBookings = asyncHandler(async (req, res) => {
     .skip((page - 1) * limit)
     .select('-__v');
 
-  const total = await Booking.countDocuments(filter);
+  const total = await HotelBooking.countDocuments(filter);
 
   res.status(200).json({
     status: 'success',
@@ -327,7 +327,7 @@ const getHotelBookings = asyncHandler(async (req, res) => {
 const processCheckIn = asyncHandler(async (req, res) => {
   const { roomNumber, staffName } = req.body;
 
-  const booking = await Booking.findById(req.params.id).populate('hotel');
+  const booking = await HotelBooking.findById(req.params.id).populate('hotel');
 
   if (!booking) {
     return res.status(404).json({
@@ -362,7 +362,7 @@ const processCheckIn = asyncHandler(async (req, res) => {
     });
   }
 
-  const updatedBooking = await Booking.findByIdAndUpdate(
+  const updatedBooking = await HotelBooking.findByIdAndUpdate(
     req.params.id,
     {
       checkInInfo: {
@@ -392,7 +392,7 @@ const processCheckIn = asyncHandler(async (req, res) => {
 const processCheckOut = asyncHandler(async (req, res) => {
   const { staffName } = req.body;
 
-  const booking = await Booking.findById(req.params.id).populate('hotel');
+  const booking = await HotelBooking.findById(req.params.id).populate('hotel');
 
   if (!booking) {
     return res.status(404).json({
@@ -427,7 +427,7 @@ const processCheckOut = asyncHandler(async (req, res) => {
     });
   }
 
-  const updatedBooking = await Booking.findByIdAndUpdate(
+  const updatedBooking = await HotelBooking.findByIdAndUpdate(
     req.params.id,
     {
       status: 'completed',
@@ -482,13 +482,13 @@ const getBookingStats = asyncHandler(async (req, res) => {
     filter.guest = req.user.id;
   }
 
-  const totalBookings = await Booking.countDocuments(filter);
-  const confirmedBookings = await Booking.countDocuments({ ...filter, status: 'confirmed' });
-  const completedBookings = await Booking.countDocuments({ ...filter, status: 'completed' });
-  const cancelledBookings = await Booking.countDocuments({ ...filter, status: 'cancelled' });
+  const totalBookings = await HotelBooking.countDocuments(filter);
+  const confirmedBookings = await HotelBooking.countDocuments({ ...filter, status: 'confirmed' });
+  const completedBookings = await HotelBooking.countDocuments({ ...filter, status: 'completed' });
+  const cancelledBookings = await HotelBooking.countDocuments({ ...filter, status: 'cancelled' });
 
   // Get revenue statistics
-  const revenueStats = await Booking.aggregate([
+  const revenueStats = await HotelBooking.aggregate([
     { $match: { ...filter, status: 'completed' } },
     {
       $group: {
@@ -500,7 +500,7 @@ const getBookingStats = asyncHandler(async (req, res) => {
   ]);
 
   // Get monthly trends
-  const monthlyBookings = await Booking.aggregate([
+  const monthlyBookings = await HotelBooking.aggregate([
     { $match: filter },
     {
       $group: {
