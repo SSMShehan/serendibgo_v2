@@ -52,8 +52,11 @@ const register = asyncHandler(async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone,
         role: user.role,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        avatar: user.avatar,
+        profile: user.profile
       },
       token
     }
@@ -119,9 +122,11 @@ const login = asyncHandler(async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         isVerified: user.isVerified,
-        avatar: user.avatar
+        avatar: user.avatar,
+        profile: user.profile
       },
       token
     }

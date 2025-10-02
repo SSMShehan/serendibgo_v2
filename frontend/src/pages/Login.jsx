@@ -22,19 +22,21 @@ const Login = () => {
   const onSubmit = async (data) => {
     try {
       const response = await login(data)
-      const user = response.data.user
+      const user = response.data?.user || response.user
       
       // Redirect based on user role
       let redirectPath = '/dashboard'
       
-      if (user.role === 'hotel_owner') {
+      if (user?.role === 'hotel_owner') {
         redirectPath = '/hotel-owner/dashboard'
-      } else if (user.role === 'admin') {
+      } else if (user?.role === 'admin') {
         redirectPath = '/admin'
-      } else if (user.role === 'guide') {
+      } else if (user?.role === 'guide') {
         redirectPath = '/guide/dashboard'
-      } else if (user.role === 'driver') {
+      } else if (user?.role === 'driver') {
         redirectPath = '/driver/dashboard'
+      } else if (user?.role === 'staff') {
+        redirectPath = '/dashboard/staff'
       }
       
       navigate(redirectPath, { replace: true })

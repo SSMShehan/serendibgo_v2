@@ -18,6 +18,7 @@ const bookingRoutes = require('./src/routes/bookings');
 const paymentRoutes = require('./src/routes/payments');
 const reviewRoutes = require('./src/routes/reviews');
 const adminRoutes = require('./src/routes/admin');
+const guideRoutes = require('./src/routes/guides');
 
 // Hotel routes
 const hotelRoutes = require('./src/routes/hotels/hotels');
@@ -94,6 +95,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/guides', guideRoutes);
 
 // Hotel API routes
 app.use('/api/hotels', hotelRoutes);
