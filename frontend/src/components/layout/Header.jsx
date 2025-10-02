@@ -50,7 +50,7 @@ const Header = () => {
       case 'driver':
         return '/driver/dashboard'
       case 'staff':
-        return '/dashboard/staff'
+        return '/staff'
       default:
         return '/dashboard'
     }

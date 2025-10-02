@@ -26,6 +26,8 @@ const Register = () => {
       // Redirect based on user role
       if (data.role === 'guide') {
         navigate('/guide/dashboard')
+      } else if (data.role === 'staff') {
+        navigate('/staff')
       } else {
         navigate('/dashboard')
       }
@@ -194,6 +196,7 @@ const Register = () => {
                   <option value="hotel_owner">Hotel Owner</option>
                   <option value="guide">Tour Guide</option>
                   <option value="driver">Driver</option>
+                  <option value="staff">Staff</option>
                 </select>
                 {errors.role && (
                   <label className="label">
@@ -353,6 +356,7 @@ const Register = () => {
                 </Link>
               </p>
             </div>
+
           </div>
         </div>
 
