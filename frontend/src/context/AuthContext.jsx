@@ -67,29 +67,52 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is logged in on app load
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token')
-      if (token) {
+  const checkAuth = async () => {
+    const token = localStorage.getItem('token')
+    const userData = localStorage.getItem('user')
+    
+    if (token && userData) {
+      try {
+        // Use localStorage user data first, then verify token
+        const user = JSON.parse(userData)
+        dispatch({
+          type: 'AUTH_SUCCESS',
+          payload: {
+            user,
+            token,
+          },
+        })
+        
+        // Optionally verify token in background
         try {
           const response = await authService.getMe()
-          dispatch({
-            type: 'AUTH_SUCCESS',
-            payload: {
-              user: response.data.user,
-              token,
-            },
-          })
+          // Update with fresh data if available
+          if (response.data.user) {
+            localStorage.setItem('user', JSON.stringify(response.data.user))
+            dispatch({
+              type: 'AUTH_SUCCESS',
+              payload: {
+                user: response.data.user,
+                token,
+              },
+            })
+          }
         } catch (error) {
-          localStorage.removeItem('token')
-          dispatch({
-            type: 'AUTH_FAILURE',
-            payload: error.response?.data?.message || 'Authentication failed',
-          })
+          // Token verification failed, but keep user logged in with localStorage data
+          console.warn('Token verification failed, using localStorage data')
         }
-      } else {
-        dispatch({ type: 'AUTH_FAILURE', payload: null })
+      } catch (error) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        dispatch({
+          type: 'AUTH_FAILURE',
+          payload: error.response?.data?.message || 'Authentication failed',
+        })
       }
+    } else {
+      dispatch({ type: 'AUTH_FAILURE', payload: null })
     }
+  }
 
     checkAuth()
   }, [])
@@ -101,6 +124,7 @@ export const AuthProvider = ({ children }) => {
       const { user, token } = response.data.data
       
       localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: { user, token },
@@ -126,6 +150,7 @@ export const AuthProvider = ({ children }) => {
       const { user, token } = response.data.data
       
       localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: { user, token },
@@ -151,6 +176,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error)
     } finally {
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
       dispatch({ type: 'LOGOUT' })
       toast.success('Logged out successfully')
     }
@@ -201,6 +227,7 @@ export const AuthProvider = ({ children }) => {
       const { user, token: newToken } = response.data.data
       
       localStorage.setItem('token', newToken)
+      localStorage.setItem('user', JSON.stringify(user))
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: { user, token: newToken },

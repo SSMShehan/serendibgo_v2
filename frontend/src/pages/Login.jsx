@@ -21,8 +21,18 @@ const Login = () => {
 
   const onSubmit = async (data) => {
     try {
-      await login(data)
-      navigate(from, { replace: true })
+      const response = await login(data)
+      // The response from login contains the full data
+      const loggedInUser = response.data?.user || response.user
+      
+      // Redirect based on user role
+      if (loggedInUser?.role === 'guide') {
+        navigate('/guide-dashboard', { replace: true })
+      } else if (loggedInUser?.role === 'admin') {
+        navigate('/admin', { replace: true })
+      } else {
+        navigate(from, { replace: true })
+      }
     } catch (error) {
       // Error is handled in the auth context
     }

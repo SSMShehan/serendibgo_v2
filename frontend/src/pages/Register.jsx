@@ -23,7 +23,12 @@ const Register = () => {
   const onSubmit = async (data) => {
     try {
       await registerUser(data)
-      navigate('/dashboard')
+      // Redirect based on user role
+      if (data.role === 'guide') {
+        navigate('/guide-dashboard')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error) {
       // Error is handled in the auth context
     }
