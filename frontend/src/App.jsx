@@ -25,6 +25,24 @@ import GuideProfile from './pages/Guide/GuideProfile'
 import GuideEarnings from './pages/Guide/GuideEarnings'
 import GuideAnalytics from './pages/Guide/GuideAnalytics'
 import Hotels from './pages/Hotels'
+import HotelSearch from './pages/hotels/HotelSearch'
+import HotelDetails from './pages/hotels/HotelDetails'
+import HotelBooking from './pages/hotels/HotelBooking'
+import Payment from './pages/hotels/booking/Payment'
+import BookingConfirmation from './pages/hotels/booking/BookingConfirmation'
+import HotelReviews from './pages/hotels/reviews/HotelReviews'
+import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
+import StaffManagement from './pages/admin/staff/StaffManagement'
+import AnalyticsDashboard from './pages/admin/analytics/AnalyticsDashboard'
+import NotificationManagement from './pages/notifications/NotificationManagement'
+import EarningsDashboard from './pages/earnings/EarningsDashboard'
+import PricingManagement from './pages/pricing/PricingManagement'
+import HotelOwnerRegistration from './pages/hotels/HotelOwnerRegistration'
+import HotelOwnerDashboard from './pages/hotels/HotelOwnerDashboard'
+import ManageRooms from './pages/hotels/ManageRooms'
+import ManageBookings from './pages/hotels/ManageBookings'
+import RoomAvailabilityCalendar from './pages/hotels/RoomAvailabilityCalendar'
+import EditHotel from './pages/hotels/EditHotel'
 import Vehicles from './pages/Vehicles'
 import MyBookings from './pages/MyBookings'
 import Login from './pages/Login'
@@ -32,24 +50,9 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Booking from './pages/Booking'
-import Payment from './pages/Payment'
 import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
 
-// Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminTours from './pages/admin/AdminTours'
-import AdminUsers from './pages/admin/AdminUsers'
-import AdminBookings from './pages/admin/AdminBookings'
-
-// Hotel Pages
-import HotelSearch from './pages/hotels/HotelSearch'
-import HotelOwnerRegistration from './pages/hotels/HotelOwnerRegistration'
-import HotelOwnerDashboard from './pages/hotels/HotelOwnerDashboard'
-import ManageRooms from './pages/hotels/ManageRooms'
-import ManageBookings from './pages/hotels/ManageBookings'
-import RoomAvailabilityCalendar from './pages/hotels/RoomAvailabilityCalendar'
-import EditHotel from './pages/hotels/EditHotel'
 
 function App() {
   return (
@@ -116,7 +119,63 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="hotels" element={<HotelSearch />} />
-                <Route path="hotels/:id" element={<HotelSearch />} />
+                <Route path="hotels/:id" element={<HotelDetails />} />
+                <Route path="hotels/:id/booking" element={<HotelBooking />} />
+                <Route path="payment/:bookingId" element={<Payment />} />
+                <Route path="booking-confirmation/:bookingId" element={<BookingConfirmation />} />
+                <Route path="hotels/:id/reviews" element={<HotelReviews />} />
+                
+                {/* Admin Routes */}
+                <Route path="admin/dashboard" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/staff" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <StaffManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/analytics" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AnalyticsDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/notifications" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <NotificationManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/hotels" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                      <div className="bg-white p-8 rounded-lg shadow-sm border">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Hotel Management</h2>
+                        <p className="text-gray-600">Hotel approval and management features coming soon...</p>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/settings" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                      <div className="bg-white p-8 rounded-lg shadow-sm border">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Platform Settings</h2>
+                        <p className="text-gray-600">Platform configuration features coming soon...</p>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="earnings" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <EarningsDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="pricing" element={
+                  <ProtectedRoute allowedRoles={['hotel_owner']}>
+                    <PricingManagement />
+                  </ProtectedRoute>
+                } />
                 <Route path="vehicles" element={<Vehicles />} />
                 
                 {/* User Dashboard */}
@@ -163,23 +222,6 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
-                <Route path="admin/tours" element={
-                  <ProtectedRoute allowedRoles={['admin', 'guide']}>
-                    <AdminTours />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="admin/users" element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminUsers />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="admin/bookings" element={
-                  <ProtectedRoute allowedRoles={['admin', 'staff']}>
-                    <AdminBookings />
-                  </ProtectedRoute>
-                } />
                 
                 {/* Hotel Owner Routes */}
                 <Route path="hotel-owner/register" element={
