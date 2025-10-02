@@ -1,6 +1,6 @@
 const Room = require('../../models/hotels/Room');
 const Hotel = require('../../models/hotels/Hotel');
-const Booking = require('../../models/hotels/Booking');
+const HotelBooking = require('../../models/hotels/HotelBooking');
 const { asyncHandler } = require('../../middleware/errorHandler');
 
 // @desc    Get all rooms for a hotel
@@ -197,7 +197,7 @@ const deleteRoom = asyncHandler(async (req, res) => {
   }
 
   // Check if room has any bookings
-  const hasBookings = await Booking.countDocuments({ room: req.params.id });
+  const hasBookings = await HotelBooking.countDocuments({ room: req.params.id });
   if (hasBookings > 0) {
     return res.status(400).json({
       status: 'error',
@@ -380,18 +380,18 @@ const getRoomStats = asyncHandler(async (req, res) => {
   }
 
   // Get booking statistics
-  const totalBookings = await Booking.countDocuments({ room: req.params.id });
-  const confirmedBookings = await Booking.countDocuments({ 
+  const totalBookings = await HotelBooking.countDocuments({ room: req.params.id });
+  const confirmedBookings = await HotelBooking.countDocuments({ 
     room: req.params.id, 
     status: 'confirmed' 
   });
-  const completedBookings = await Booking.countDocuments({ 
+  const completedBookings = await HotelBooking.countDocuments({ 
     room: req.params.id, 
     status: 'completed' 
   });
 
   // Get revenue statistics
-  const revenueStats = await Booking.aggregate([
+  const revenueStats = await HotelBooking.aggregate([
     { $match: { room: req.params.id, status: 'completed' } },
     {
       $group: {
@@ -403,7 +403,7 @@ const getRoomStats = asyncHandler(async (req, res) => {
   ]);
 
   // Get occupancy rate
-  const totalNights = await Booking.aggregate([
+  const totalNights = await HotelBooking.aggregate([
     { $match: { room: req.params.id, status: 'completed' } },
     {
       $group: {

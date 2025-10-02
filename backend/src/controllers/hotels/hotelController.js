@@ -1,6 +1,6 @@
 const Hotel = require('../../models/hotels/Hotel');
 const Room = require('../../models/hotels/Room');
-const Booking = require('../../models/hotels/Booking');
+const HotelBooking = require('../../models/hotels/HotelBooking');
 const { asyncHandler } = require('../../middleware/errorHandler');
 
 // @desc    Get all hotels with filtering and pagination
@@ -286,18 +286,18 @@ const getHotelStats = asyncHandler(async (req, res) => {
   }
 
   // Get booking statistics
-  const totalBookings = await Booking.countDocuments({ hotel: req.params.id });
-  const confirmedBookings = await Booking.countDocuments({ 
+  const totalBookings = await HotelBooking.countDocuments({ hotel: req.params.id });
+  const confirmedBookings = await HotelBooking.countDocuments({ 
     hotel: req.params.id, 
     status: 'confirmed' 
   });
-  const completedBookings = await Booking.countDocuments({ 
+  const completedBookings = await HotelBooking.countDocuments({ 
     hotel: req.params.id, 
     status: 'completed' 
   });
 
   // Get revenue statistics
-  const revenueStats = await Booking.aggregate([
+  const revenueStats = await HotelBooking.aggregate([
     { $match: { hotel: req.params.id, status: 'completed' } },
     {
       $group: {
@@ -309,7 +309,7 @@ const getHotelStats = asyncHandler(async (req, res) => {
   ]);
 
   // Get monthly booking trends
-  const monthlyBookings = await Booking.aggregate([
+  const monthlyBookings = await HotelBooking.aggregate([
     { $match: { hotel: req.params.id } },
     {
       $group: {
