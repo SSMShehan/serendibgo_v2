@@ -16,6 +16,8 @@ const Dashboard = () => {
       navigate('/guide/dashboard', { replace: true })
     } else if (user?.role === 'driver') {
       navigate('/driver/dashboard', { replace: true })
+    } else if (user?.role === 'staff') {
+      navigate('/staff', { replace: true })
     }
   }, [user, navigate])
   

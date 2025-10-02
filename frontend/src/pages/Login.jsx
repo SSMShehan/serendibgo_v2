@@ -36,7 +36,7 @@ const Login = () => {
       } else if (user?.role === 'driver') {
         redirectPath = '/driver/dashboard'
       } else if (user?.role === 'staff') {
-        redirectPath = '/dashboard/staff'
+        redirectPath = '/staff'
       }
       
       navigate(redirectPath, { replace: true })
@@ -199,6 +199,7 @@ const Login = () => {
                 </Link>
               </p>
             </div>
+
           </div>
         </div>
 
