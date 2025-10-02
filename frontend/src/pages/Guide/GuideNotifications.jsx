@@ -192,19 +192,19 @@ const GuideNotifications = () => {
 
   const handleTabClick = (tabId) => {
     if (tabId === 'overview') {
-      navigate('/guide-dashboard')
+      navigate('/guide/dashboard')
     } else if (tabId === 'support') {
       navigate('/guide-support')
     } else if (tabId === 'profile') {
-      navigate('/guide-dashboard', { state: { activeTab: 'profile' } })
+      navigate('/guide/dashboard', { state: { activeTab: 'profile' } })
     } else if (tabId === 'services') {
-      navigate('/guide-dashboard', { state: { activeTab: 'services' } })
+      navigate('/guide/dashboard', { state: { activeTab: 'services' } })
     } else if (tabId === 'pricing') {
-      navigate('/guide-dashboard', { state: { activeTab: 'pricing' } })
+      navigate('/guide/dashboard', { state: { activeTab: 'pricing' } })
     } else if (tabId === 'availability') {
-      navigate('/guide-dashboard', { state: { activeTab: 'availability' } })
+      navigate('/guide/dashboard', { state: { activeTab: 'availability' } })
     } else if (tabId === 'stats') {
-      navigate('/guide-dashboard', { state: { activeTab: 'stats' } })
+      navigate('/guide/dashboard', { state: { activeTab: 'stats' } })
     }
   }
 
@@ -265,7 +265,7 @@ const GuideNotifications = () => {
                     </div>
                     <button
                       onClick={() => {
-                        navigate('/guide-dashboard', { state: { activeTab: 'profile' } })
+                        navigate('/guide/dashboard', { state: { activeTab: 'profile' } })
                         setIsProfileDropdownOpen(false)
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
@@ -285,7 +285,7 @@ const GuideNotifications = () => {
                     </button>
                     <button
                       onClick={() => {
-                        navigate('/guide-dashboard')
+                        navigate('/guide/dashboard')
                         setIsProfileDropdownOpen(false)
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"

@@ -25,7 +25,7 @@ const Register = () => {
       await registerUser(data)
       // Redirect based on user role
       if (data.role === 'guide') {
-        navigate('/guide-dashboard')
+        navigate('/guide/dashboard')
       } else {
         navigate('/dashboard')
       }
