@@ -1,10 +1,56 @@
 import api from '../api';
 
 const roomAvailabilityService = {
-  // Get room availability for date range
+  // Get room availability for date range (for users)
   getRoomAvailability: async (roomId, params = {}) => {
-    const response = await api.get(`/hotels/rooms/${roomId}/availability`, { params });
+    const response = await api.get(`/room-availability/${roomId}`, { params });
     return response.data;
+  },
+
+  // Get room availability for booking (simplified for users)
+  getRoomAvailabilityForBooking: async (roomId, checkIn, checkOut) => {
+    try {
+      const response = await api.get(`/room-availability/${roomId}`, {
+        params: {
+          startDate: checkIn,
+          endDate: checkOut
+        }
+      });
+      
+      if (response.data.status === 'success') {
+        const data = response.data.data;
+        // Fix the logic: room is only available if isAvailable is true AND there are available rooms
+        const isActuallyAvailable = data.isAvailable && data.totalAvailableRooms > 0;
+        
+        return {
+          isAvailable: isActuallyAvailable,
+          totalAvailableRooms: data.totalAvailableRooms,
+          details: data.details,
+          message: isActuallyAvailable ? 
+            `Room is available for selected dates (${data.totalAvailableRooms} rooms available)` : 
+            data.totalAvailableRooms === 0 ? 
+              'No rooms available for selected dates' :
+              'Room is not available for selected dates'
+        };
+      } else {
+        return {
+          isAvailable: false,
+          totalAvailableRooms: 0,
+          details: [],
+          message: response.data.message || 'Unable to check availability'
+        };
+      }
+    } catch (error) {
+      console.error('Error checking room availability:', error);
+      // Fallback: allow booking with warning when API fails
+      return {
+        isAvailable: true, // Allow booking when API fails
+        totalAvailableRooms: 1,
+        details: [],
+        message: 'Availability check failed, but booking can proceed. Please contact hotel directly if needed.',
+        warning: true // Flag to show warning
+      };
+    }
   },
 
   // Get availability calendar for a room

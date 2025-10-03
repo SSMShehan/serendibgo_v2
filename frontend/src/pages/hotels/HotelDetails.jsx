@@ -130,8 +130,7 @@ const HotelDetails = () => {
   };
 
   const handleRoomSelect = (room) => {
-    setSelectedRoom(room);
-    setShowBookingForm(true);
+    navigate(`/hotels/${id}/rooms/${room._id}`);
   };
 
   const handleBookingSubmit = () => {
@@ -314,7 +313,7 @@ const HotelDetails = () => {
             <div className="relative">
               <div className="aspect-video rounded-lg overflow-hidden bg-gray-200">
                 <img
-                  src={hotel.images[selectedImageIndex]}
+                  src={hotel.images[selectedImageIndex].url}
                   alt={`${hotel.name} - Image ${selectedImageIndex + 1}`}
                   className="w-full h-full object-cover"
                 />
@@ -354,7 +353,7 @@ const HotelDetails = () => {
                     }`}
                   >
                     <img
-                      src={image}
+                      src={image.url}
                       alt={`Thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -431,11 +430,27 @@ const HotelDetails = () => {
                         <h3 className="text-lg font-semibold text-gray-900">{room.name}</h3>
                         <div className="text-right">
                           <div className="text-xl font-bold text-blue-600">
-                            {hotelUtils.formatPrice(room.basePrice)}
+                            {hotelUtils.formatPrice(room.pricing?.basePrice)}
                           </div>
                           <div className="text-sm text-gray-600">per night</div>
                         </div>
                       </div>
+                      
+                      {/* Room Images */}
+                      {room.images && room.images.length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex space-x-2 overflow-x-auto">
+                            {room.images.map((image, index) => (
+                              <img
+                                key={index}
+                                src={image.url}
+                                alt={`${room.name} - Image ${index + 1}`}
+                                className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       <p className="text-gray-600 mb-4">{room.description}</p>
                       
@@ -446,7 +461,7 @@ const HotelDetails = () => {
                         </div>
                         <div className="flex items-center">
                           <Bed className="w-4 h-4 mr-1" />
-                          <span>{room.bedConfiguration.join(', ')}</span>
+                          <span>{room.bedConfiguration.map(bed => `${bed.quantity} ${bed.type}`).join(', ')}</span>
                         </div>
                         {room.size && (
                           <div className="flex items-center">

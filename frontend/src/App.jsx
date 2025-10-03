@@ -8,6 +8,10 @@ import { NotificationProvider } from './context/NotificationContext'
 // Layout Components
 import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import StaffProtectedRoute from './components/common/StaffProtectedRoute'
+
+// Staff Components
+import StaffDashboard from './pages/Staff/StaffDashboard'
 
 // Pages
 import Home from './pages/Home'
@@ -27,6 +31,7 @@ import GuideAnalytics from './pages/Guide/GuideAnalytics'
 import Hotels from './pages/Hotels'
 import HotelSearch from './pages/hotels/HotelSearch'
 import HotelDetails from './pages/hotels/HotelDetails'
+import RoomDetails from './pages/hotels/RoomDetails'
 import HotelBooking from './pages/hotels/HotelBooking'
 import Payment from './pages/hotels/booking/Payment'
 import BookingConfirmation from './pages/hotels/booking/BookingConfirmation'
@@ -53,9 +58,6 @@ import Booking from './pages/Booking'
 import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
 
-// Staff Pages
-import StaffDashboard from './pages/Staff/StaffDashboard'
-
 function App() {
   return (
     <AuthProvider>
@@ -64,9 +66,9 @@ function App() {
           <NotificationProvider>
             <div className="min-h-screen bg-base-100" data-theme="serendibgo">
             <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
               
               
               {/* Protected Routes with Layout */}
@@ -76,6 +78,13 @@ function App() {
                 <Route path="tours/:id" element={<TourDetails />} />
                 <Route path="guides" element={<Guides />} />
                 <Route path="guides/:id" element={<GuideDetail />} />
+                
+                {/* Staff Dashboard Route */}
+                <Route path="staff" element={
+                  <StaffProtectedRoute allowedRoles={['staff', 'admin', 'super_admin', 'manager', 'support_staff']}>
+                    <StaffDashboard />
+                  </StaffProtectedRoute>
+                } />
                 <Route path="guide/dashboard" element={
                   <ProtectedRoute allowedRoles={['guide']}>
                     <GuideDashboard />
@@ -123,6 +132,7 @@ function App() {
                 } />
                 <Route path="hotels" element={<HotelSearch />} />
                 <Route path="hotels/:id" element={<HotelDetails />} />
+                <Route path="hotels/:hotelId/rooms/:roomId" element={<RoomDetails />} />
                 <Route path="hotels/:id/booking" element={<HotelBooking />} />
                 <Route path="payment/:bookingId" element={<Payment />} />
                 <Route path="booking-confirmation/:bookingId" element={<BookingConfirmation />} />
@@ -222,14 +232,6 @@ function App() {
                 <Route path="admin" element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <AdminDashboard />
-                  </ProtectedRoute>
-                } />
-                
-                
-                {/* Staff Routes */}
-                <Route path="staff" element={
-                  <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                    <StaffDashboard />
                   </ProtectedRoute>
                 } />
                 
