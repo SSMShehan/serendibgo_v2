@@ -58,7 +58,6 @@ import {
   Activity,
   UserCheck,
   Crown,
-  Sparkles,
   FileText,
   CreditCard,
   Map,

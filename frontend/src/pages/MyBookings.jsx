@@ -1,31 +1,38 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Clock, Users, CreditCard } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { bookingAPI } from '../services/hotels/hotelService'
+import { Calendar, MapPin, Clock, Users, CreditCard, Bed, AlertCircle } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 const MyBookings = () => {
-  // Mock data - replace with actual API call
-  const bookings = [
-    {
-      id: 1,
-      tourName: 'Sigiriya Rock Fortress Tour',
-      date: '2024-01-15',
-      time: '08:00 AM',
-      participants: 2,
-      status: 'confirmed',
-      amount: 15000,
-      location: 'Sigiriya'
-    },
-    {
-      id: 2,
-      tourName: 'Kandy Temple Tour',
-      date: '2024-01-20',
-      time: '09:00 AM',
-      participants: 1,
-      status: 'pending',
-      amount: 8000,
-      location: 'Kandy'
+  const { user } = useAuth()
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (user) {
+      fetchBookings()
     }
-  ]
+  }, [user])
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true)
+      const response = await bookingAPI.getMyBookings()
+      if (response.status === 'success') {
+        setBookings(response.data.bookings)
+      } else {
+        setError('Failed to fetch bookings')
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+      setError('Failed to fetch bookings')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -35,9 +42,53 @@ const MyBookings = () => {
         return 'bg-yellow-100 text-yellow-800'
       case 'cancelled':
         return 'bg-red-100 text-red-800'
+      case 'completed':
+        return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Error loading bookings</h3>
+            <p className="mt-1 text-sm text-gray-500">{error}</p>
+            <div className="mt-6">
+              <button
+                onClick={fetchBookings}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -52,11 +103,17 @@ const MyBookings = () => {
           <div className="text-center py-12">
             <Calendar className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Start by exploring our amazing tours.</p>
-            <div className="mt-6">
+            <p className="mt-1 text-sm text-gray-500">Start by exploring our amazing hotels and tours.</p>
+            <div className="mt-6 space-x-4">
+              <Link
+                to="/hotels"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Browse Hotels
+              </Link>
               <Link
                 to="/tours"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
                 Browse Tours
               </Link>
@@ -65,28 +122,41 @@ const MyBookings = () => {
         ) : (
           <div className="space-y-6">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div key={booking._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{booking.tourName}</h3>
-                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Bed className="h-5 w-5 text-blue-600" />
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {booking.hotel?.name || 'Hotel Booking'}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {booking.room?.name || 'Room'} - {booking.room?.roomType || 'Standard'}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="flex items-center text-sm text-gray-600">
                         <Calendar className="h-4 w-4 mr-2" />
-                        {booking.date}
+                        {formatDate(booking.checkInDate)}
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="h-4 w-4 mr-2" />
-                        {booking.time}
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {formatDate(booking.checkOutDate)}
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <MapPin className="h-4 w-4 mr-2" />
-                        {booking.location}
+                        {booking.hotel?.location?.city || 'Location'}
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <Users className="h-4 w-4 mr-2" />
-                        {booking.participants} {booking.participants === 1 ? 'person' : 'people'}
+                        {booking.guests?.adults || 1} {booking.guests?.adults === 1 ? 'guest' : 'guests'}
                       </div>
                     </div>
+                    {booking.bookingReference && (
+                      <div className="mt-3 text-xs text-gray-500">
+                        Reference: {booking.bookingReference}
+                      </div>
+                    )}
                   </div>
                   <div className="ml-6 flex flex-col items-end">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
@@ -94,12 +164,12 @@ const MyBookings = () => {
                     </span>
                     <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
                       <CreditCard className="h-4 w-4 mr-1" />
-                      LKR {booking.amount.toLocaleString()}
+                      {booking.pricing?.currency || 'USD'} {booking.pricing?.totalPrice?.toLocaleString() || '0'}
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end space-x-3">
-                  <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                  <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     View Details
                   </button>
                   {booking.status === 'pending' && (
@@ -118,3 +188,4 @@ const MyBookings = () => {
 }
 
 export default MyBookings
+

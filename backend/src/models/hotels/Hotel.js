@@ -325,17 +325,22 @@ hotelSchema.index({ 'ratings.overall': -1 });
 hotelSchema.index({ featured: 1 });
 hotelSchema.index({ 'location.coordinates': '2dsphere' });
 
+// Include virtual fields in JSON output
+hotelSchema.set('toJSON', { virtuals: true });
+hotelSchema.set('toObject', { virtuals: true });
+
 // Virtual for average room price
 hotelSchema.virtual('averageRoomPrice').get(function() {
-  if (this.roomTypes.length === 0) return 0;
+  if (!this.roomTypes || this.roomTypes.length === 0) return 0;
   const totalPrice = this.roomTypes.reduce((sum, room) => sum + room.basePrice, 0);
   return totalPrice / this.roomTypes.length;
 });
 
 // Virtual for primary image
 hotelSchema.virtual('primaryImage').get(function() {
+  if (!this.images || this.images.length === 0) return null;
   const primaryImg = this.images.find(img => img.isPrimary);
-  return primaryImg ? primaryImg.url : (this.images.length > 0 ? this.images[0].url : null);
+  return primaryImg ? primaryImg.url : this.images[0].url;
 });
 
 // Method to calculate distance from a point

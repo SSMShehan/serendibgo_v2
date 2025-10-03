@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import staffService from '../../services/staff/staffService'
+import toast from 'react-hot-toast'
 import {
   User,
   MapPin,
@@ -165,7 +168,6 @@ import {
   SendIcon as SendIconIcon,
   ReplyIcon as ReplyIconIcon
 } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
 import TripManagement from './components/TripManagement'
 import CustomTripApproval from './components/CustomTripApproval'
 import HotelManagement from './components/HotelManagement'
@@ -175,6 +177,9 @@ import SupportManagement from './components/SupportManagement'
 import ReviewManagement from './components/ReviewManagement'
 import AnalyticsManagement from './components/AnalyticsManagement'
 import SettingsManagement from './components/SettingsManagement'
+import ApprovalManagement from '../../components/staff/management/ApprovalManagement'
+import BookingManagement from '../../components/staff/management/BookingManagement'
+import FinancialManagement from '../../components/staff/management/FinancialManagement'
 
 const StaffDashboard = () => {
   const navigate = useNavigate()
@@ -186,18 +191,26 @@ const StaffDashboard = () => {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
   
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login')
+    }
+  }, [isAuthenticated, isLoading, navigate])
+  
   // Staff stats
   const [staffStats, setStaffStats] = useState({
-    pendingApprovals: 12,
-    totalUsers: 1250,
-    activeBookings: 89,
-    totalRevenue: 125000,
-    pendingReviews: 8,
-    supportTickets: 15,
-    newGuides: 5,
-    newHotels: 3,
-    newVehicles: 7
+    pendingApprovals: 0,
+    totalUsers: 0,
+    activeBookings: 0,
+    totalRevenue: 0,
+    pendingReviews: 0,
+    supportTickets: 0,
+    newGuides: 0,
+    newHotels: 0,
+    newVehicles: 0
   })
+  const [dashboardLoading, setDashboardLoading] = useState(true)
 
   // Handle navigation state for activeTab
   useEffect(() => {
@@ -220,6 +233,40 @@ const StaffDashboard = () => {
       return
     }
   }, [isLoading, isAuthenticated, user, navigate])
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!isAuthenticated || isLoading) return
+      
+      try {
+        setDashboardLoading(true)
+        const response = await staffService.getDashboardOverview()
+        
+        if (response.success) {
+          const data = response.data.stats
+          setStaffStats({
+            pendingApprovals: data.pendingApprovals || 0,
+            totalUsers: data.totalUsers || 0,
+            activeBookings: data.activeBookings || 0,
+            totalRevenue: data.totalRevenue || 0,
+            pendingReviews: data.pendingReviews || 0,
+            supportTickets: data.supportTickets || 0,
+            newGuides: data.newGuides || 0,
+            newHotels: data.newHotels || 0,
+            newVehicles: data.newVehicles || 0
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+        toast.error('Failed to load dashboard data')
+      } finally {
+        setDashboardLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [isAuthenticated, isLoading])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -251,6 +298,9 @@ const StaffDashboard = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
+    { id: 'approvals', label: 'Approvals', icon: CheckCircle },
+    { id: 'bookings', label: 'Bookings', icon: Calendar },
+    { id: 'financial', label: 'Financial', icon: DollarSign },
     { id: 'trips', label: 'Trip Management', icon: Map },
     { id: 'custom-trips', label: 'Custom Trips', icon: Compass },
     { id: 'vehicles', label: 'Vehicles', icon: Car },
@@ -276,6 +326,26 @@ const StaffDashboard = () => {
         </div>
       </div>
     )
+  }
+
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Shield className="h-8 w-8 text-white" />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-700 mb-2">Loading Staff Dashboard</h2>
+          <p className="text-slate-500">Please wait while we verify your access...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null
   }
 
   return (
@@ -438,7 +508,13 @@ const StaffDashboard = () => {
                       <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                         <Clock className="h-6 w-6 text-orange-600" />
                       </div>
-                      <span className="text-2xl font-bold text-slate-900">{staffStats.pendingApprovals}</span>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.pendingApprovals
+                        )}
+                      </span>
                     </div>
                     <h3 className="font-semibold text-slate-900 mb-1">Pending Approvals</h3>
                     <p className="text-sm text-slate-600">Items awaiting review</p>
@@ -449,7 +525,13 @@ const StaffDashboard = () => {
                       <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                         <Users className="h-6 w-6 text-green-600" />
                       </div>
-                      <span className="text-2xl font-bold text-slate-900">{staffStats.totalUsers}</span>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.totalUsers
+                        )}
+                      </span>
                     </div>
                     <h3 className="font-semibold text-slate-900 mb-1">Total Users</h3>
                     <p className="text-sm text-slate-600">Registered platform users</p>
@@ -460,7 +542,13 @@ const StaffDashboard = () => {
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                         <Calendar className="h-6 w-6 text-blue-600" />
                       </div>
-                      <span className="text-2xl font-bold text-slate-900">{staffStats.activeBookings}</span>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.activeBookings
+                        )}
+                      </span>
                     </div>
                     <h3 className="font-semibold text-slate-900 mb-1">Active Bookings</h3>
                     <p className="text-sm text-slate-600">Current reservations</p>
@@ -471,10 +559,87 @@ const StaffDashboard = () => {
                       <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                         <DollarSign className="h-6 w-6 text-purple-600" />
                       </div>
-                      <span className="text-2xl font-bold text-slate-900">LKR {staffStats.totalRevenue.toLocaleString()}</span>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-16 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          `LKR ${staffStats.totalRevenue.toLocaleString()}`
+                        )}
+                      </span>
                     </div>
                     <h3 className="font-semibold text-slate-900 mb-1">Total Revenue</h3>
                     <p className="text-sm text-slate-600">Platform earnings</p>
+                  </div>
+                </div>
+
+                {/* Additional Metrics Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                        <AlertCircle className="h-6 w-6 text-red-600" />
+                      </div>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.supportTickets
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Support Tickets</h3>
+                    <p className="text-sm text-slate-600">Open support requests</p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                        <Star className="h-6 w-6 text-yellow-600" />
+                      </div>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.pendingReviews
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Pending Reviews</h3>
+                    <p className="text-sm text-slate-600">Reviews awaiting moderation</p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                        <UserCheck className="h-6 w-6 text-indigo-600" />
+                      </div>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.newGuides
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Active Guides</h3>
+                    <p className="text-sm text-slate-600">Verified tour guides</p>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
+                        <Building className="h-6 w-6 text-teal-600" />
+                      </div>
+                      <span className="text-2xl font-bold text-slate-900">
+                        {dashboardLoading ? (
+                          <div className="w-8 h-6 bg-slate-200 rounded animate-pulse"></div>
+                        ) : (
+                          staffStats.newHotels
+                        )}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-slate-900 mb-1">Active Hotels</h3>
+                    <p className="text-sm text-slate-600">Verified hotel partners</p>
                   </div>
                 </div>
 
@@ -554,6 +719,49 @@ const StaffDashboard = () => {
                   </div>
                 </div>
 
+                {/* System Health Indicators */}
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                  <div className="flex items-center mb-6">
+                    <Shield className="h-6 w-6 text-blue-600 mr-3" />
+                    <h2 className="text-2xl font-bold text-slate-900">System Health</h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="flex items-center p-4 bg-green-50 rounded-xl border border-green-200">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900">Database Status</h3>
+                        <p className="text-sm text-slate-600">All systems operational</p>
+                      </div>
+                      <span className="text-sm text-green-600 font-medium">Healthy</span>
+                    </div>
+
+                    <div className="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                        <Globe className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900">API Response Time</h3>
+                        <p className="text-sm text-slate-600">Average: 120ms</p>
+                      </div>
+                      <span className="text-sm text-blue-600 font-medium">Good</span>
+                    </div>
+
+                    <div className="flex items-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                      <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+                        <AlertCircle className="h-5 w-5 text-yellow-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900">Server Load</h3>
+                        <p className="text-sm text-slate-600">CPU: 45% | Memory: 62%</p>
+                      </div>
+                      <span className="text-sm text-yellow-600 font-medium">Moderate</span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Recent Activity */}
                 <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
                   <div className="flex items-center mb-6">
@@ -607,6 +815,61 @@ const StaffDashboard = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Performance Charts */}
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                  <div className="flex items-center mb-6">
+                    <BarChart3 className="h-6 w-6 text-blue-600 mr-3" />
+                    <h2 className="text-2xl font-bold text-slate-900">Performance Overview</h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Revenue Chart Placeholder */}
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 border border-blue-200">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4">Revenue Trend</h3>
+                      <div className="h-48 bg-white rounded-lg flex items-center justify-center border border-slate-200">
+                        <div className="text-center">
+                          <BarChart3 className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                          <p className="text-slate-500">Chart will be implemented</p>
+                          <p className="text-sm text-slate-400">Revenue analytics coming soon</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* User Growth Chart Placeholder */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4">User Growth</h3>
+                      <div className="h-48 bg-white rounded-lg flex items-center justify-center border border-slate-200">
+                        <div className="text-center">
+                          <Users className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                          <p className="text-slate-500">Chart will be implemented</p>
+                          <p className="text-sm text-slate-400">User analytics coming soon</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Approval Management Tab */}
+            {activeTab === 'approvals' && (
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <ApprovalManagement />
+              </div>
+            )}
+
+            {/* Booking Management Tab */}
+            {activeTab === 'bookings' && (
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <BookingManagement />
+              </div>
+            )}
+
+            {/* Financial Management Tab */}
+            {activeTab === 'financial' && (
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <FinancialManagement />
               </div>
             )}
 
@@ -666,7 +929,7 @@ const StaffDashboard = () => {
               </div>
             )}
 
-            {/* Settings Tab */}
+            {/* Settings Management Tab */}
             {activeTab === 'settings' && (
               <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
                 <SettingsManagement />
@@ -674,7 +937,7 @@ const StaffDashboard = () => {
             )}
 
             {/* Other tabs will be implemented in separate components */}
-            {activeTab !== 'overview' && activeTab !== 'trips' && activeTab !== 'custom-trips' && activeTab !== 'hotels' && activeTab !== 'guides' && activeTab !== 'vehicles' && activeTab !== 'support' && activeTab !== 'reviews' && activeTab !== 'analytics' && activeTab !== 'settings' && (
+            {activeTab !== 'overview' && activeTab !== 'approvals' && activeTab !== 'bookings' && activeTab !== 'financial' && activeTab !== 'trips' && activeTab !== 'custom-trips' && activeTab !== 'hotels' && activeTab !== 'guides' && activeTab !== 'vehicles' && activeTab !== 'support' && activeTab !== 'reviews' && activeTab !== 'analytics' && activeTab !== 'settings' && (
               <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">

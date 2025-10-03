@@ -1,6 +1,7 @@
 const HotelBooking = require('../../models/hotels/HotelBooking');
 const Hotel = require('../../models/hotels/Hotel');
 const Room = require('../../models/hotels/Room');
+const RoomAvailability = require('../../models/hotels/RoomAvailability');
 const { asyncHandler } = require('../../middleware/errorHandler');
 
 // @desc    Create new hotel booking
@@ -61,26 +62,41 @@ const createBooking = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check room availability
-  const isAvailable = await roomExists.checkAvailability(checkIn, checkOut);
+  // Check room availability using RoomAvailability system
+  const availability = await RoomAvailability.getAvailabilityForRange(
+    room,
+    checkIn.toISOString().split('T')[0],
+    checkOut.toISOString().split('T')[0]
+  );
+
+  // Check if all dates are available
+  const isAvailable = availability.every(record => 
+    record.status === 'available' && record.availableRooms >= numberOfRooms
+  );
+
   if (!isAvailable) {
     return res.status(400).json({
       status: 'error',
-      message: 'Room is not available for the selected dates'
+      message: 'Room is not available for the selected dates or requested number of rooms'
     });
   }
 
   // Calculate pricing
-  const roomPrice = roomExists.calculatePrice(checkIn, checkOut);
+  const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+  const roomPrice = roomExists.pricing.basePrice * nights;
   const taxes = roomPrice * 0.1; // 10% tax
   const serviceCharge = roomPrice * 0.05; // 5% service charge
   const totalPrice = roomPrice + taxes + serviceCharge;
+
+  // Generate unique booking reference
+  const bookingReference = `HB${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
   // Create booking
   const booking = await HotelBooking.create({
     hotel,
     room,
     user: req.user.id,
+    bookingReference,
     checkInDate: checkIn,
     checkOutDate: checkOut,
     numberOfRooms,
@@ -88,13 +104,64 @@ const createBooking = asyncHandler(async (req, res) => {
     guestDetails,
     specialRequests,
     pricing: {
-      basePrice: roomPrice,
+      basePrice: roomExists.pricing.basePrice,
+      nights,
+      roomPrice,
       taxes,
       serviceCharge,
       totalPrice,
-      currency: roomExists.pricing.currency
+      currency: roomExists.pricing.currency || 'USD'
     }
   });
+
+  // Update RoomAvailability records to reflect the booking
+  try {
+    const dates = [];
+    const currentDate = new Date(checkIn);
+    const endDate = new Date(checkOut);
+    
+    while (currentDate < endDate) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    for (const date of dates) {
+      const dateString = date.toISOString().split('T')[0];
+      
+      // Find existing availability record for this date
+      let availabilityRecord = await RoomAvailability.findOne({
+        room: room,
+        date: dateString
+      });
+
+      if (availabilityRecord) {
+        // Update existing record
+        availabilityRecord.availableRooms = Math.max(0, availabilityRecord.availableRooms - numberOfRooms);
+        if (availabilityRecord.availableRooms === 0) {
+          availabilityRecord.status = 'booked';
+        }
+        await availabilityRecord.save();
+      } else {
+        // Create new availability record
+        await RoomAvailability.create({
+          room: room,
+          hotel: hotel,
+          date: dateString,
+          status: 'booked',
+          availableRooms: 0,
+          totalRooms: numberOfRooms,
+          createdBy: req.user.id,
+          pricing: {
+            basePrice: roomExists.pricing.basePrice,
+            currency: roomExists.pricing.currency
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error updating room availability:', error);
+    // Don't fail the booking if availability update fails
+  }
 
   // Populate references
   await booking.populate([
@@ -170,6 +237,54 @@ const getHotelBookings = asyncHandler(async (req, res) => {
         current: parseInt(page),
         pages: Math.ceil(total / limit),
         total
+      }
+    }
+  });
+});
+
+// @desc    Get all bookings for admin
+// @route   GET /api/hotel-bookings/admin
+// @access  Private (Admin)
+const getAllBookings = asyncHandler(async (req, res) => {
+  const { status, paymentStatus, search, page = 1, limit = 10 } = req.query;
+
+  // Build query
+  const query = {};
+  
+  if (status) {
+    query.bookingStatus = status;
+  }
+  
+  if (paymentStatus) {
+    query.paymentStatus = paymentStatus;
+  }
+
+  // Calculate pagination
+  const skip = (page - 1) * limit;
+
+  // Get bookings with pagination
+  const bookings = await HotelBooking.find(query)
+    .populate([
+      { path: 'hotel', select: 'name location images' },
+      { path: 'room', select: 'name roomType images' },
+      { path: 'user', select: 'firstName lastName email phone' }
+    ])
+    .sort({ bookedAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  // Get total count
+  const total = await HotelBooking.countDocuments(query);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      bookings,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total,
+        limit: parseInt(limit)
       }
     }
   });
@@ -488,6 +603,7 @@ module.exports = {
   createBooking,
   getHotelBookings,
   getUserBookings,
+  getAllBookings,
   getBookingById,
   updateBookingStatus,
   cancelBooking,

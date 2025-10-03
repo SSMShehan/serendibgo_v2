@@ -22,6 +22,9 @@ const reviewRoutes = require('./src/routes/reviews');
 const adminRoutes = require('./src/routes/admin');
 const guideRoutes = require('./src/routes/guides');
 
+// Staff routes
+const staffRoutes = require('./src/routes/staff');
+
 // Hotel routes
 const hotelRoutes = require('./src/routes/hotels/hotels');
 const roomRoutes = require('./src/routes/hotels/rooms');
@@ -57,7 +60,7 @@ app.use('/api/', limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -99,12 +102,14 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/guides', guideRoutes);
 
+// Staff API routes
+app.use('/api/staff', staffRoutes);
+
 // Hotel API routes
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/hotels', roomRoutes); // Mount room routes under /api/hotels
-app.use('/api/hotels', hotelBookingRoutes); // Mount hotel booking routes under /api/hotels
-app.use('/api/hotels', roomAvailabilityRoutes); // Mount room availability routes under /api/hotels
-app.use('/api/hotel-bookings', hotelBookingRoutes); // Also mount for general booking operations
+app.use('/api', roomAvailabilityRoutes); // Mount room availability routes under /api
+app.use('/api/hotel-bookings', hotelBookingRoutes); // Mount hotel booking routes under /api/hotel-bookings
 
 // 404 handler
 app.all('*', (req, res) => {

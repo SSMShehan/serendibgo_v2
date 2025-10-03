@@ -10,6 +10,10 @@ const getRoomAvailability = asyncHandler(async (req, res) => {
   const { roomId } = req.params;
   const { startDate, endDate } = req.query;
 
+  console.log('getRoomAvailability called with:', { roomId, startDate, endDate });
+  console.log('roomId type:', typeof roomId);
+  console.log('roomId length:', roomId?.length);
+
   if (!startDate || !endDate) {
     return res.status(400).json({
       status: 'error',
@@ -19,10 +23,20 @@ const getRoomAvailability = asyncHandler(async (req, res) => {
 
   // Validate room exists
   const room = await Room.findById(roomId);
+  console.log('Room found:', room ? 'YES' : 'NO');
+  console.log('Room query result:', room);
   if (!room) {
     return res.status(404).json({
       status: 'error',
       message: 'Room not found'
+    });
+  }
+
+  // Check if room is active
+  if (room.status !== 'active') {
+    return res.status(404).json({
+      status: 'error',
+      message: 'Room is not available'
     });
   }
 
@@ -33,19 +47,29 @@ const getRoomAvailability = asyncHandler(async (req, res) => {
     endDate
   );
 
+  console.log('Availability query result:', availability);
+
+  // Determine overall availability for the range
+  const isAvailable = availability.every(record => 
+    record.status === 'available' && record.availableRooms > 0
+  );
+
+  // Calculate total available rooms for the range
+  const totalAvailableRooms = availability.reduce((sum, record) => {
+    return record.status === 'available' ? sum + record.availableRooms : sum;
+  }, 0);
+
+  console.log('Final availability result:', { isAvailable, totalAvailableRooms, details: availability.length });
+
   res.status(200).json({
     status: 'success',
     data: {
-      room: {
-        id: room._id,
-        name: room.name,
-        roomType: room.roomType
-      },
-      availability,
-      dateRange: {
-        start: startDate,
-        end: endDate
-      }
+      roomId,
+      startDate,
+      endDate,
+      isAvailable,
+      totalAvailableRooms,
+      details: availability
     }
   });
 });

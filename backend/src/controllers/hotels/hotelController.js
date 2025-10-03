@@ -408,9 +408,39 @@ const getPendingHotels = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Get single room from hotel
+// @route   GET /api/hotels/:id/rooms/:roomId
+// @access  Public
+const getRoomFromHotel = asyncHandler(async (req, res) => {
+  const { id: hotelId, roomId } = req.params;
+
+  console.log('getRoomFromHotel - hotelId:', hotelId, 'roomId:', roomId);
+
+  // Find the room in the hotel
+  const room = await Room.findOne({ 
+    _id: roomId, 
+    hotel: hotelId 
+  }).populate('hotel', 'name location contact');
+
+  console.log('Room found:', room ? 'YES' : 'NO');
+
+  if (!room) {
+    return res.status(404).json({
+      status: 'error',
+      message: 'Room not found'
+    });
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: room
+  });
+});
+
 module.exports = {
   getHotels,
   getHotel,
+  getRoomFromHotel,
   createHotel,
   updateHotel,
   deleteHotel,
