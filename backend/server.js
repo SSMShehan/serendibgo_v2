@@ -31,6 +31,18 @@ const roomRoutes = require('./src/routes/hotels/rooms');
 const hotelBookingRoutes = require('./src/routes/hotels/hotelBookingRoutes');
 const roomAvailabilityRoutes = require('./src/routes/hotels/roomAvailabilityRoutes');
 
+// Vehicle routes
+const vehicleRoutes = require('./src/routes/vehicles/vehicles');
+const vehicleBookingRoutes = require('./src/routes/vehicles/vehicleBookings');
+const vehicleAvailabilityRoutes = require('./src/routes/vehicles/availability');
+const vehiclePricingRoutes = require('./src/routes/vehicles/pricing');
+const vehicleIntegrationRoutes = require('./src/routes/vehicles/integrations');
+const vehicleBookingRequestRoutes = require('./src/routes/vehicles/bookingRequests');
+const tripRoutes = require('./src/routes/vehicles/trips');
+const driverRoutes = require('./src/routes/vehicles/drivers');
+const maintenanceRoutes = require('./src/routes/vehicles/maintenance');
+const revenueRoutes = require('./src/routes/vehicles/revenue');
+
 // Import middleware
 const { errorHandler } = require('./src/middleware/errorHandler');
 
@@ -110,6 +122,18 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/hotels', roomRoutes); // Mount room routes under /api/hotels
 app.use('/api', roomAvailabilityRoutes); // Mount room availability routes under /api
 app.use('/api/hotel-bookings', hotelBookingRoutes); // Mount hotel booking routes under /api/hotel-bookings
+
+// Vehicle API routes
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/vehicles', vehicleAvailabilityRoutes);
+app.use('/api/vehicles', vehiclePricingRoutes);
+app.use('/api/vehicles', vehicleIntegrationRoutes);
+app.use('/api/vehicle-bookings', vehicleBookingRoutes);
+app.use('/api/vehicle-bookings', vehicleBookingRequestRoutes);
+app.use('/api/trips', tripRoutes);
+app.use('/api/drivers', driverRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/revenue', revenueRoutes);
 
 // 404 handler
 app.all('*', (req, res) => {

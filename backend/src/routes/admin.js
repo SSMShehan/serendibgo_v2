@@ -22,6 +22,16 @@ const {
   getPendingHotels
 } = require('../controllers/admin/dashboardController');
 
+// Import vehicle admin controller
+const {
+  getAdminVehicles,
+  getVehicleStats,
+  getPendingVehicles,
+  bulkUpdateVehicleStatus,
+  getVehicleHistory,
+  exportVehicles
+} = require('../controllers/admin/vehicleController');
+
 const router = express.Router();
 
 // All admin routes require authentication and admin role
@@ -95,6 +105,19 @@ router.get('/users/unverified', asyncHandler(getUnverifiedUsers));
 router.get('/bookings/recent', asyncHandler(getRecentBookings));
 router.get('/hotels/recent', asyncHandler(getRecentHotels));
 router.get('/hotels/pending', asyncHandler(getPendingHotels));
+
+// Vehicle management routes
+router.get('/vehicles', asyncHandler(getAdminVehicles));
+router.get('/vehicles/stats', asyncHandler(getVehicleStats));
+router.get('/vehicles/pending', asyncHandler(getPendingVehicles));
+router.put('/vehicles/bulk-status', [
+  body('vehicleIds').isArray().withMessage('Vehicle IDs must be an array'),
+  body('status').isIn(['pending', 'approved', 'active', 'suspended', 'rejected', 'maintenance'])
+    .withMessage('Invalid status'),
+  handleValidationErrors
+], asyncHandler(bulkUpdateVehicleStatus));
+router.get('/vehicles/:id/history', asyncHandler(getVehicleHistory));
+router.get('/vehicles/export', asyncHandler(exportVehicles));
 
 module.exports = router;
 
