@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { TourProvider } from './context/TourContext'
 import { HotelProvider } from './context/hotels/HotelContext'
+import { VehicleProvider } from './context/vehicles/VehicleContext'
 import { NotificationProvider } from './context/NotificationContext'
 
 // Layout Components
@@ -39,6 +40,7 @@ import HotelReviews from './pages/hotels/reviews/HotelReviews'
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
 import StaffManagement from './pages/admin/staff/StaffManagement'
 import AnalyticsDashboard from './pages/admin/analytics/AnalyticsDashboard'
+import AdminVehicleManagement from './pages/admin/vehicles/AdminVehicleManagement'
 import NotificationManagement from './pages/notifications/NotificationManagement'
 import EarningsDashboard from './pages/earnings/EarningsDashboard'
 import PricingManagement from './pages/pricing/PricingManagement'
@@ -48,6 +50,26 @@ import ManageRooms from './pages/hotels/ManageRooms'
 import ManageBookings from './pages/hotels/ManageBookings'
 import RoomAvailabilityCalendar from './pages/hotels/RoomAvailabilityCalendar'
 import EditHotel from './pages/hotels/EditHotel'
+
+// Vehicle Components
+import VehicleOwnerRegistration from './pages/vehicles/VehicleOwnerRegistration'
+import VehicleOwnerDashboard from './pages/vehicles/VehicleOwnerDashboard'
+import AddVehicle from './pages/vehicles/AddVehicle'
+import VehicleDetails from './pages/vehicles/VehicleDetails'
+import VehicleAvailabilityManagement from './pages/vehicles/VehicleAvailabilityManagement'
+import VehiclePricingManagement from './pages/vehicles/VehiclePricingManagement'
+import VehicleIntegrationManagement from './pages/vehicles/VehicleIntegrationManagement'
+import VehicleBookingRequests from './pages/vehicles/VehicleBookingRequests'
+import TripManagement from './pages/vehicles/TripManagement'
+import DriverManagement from './pages/vehicles/DriverManagement'
+import DriverRegistration from './pages/vehicles/DriverRegistration'
+import DriverDashboard from './pages/vehicles/DriverDashboard'
+import DriverVehicleRegistration from './pages/vehicles/DriverVehicleRegistration'
+import VehicleSearchInterface from './pages/vehicles/VehicleSearchInterface'
+import VehicleBookingFlow from './pages/vehicles/VehicleBookingFlow'
+import GPSTracking from './pages/vehicles/GPSTracking'
+import MaintenanceTracking from './pages/vehicles/MaintenanceTracking'
+import RevenueManagement from './pages/vehicles/RevenueManagement'
 import Vehicles from './pages/Vehicles'
 import MyBookings from './pages/MyBookings'
 import Login from './pages/Login'
@@ -63,9 +85,10 @@ function App() {
     <AuthProvider>
       <TourProvider>
         <HotelProvider>
-          <NotificationProvider>
-            <div className="min-h-screen bg-base-100" data-theme="serendibgo">
-            <Routes>
+          <VehicleProvider>
+            <NotificationProvider>
+              <div className="min-h-screen bg-base-100" data-theme="serendibgo">
+              <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -167,6 +190,11 @@ function App() {
                         <p className="text-gray-600">Hotel approval and management features coming soon...</p>
                       </div>
                     </div>
+                  </ProtectedRoute>
+                } />
+                <Route path="admin/vehicles" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminVehicleManagement />
                   </ProtectedRoute>
                 } />
                 <Route path="admin/settings" element={
@@ -271,13 +299,125 @@ function App() {
                     <EditHotel />
                   </ProtectedRoute>
                 } />
+                
+                {/* Vehicle Owner Routes */}
+                <Route path="vehicle-owner/register" element={
+                  <ProtectedRoute allowedRoles={['vehicle_owner']}>
+                    <VehicleOwnerRegistration />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="vehicle-owner/dashboard" element={
+                  <ProtectedRoute allowedRoles={['vehicle_owner']}>
+                    <VehicleOwnerDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="vehicle-owner/add-vehicle" element={
+                  <ProtectedRoute allowedRoles={['vehicle_owner']}>
+                    <AddVehicle />
+                  </ProtectedRoute>
+                } />
+                
+                    <Route path="vehicle-owner/vehicles/:vehicleId" element={
+                      <ProtectedRoute allowedRoles={['vehicle_owner']}>
+                        <VehicleDetails />
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="vehicle-owner/vehicles/:vehicleId/availability" element={
+                      <ProtectedRoute allowedRoles={['vehicle_owner']}>
+                        <VehicleAvailabilityManagement />
+                      </ProtectedRoute>
+                    } />
+                    
+                    <Route path="vehicle-owner/vehicles/:vehicleId/pricing" element={
+                      <ProtectedRoute allowedRoles={['vehicle_owner']}>
+                        <VehiclePricingManagement />
+                      </ProtectedRoute>
+                    } />
+                    
+        <Route path="vehicle-owner/vehicles/:vehicleId/integrations" element={
+          <ProtectedRoute allowedRoles={['vehicle_owner']}>
+            <VehicleIntegrationManagement />
+          </ProtectedRoute>
+        } />
+
+        <Route path="vehicle-owner/booking-requests" element={
+          <ProtectedRoute allowedRoles={['vehicle_owner']}>
+            <VehicleBookingRequests />
+          </ProtectedRoute>
+        } />
+
+        <Route path="customer/booking-requests" element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <VehicleBookingRequests />
+          </ProtectedRoute>
+        } />
+
+        <Route path="trips" element={
+          <ProtectedRoute allowedRoles={['customer', 'vehicle_owner', 'driver']}>
+            <TripManagement />
+          </ProtectedRoute>
+        } />
+
+        <Route path="drivers" element={
+          <ProtectedRoute allowedRoles={['admin', 'vehicle_owner']}>
+            <DriverManagement />
+          </ProtectedRoute>
+        } />
+
+        <Route path="driver/register" element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <DriverRegistration />
+          </ProtectedRoute>
+        } />
+
+        <Route path="driver/dashboard" element={
+          <ProtectedRoute allowedRoles={['driver']}>
+            <DriverDashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="driver/vehicle-registration" element={
+          <ProtectedRoute allowedRoles={['driver']}>
+            <DriverVehicleRegistration />
+          </ProtectedRoute>
+        } />
+
+        <Route path="search" element={<VehicleSearchInterface />} />
+
+        <Route path="vehicles/:vehicleId/book" element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <VehicleBookingFlow />
+          </ProtectedRoute>
+        } />
+
+        <Route path="trips/:tripId/tracking" element={
+          <ProtectedRoute allowedRoles={['customer', 'vehicle_owner', 'driver']}>
+            <GPSTracking />
+          </ProtectedRoute>
+        } />
+
+        <Route path="maintenance" element={
+          <ProtectedRoute allowedRoles={['vehicle_owner', 'admin']}>
+            <MaintenanceTracking />
+          </ProtectedRoute>
+        } />
+
+        <Route path="revenue" element={
+          <ProtectedRoute allowedRoles={['vehicle_owner', 'admin']}>
+            <RevenueManagement />
+          </ProtectedRoute>
+        } />
               </Route>
               
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-          </NotificationProvider>
+              </Routes>
+            </div>
+            </NotificationProvider>
+          </VehicleProvider>
         </HotelProvider>
       </TourProvider>
     </AuthProvider>
