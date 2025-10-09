@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CheckCircle,
   XCircle,
@@ -27,199 +28,65 @@ import {
   ThumbsDown,
   Flag,
   Archive,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Minus,
+  Car,
+  Building,
+  UserCheck,
+  Navigation,
+  Bed,
+  Utensils,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  Edit3,
+  Trash2
 } from 'lucide-react'
 
 const CustomTripApproval = () => {
+  const navigate = useNavigate()
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [showApprovalModal, setShowApprovalModal] = useState(false)
-  const [approvalAction, setApprovalAction] = useState('')
-  const [approvalComment, setApprovalComment] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [customTrips, setCustomTrips] = useState([])
 
-  // Sample custom trip requests
-  const [customTrips, setCustomTrips] = useState([
-    {
-      id: 1,
-      title: '7-Day Cultural Heritage Tour',
-      customer: {
-        name: 'John Smith',
-        email: 'john.smith@email.com',
-        phone: '+1-555-0123',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'
-      },
-      duration: '7 days',
-      participants: 4,
-      budget: 150000,
-      status: 'pending',
-      priority: 'high',
-      createdAt: '2024-01-20',
-      requestedDate: '2024-02-15',
-      description: 'We would like a comprehensive cultural tour covering Kandy, Anuradhapura, Polonnaruwa, and Sigiriya. We are interested in historical sites, temples, and local cultural experiences.',
-      requirements: [
-        'English-speaking guide',
-        'Air-conditioned vehicle',
-        '4-star accommodation',
-        'All entrance fees included',
-        'Traditional cultural shows',
-        'Local cuisine experiences'
-      ],
-      itinerary: [
-        { day: 1, location: 'Colombo', activities: 'Arrival, city tour, Gangaramaya Temple' },
-        { day: 2, location: 'Kandy', activities: 'Temple of the Tooth, Cultural show, Kandy Lake' },
-        { day: 3, location: 'Anuradhapura', activities: 'Ancient city tour, Sri Maha Bodhi, Ruwanwelisaya' },
-        { day: 4, location: 'Polonnaruwa', activities: 'Ancient city, Gal Vihara, Parakrama Samudra' },
-        { day: 5, location: 'Sigiriya', activities: 'Rock fortress, Dambulla cave temple' },
-        { day: 6, location: 'Colombo', activities: 'Shopping, farewell dinner' },
-        { day: 7, location: 'Departure', activities: 'Airport transfer' }
-      ],
-      specialRequests: 'Vegetarian meals preferred, wheelchair accessible vehicle needed for one participant',
-      estimatedCost: 145000,
-      guideRecommendations: ['Sarah Perera', 'Kamal Silva'],
-      notes: 'High-value customer, repeat visitor to Sri Lanka'
-    },
-    {
-      id: 2,
-      title: '3-Day Wildlife Safari Adventure',
-      customer: {
-        name: 'Emily Johnson',
-        email: 'emily.j@email.com',
-        phone: '+44-20-7946-0958',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face'
-      },
-      duration: '3 days',
-      participants: 2,
-      budget: 80000,
-      status: 'pending',
-      priority: 'medium',
-      createdAt: '2024-01-19',
-      requestedDate: '2024-02-20',
-      description: 'Wildlife photography tour focusing on elephants, leopards, and birds. Early morning and evening game drives preferred.',
-      requirements: [
-        'Wildlife specialist guide',
-        '4WD safari vehicle',
-        'Camera equipment assistance',
-        'Lodge accommodation in national parks',
-        'All park entrance fees',
-        'Meals included'
-      ],
-      itinerary: [
-        { day: 1, location: 'Yala National Park', activities: 'Morning and evening game drives' },
-        { day: 2, location: 'Udawalawe National Park', activities: 'Elephant watching, bird photography' },
-        { day: 3, location: 'Colombo', activities: 'Return to Colombo, photo review session' }
-      ],
-      specialRequests: 'Photography guide with wildlife expertise, early morning departures',
-      estimatedCost: 75000,
-      guideRecommendations: ['Rajesh Fernando', 'Nimal Perera'],
-      notes: 'Professional photographer, social media influencer'
-    },
-    {
-      id: 3,
-      title: '5-Day Beach & Relaxation Tour',
-      customer: {
-        name: 'Michael Brown',
-        email: 'm.brown@email.com',
-        phone: '+61-2-9374-4000',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
-      },
-      duration: '5 days',
-      participants: 2,
-      budget: 100000,
-      status: 'approved',
-      priority: 'low',
-      createdAt: '2024-01-18',
-      requestedDate: '2024-02-10',
-      description: 'Relaxing beach holiday with some cultural experiences. Focus on beautiful beaches and spa treatments.',
-      requirements: [
-        'Beachfront accommodation',
-        'Private vehicle',
-        'Spa treatments included',
-        'Seafood dining experiences',
-        'Sunset viewing spots',
-        'Water activities'
-      ],
-      itinerary: [
-        { day: 1, location: 'Negombo', activities: 'Arrival, beach relaxation' },
-        { day: 2, location: 'Bentota', activities: 'Beach activities, spa treatments' },
-        { day: 3, location: 'Galle', activities: 'Fort tour, beach time' },
-        { day: 4, location: 'Mirissa', activities: 'Whale watching, beach relaxation' },
-        { day: 5, location: 'Colombo', activities: 'Shopping, departure' }
-      ],
-      specialRequests: 'Romantic dinner setup, couple spa treatments',
-      estimatedCost: 95000,
-      guideRecommendations: ['Priya Silva', 'David Fernando'],
-      notes: 'Honeymoon couple, first-time visitors'
-    },
-    {
-      id: 4,
-      title: '10-Day Comprehensive Sri Lanka Tour',
-      customer: {
-        name: 'Sarah Wilson',
-        email: 'sarah.wilson@email.com',
-        phone: '+1-555-0199',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face'
-      },
-      duration: '10 days',
-      participants: 6,
-      budget: 250000,
-      status: 'rejected',
-      priority: 'high',
-      createdAt: '2024-01-17',
-      requestedDate: '2024-03-01',
-      description: 'Complete Sri Lanka experience covering all major attractions. Family-friendly activities preferred.',
-      requirements: [
-        'Family-friendly guide',
-        'Large vehicle for 6 people',
-        'Family rooms in hotels',
-        'All major attractions included',
-        'Flexible itinerary',
-        'Child-friendly activities'
-      ],
-      itinerary: [
-        { day: 1, location: 'Colombo', activities: 'Arrival, city tour' },
-        { day: 2, location: 'Kandy', activities: 'Temple of the Tooth, cultural show' },
-        { day: 3, location: 'Nuwara Eliya', activities: 'Tea plantations, train ride' },
-        { day: 4, location: 'Ella', activities: 'Nine Arch Bridge, hiking' },
-        { day: 5, location: 'Yala', activities: 'Wildlife safari' },
-        { day: 6, location: 'Galle', activities: 'Fort tour, beach time' },
-        { day: 7, location: 'Mirissa', activities: 'Whale watching' },
-        { day: 8, location: 'Anuradhapura', activities: 'Ancient city tour' },
-        { day: 9, location: 'Sigiriya', activities: 'Rock fortress' },
-        { day: 10, location: 'Colombo', activities: 'Shopping, departure' }
-      ],
-      specialRequests: 'Children aged 8 and 12, need child-friendly activities and meals',
-      estimatedCost: 280000,
-      guideRecommendations: ['Kamal Silva', 'Nisha Perera'],
-      notes: 'Budget exceeded by 30,000 LKR, needs negotiation'
+  // Fetch custom trips from API
+  useEffect(() => {
+    fetchCustomTrips()
+  }, [])
+
+  const fetchCustomTrips = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/custom-trips', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setCustomTrips(data.data)
+      } else {
+        console.error('Error fetching custom trips:', data.message)
+        setCustomTrips([])
+      }
+    } catch (error) {
+      console.error('Error fetching custom trips:', error)
+      setCustomTrips([])
+    } finally {
+      setLoading(false)
     }
-  ])
+  }
 
   const showMessage = (type, text) => {
     setMessage({ type, text })
     setTimeout(() => setMessage({ type: '', text: '' }), 5000)
-  }
-
-  const handleApproval = async (tripId, action) => {
-    setLoading(true)
-    try {
-      setCustomTrips(prev => prev.map(trip => 
-        trip.id === tripId 
-          ? { ...trip, status: action, approvedAt: new Date().toISOString(), approvalComment }
-          : trip
-      ))
-      setShowApprovalModal(false)
-      setSelectedTrip(null)
-      setApprovalComment('')
-      showMessage('success', `Trip ${action} successfully!`)
-    } catch (error) {
-      showMessage('error', `Failed to ${action} trip`)
-    } finally {
-      setLoading(false)
-    }
   }
 
   const getStatusColor = (status) => {
@@ -242,9 +109,10 @@ const CustomTripApproval = () => {
   }
 
   const filteredTrips = customTrips.filter(trip => {
-    const matchesSearch = trip.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.customer.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = trip.requestDetails?.destination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         trip.customer?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         trip.customer?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         trip.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filterStatus === 'all' || trip.status === filterStatus
     return matchesSearch && matchesFilter
   })
@@ -258,7 +126,10 @@ const CustomTripApproval = () => {
           <p className="text-slate-600">Review and approve custom trip requests from customers</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+          <button 
+            onClick={fetchCustomTrips}
+            className="flex items-center px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </button>
@@ -320,21 +191,20 @@ const CustomTripApproval = () => {
           <div key={trip.id} className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-start space-x-4">
-                <img
-                  src={trip.customer.avatar}
-                  alt={trip.customer.name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                  <User className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">{trip.title}</h3>
-                  <p className="text-sm text-slate-600">by {trip.customer.name}</p>
-                  <p className="text-xs text-slate-500">{trip.customer.email}</p>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Custom Trip to {trip.requestDetails?.destination || 'Sri Lanka'}
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    by {trip.customer?.firstName} {trip.customer?.lastName}
+                  </p>
+                  <p className="text-xs text-slate-500">{trip.customer?.email}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(trip.priority)}`}>
-                  {trip.priority} priority
-                </span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(trip.status)}`}>
                   {trip.status}
                 </span>
@@ -344,23 +214,28 @@ const CustomTripApproval = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div className="flex items-center text-sm text-slate-600">
                 <Clock className="h-4 w-4 mr-2" />
-                {trip.duration}
+                {trip.requestDetails?.startDate && trip.requestDetails?.endDate 
+                  ? Math.ceil((new Date(trip.requestDetails.endDate) - new Date(trip.requestDetails.startDate)) / (1000 * 60 * 60 * 24)) + ' days'
+                  : 'Not specified'
+                }
               </div>
               <div className="flex items-center text-sm text-slate-600">
                 <Users className="h-4 w-4 mr-2" />
-                {trip.participants} people
+                {trip.requestDetails?.groupSize || 1} people
               </div>
               <div className="flex items-center text-sm text-slate-600">
                 <DollarSign className="h-4 w-4 mr-2" />
-                LKR {trip.budget.toLocaleString()}
+                LKR {trip.requestDetails?.budget?.toLocaleString() || 'Not specified'}
               </div>
               <div className="flex items-center text-sm text-slate-600">
                 <Calendar className="h-4 w-4 mr-2" />
-                {new Date(trip.requestedDate).toLocaleDateString()}
+                {trip.requestDetails?.startDate ? new Date(trip.requestDetails.startDate).toLocaleDateString() : 'Not specified'}
               </div>
             </div>
 
-            <p className="text-sm text-slate-700 mb-4 line-clamp-2">{trip.description}</p>
+            <p className="text-sm text-slate-700 mb-4 line-clamp-2">
+              {trip.requestDetails?.specialRequests || 'No special requests specified'}
+            </p>
 
             <div className="flex items-center justify-between">
               <div className="text-sm text-slate-500">
@@ -381,9 +256,9 @@ const CustomTripApproval = () => {
                   <>
                     <button
                       onClick={() => {
-                        setSelectedTrip(trip)
-                        setApprovalAction('approved')
-                        setShowApprovalModal(true)
+                        navigate(`/staff/custom-trips/${trip._id}/approve`, {
+                          state: { trip, action: 'approved' }
+                        })
                       }}
                       className="flex items-center px-3 py-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
                     >
@@ -392,9 +267,9 @@ const CustomTripApproval = () => {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedTrip(trip)
-                        setApprovalAction('rejected')
-                        setShowApprovalModal(true)
+                        navigate(`/staff/custom-trips/${trip._id}/approve`, {
+                          state: { trip, action: 'rejected' }
+                        })
                       }}
                       className="flex items-center px-3 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                     >
@@ -606,79 +481,6 @@ const CustomTripApproval = () => {
         </div>
       )}
 
-      {/* Approval Modal */}
-      {showApprovalModal && selectedTrip && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
-                  approvalAction === 'approved' ? 'bg-green-100' : 'bg-red-100'
-                }`}>
-                  {approvalAction === 'approved' ? (
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  ) : (
-                    <XCircle className="h-6 w-6 text-red-600" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {approvalAction === 'approved' ? 'Approve' : 'Reject'} Trip
-                  </h3>
-                  <p className="text-sm text-slate-600">{selectedTrip.title}</p>
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Comments (Optional)
-                </label>
-                <textarea
-                  value={approvalComment}
-                  onChange={(e) => setApprovalComment(e.target.value)}
-                  rows="3"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder={`Add comments for ${approvalAction === 'approved' ? 'approval' : 'rejection'}...`}
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowApprovalModal(false)}
-                  className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleApproval(selectedTrip.id, approvalAction)}
-                  disabled={loading}
-                  className={`px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center ${
-                    approvalAction === 'approved' 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      {approvalAction === 'approved' ? (
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                      ) : (
-                        <XCircle className="h-4 w-4 mr-2" />
-                      )}
-                      {approvalAction === 'approved' ? 'Approve' : 'Reject'} Trip
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

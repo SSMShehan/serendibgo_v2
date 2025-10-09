@@ -44,6 +44,7 @@ import AdminBookings from './pages/admin/AdminBookings'
 
 // Staff Pages
 import StaffDashboard from './pages/Staff/StaffDashboard'
+import CustomTripApprovalForm from './pages/Staff/CustomTripApprovalForm'
 
 // Hotel Pages
 import HotelSearch from './pages/hotels/HotelSearch'
@@ -189,6 +190,12 @@ function App() {
                 <Route path="staff" element={
                   <ProtectedRoute allowedRoles={['staff', 'admin']}>
                     <StaffDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="staff/custom-trips/:tripId/approve" element={
+                  <ProtectedRoute allowedRoles={['staff', 'admin']}>
+                    <CustomTripApprovalForm />
                   </ProtectedRoute>
                 } />
                 

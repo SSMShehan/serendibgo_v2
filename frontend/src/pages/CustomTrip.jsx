@@ -38,7 +38,7 @@ const CustomTrip = () => {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
-    destination: '',
+    destinations: [], // Array of custom destination strings
     startDate: '',
     endDate: '',
     groupSize: 1,
@@ -64,6 +64,8 @@ const CustomTrip = () => {
 
   const [showInterests, setShowInterests] = useState(false)
   const [showActivities, setShowActivities] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [destinationInput, setDestinationInput] = useState('')
 
   const interests = [
     { id: 'culture', label: 'Culture & History', icon: Building },
@@ -103,11 +105,67 @@ const CustomTrip = () => {
     { id: 'boat', label: 'Boat/Cruise', price: 40, icon: Waves }
   ]
 
+  const handleAddDestination = () => {
+    const destination = destinationInput.trim()
+    if (destination && !formData.destinations.includes(destination)) {
+      setFormData(prev => ({
+        ...prev,
+        destinations: [...prev.destinations, destination]
+      }))
+      setDestinationInput('')
+    }
+  }
+
+  const handleRemoveDestination = (destinationToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      destinations: prev.destinations.filter(dest => dest !== destinationToRemove)
+    }))
+  }
+
+  const handleDestinationKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddDestination()
+    }
+  }
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+  }
+
+  // Get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+  }
+
+  // Get minimum end date (start date + 1 day)
+  const getMinEndDate = () => {
+    if (formData.startDate) {
+      const startDate = new Date(formData.startDate)
+      startDate.setDate(startDate.getDate() + 1)
+      return startDate.toISOString().split('T')[0]
+    }
+    return getTodayDate()
+  }
+
+  // Validate date selection
+  const validateDates = () => {
+    const today = new Date()
+    const startDate = new Date(formData.startDate)
+    const endDate = new Date(formData.endDate)
+
+    if (formData.startDate && startDate < today) {
+      return 'Start date cannot be in the past'
+    }
+    if (formData.endDate && formData.startDate && endDate <= startDate) {
+      return 'End date must be after start date'
+    }
+    return null
   }
 
   const handleInterestToggle = (interestId) => {
@@ -169,6 +227,34 @@ const CustomTrip = () => {
   }
 
   const nextStep = () => {
+    // Validate required fields before moving to next step
+    if (currentStep === 1) {
+      // Step 1: Basic Info - validate dates and destinations
+      if (!formData.startDate || !formData.endDate) {
+        alert('Please select both start and end dates')
+        return
+      }
+      
+      if (!formData.destinations || formData.destinations.length === 0) {
+        alert('Please add at least one destination')
+        return
+      }
+      
+      const dateError = validateDates()
+      if (dateError) {
+        alert(dateError)
+        return
+      }
+    }
+    
+    if (currentStep === 2) {
+      // Step 2: Preferences - validate budget
+      if (!formData.budget || formData.budget.trim() === '') {
+        alert('Please enter your budget')
+        return
+      }
+    }
+    
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1)
     }
@@ -180,11 +266,120 @@ const CustomTrip = () => {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Custom trip submitted:', formData)
-    alert('Your custom trip request has been submitted! We will contact you within 24 hours to discuss your personalized itinerary.')
-    navigate('/')
+    
+    // Comprehensive validation before submission
+    if (!formData.startDate || !formData.endDate) {
+      alert('Please select both start and end dates')
+      return
+    }
+    
+    if (!formData.budget || formData.budget.trim() === '') {
+      alert('Please enter your budget')
+      return
+    }
+    
+    if (!formData.destinations || formData.destinations.length === 0) {
+      alert('Please add at least one destination')
+      return
+    }
+    
+    // Validate dates before submission
+    const dateError = validateDates()
+    if (dateError) {
+      alert(dateError)
+      return
+    }
+    
+    setLoading(true)
+    
+    try {
+      // Map destination names to enum values
+      const destinationMap = {
+        'colombo': 'Colombo',
+        'kandy': 'Kandy',
+        'galle': 'Galle',
+        'negombo': 'Negombo',
+        'bentota': 'Bentota',
+        'hikkaduwa': 'Hikkaduwa',
+        'unawatuna': 'Unawatuna',
+        'mirissa': 'Mirissa',
+        'weligama': 'Weligama',
+        'tangalle': 'Tangalle',
+        'arugam bay': 'Arugam Bay',
+        'nuwara eliya': 'Nuwara Eliya',
+        'ella': 'Ella',
+        'bandarawela': 'Bandarawela',
+        'haputale': 'Haputale',
+        'sigiriya': 'Sigiriya',
+        'dambulla': 'Dambulla',
+        'anuradhapura': 'Anuradhapura',
+        'polonnaruwa': 'Polonnaruwa',
+        'trincomalee': 'Trincomalee',
+        'batticaloa': 'Batticaloa',
+        'jaffna': 'Jaffna',
+        'kalpitiya': 'Kalpitiya',
+        'chilaw': 'Chilaw',
+        'puttalam': 'Puttalam'
+      }
+
+      // Prepare the data for API submission
+      const tripData = {
+        destination: formData.destinations.length > 1 ? 'Multiple Cities' : 
+                   (destinationMap[formData.destinations[0]?.toLowerCase()] || 'Sri Lanka'),
+        destinations: formData.destinations, // Send the full array
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        groupSize: formData.groupSize,
+        budget: formData.budget,
+        interests: formData.interests || [],
+        accommodation: formData.accommodation,
+        transport: formData.transport || [],
+        activities: (formData.activities || []).map(activityId => {
+          const activity = activities.find(act => act.id === activityId)
+          return {
+            id: activityId,
+            label: activity?.label || activityId,
+            price: activity?.price || 0
+          }
+        }),
+        specialRequests: formData.specialRequests,
+        dietaryRequirements: formData.dietaryRequirements,
+        accessibility: formData.accessibility,
+        contactInfo: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          emergencyContact: formData.emergencyContact
+        }
+      }
+
+      console.log('Submitting custom trip:', tripData)
+
+      const response = await fetch('/api/custom-trips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(tripData)
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('Your custom trip request has been submitted successfully! We will contact you within 24 hours to discuss your personalized itinerary.')
+        navigate('/my-bookings')
+      } else {
+        alert(data.message || 'Failed to submit custom trip request. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error submitting custom trip:', error)
+      alert('An error occurred while submitting your request. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const steps = [
@@ -259,25 +454,54 @@ const CustomTrip = () => {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-semibold text-slate-700 mb-2">
                         <MapPin className="w-4 h-4 inline mr-2" />
-                        Destination in Sri Lanka
+                        Destinations
                       </label>
-                      <select
-                        value={formData.destination}
-                        onChange={(e) => handleInputChange('destination', e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
-                        required
-                      >
-                        <option value="">Select a destination</option>
-                        <option value="colombo">Colombo</option>
-                        <option value="kandy">Kandy</option>
-                        <option value="galle">Galle</option>
-                        <option value="anuradhapura">Anuradhapura</option>
-                        <option value="sigiriya">Sigiriya</option>
-                        <option value="ella">Ella</option>
-                        <option value="nuwara-eliya">Nuwara Eliya</option>
-                        <option value="trincomalee">Trincomalee</option>
-                        <option value="multiple">Multiple Cities</option>
-                      </select>
+                      <p className="text-sm text-slate-600 mb-4">Add the places you want to visit in Sri Lanka</p>
+                      
+                      {/* Destination Input */}
+                      <div className="flex gap-2 mb-4">
+                        <input
+                          type="text"
+                          value={destinationInput}
+                          onChange={(e) => setDestinationInput(e.target.value)}
+                          onKeyPress={handleDestinationKeyPress}
+                          placeholder="Type destination name (e.g., Colombo, Kandy, Galle...)"
+                          className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddDestination}
+                          disabled={!destinationInput.trim()}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Selected Destinations */}
+                      {formData.destinations.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-slate-600 font-medium">Selected destinations:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.destinations.map((destination, index) => (
+                              <span 
+                                key={index} 
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-800 rounded-full text-sm"
+                              >
+                                <MapPin className="w-4 h-4" />
+                                {destination}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDestination(destination)}
+                                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -289,9 +513,13 @@ const CustomTrip = () => {
                         type="date"
                         value={formData.startDate}
                         onChange={(e) => handleInputChange('startDate', e.target.value)}
+                        min={getTodayDate()}
                         className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
                         required
                       />
+                      {formData.startDate && new Date(formData.startDate) < new Date() && (
+                        <p className="text-red-500 text-sm mt-1">Start date cannot be in the past</p>
+                      )}
                     </div>
 
                     <div>
@@ -303,9 +531,13 @@ const CustomTrip = () => {
                         type="date"
                         value={formData.endDate}
                         onChange={(e) => handleInputChange('endDate', e.target.value)}
+                        min={getMinEndDate()}
                         className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
                         required
                       />
+                      {formData.endDate && formData.startDate && new Date(formData.endDate) <= new Date(formData.startDate) && (
+                        <p className="text-red-500 text-sm mt-1">End date must be after start date</p>
+                      )}
                     </div>
 
                     <div>
@@ -602,8 +834,20 @@ const CustomTrip = () => {
                     <h3 className="text-lg font-semibold text-slate-900 mb-4">Trip Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium text-slate-600">Destination:</span>
-                        <span className="ml-2 text-slate-900 capitalize">{formData.destination}</span>
+                        <span className="font-medium text-slate-600">Destinations:</span>
+                        <div className="ml-2 text-slate-900">
+                          {formData.destinations.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {formData.destinations.map((dest, index) => (
+                                <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                  {dest}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500">Not specified</span>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <span className="font-medium text-slate-600">Duration:</span>
@@ -667,10 +911,24 @@ const CustomTrip = () => {
                 ) : (
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-500 text-white rounded-2xl font-semibold hover:from-green-700 hover:to-emerald-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                    disabled={loading}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl ${
+                      loading 
+                        ? 'bg-gray-400 text-white cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-green-600 to-emerald-500 text-white hover:from-green-700 hover:to-emerald-600'
+                    }`}
                   >
-                    <Sparkles className="w-4 h-4" />
-                    Submit Request
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Submit Request
+                      </>
+                    )}
                   </button>
                 )}
               </div>

@@ -28,6 +28,12 @@ const roomRoutes = require('./src/routes/hotels/rooms');
 const hotelBookingRoutes = require('./src/routes/hotels/hotelBookingRoutes');
 const roomAvailabilityRoutes = require('./src/routes/hotels/roomAvailabilityRoutes');
 
+// Custom trip routes
+const customTripRoutes = require('./src/routes/customTrips');
+
+// Vehicle routes
+const vehicleRoutes = require('./src/routes/vehicles');
+
 // Import middleware
 const { errorHandler } = require('./src/middleware/errorHandler');
 
@@ -57,7 +63,7 @@ app.use('/api/', limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:3002'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -105,6 +111,12 @@ app.use('/api/hotels', roomRoutes); // Mount room routes under /api/hotels
 app.use('/api/hotels', hotelBookingRoutes); // Mount hotel booking routes under /api/hotels
 app.use('/api/hotels', roomAvailabilityRoutes); // Mount room availability routes under /api/hotels
 app.use('/api/hotel-bookings', hotelBookingRoutes); // Also mount for general booking operations
+
+// Custom trip API routes
+app.use('/api/custom-trips', customTripRoutes);
+
+// Vehicle API routes
+app.use('/api/vehicles', vehicleRoutes);
 
 // 404 handler
 app.all('*', (req, res) => {
