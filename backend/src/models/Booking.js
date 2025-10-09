@@ -9,7 +9,13 @@ const bookingSchema = new mongoose.Schema({
   tour: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
-    required: [true, 'Tour is required']
+    required: function() {
+      return !this.customTrip; // Tour is required if not a custom trip
+    }
+  },
+  customTrip: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CustomTrip'
   },
   guide: {
     type: mongoose.Schema.Types.ObjectId,

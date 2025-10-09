@@ -1,43 +1,133 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Clock, Users, CreditCard } from 'lucide-react'
+import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 const MyBookings = () => {
-  // Mock data - replace with actual API call
-  const bookings = [
-    {
-      id: 1,
-      tourName: 'Sigiriya Rock Fortress Tour',
-      date: '2024-01-15',
-      time: '08:00 AM',
-      participants: 2,
-      status: 'confirmed',
-      amount: 15000,
-      location: 'Sigiriya'
-    },
-    {
-      id: 2,
-      tourName: 'Kandy Temple Tour',
-      date: '2024-01-20',
-      time: '09:00 AM',
-      participants: 1,
-      status: 'pending',
-      amount: 8000,
-      location: 'Kandy'
+  const { user } = useAuth()
+  const [bookings, setBookings] = useState([])
+  const [customTrips, setCustomTrips] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('bookings')
+  const [selectedTrip, setSelectedTrip] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+
+  useEffect(() => {
+    fetchBookings()
+  }, [])
+
+  const fetchBookings = async () => {
+    try {
+      const response = await fetch('/api/bookings/user', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        // Separate regular tours and custom trips
+        const regularBookings = data.data.bookings.filter(booking => booking.type === 'tour')
+        const customTrips = data.data.bookings.filter(booking => booking.type === 'custom')
+        
+        setBookings(regularBookings)
+        setCustomTrips(customTrips)
+      } else {
+        console.error('Error fetching bookings:', data.message)
+        setBookings([])
+        setCustomTrips([])
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+      setBookings([])
+      setCustomTrips([])
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  const fetchCustomTrips = async () => {
+    try {
+      // Custom trips are now fetched in fetchBookings, so this is just for loading state
+      setLoading(false)
+    } catch (error) {
+      console.error('Error fetching custom trips:', error)
+      setLoading(false)
+    }
+  }
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
         return 'bg-green-100 text-green-800'
+      case 'approved':
+        return 'bg-blue-100 text-blue-800'
       case 'pending':
         return 'bg-yellow-100 text-yellow-800'
       case 'cancelled':
+      case 'rejected':
         return 'bg-red-100 text-red-800'
+      case 'completed':
+        return 'bg-purple-100 text-purple-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'confirmed':
+      case 'approved':
+        return <CheckCircle className="h-4 w-4" />
+      case 'pending':
+        return <Clock className="h-4 w-4" />
+      case 'cancelled':
+      case 'rejected':
+        return <XCircle className="h-4 w-4" />
+      default:
+        return <Clock className="h-4 w-4" />
+    }
+  }
+
+  const handleConfirmCustomTrip = async (tripId) => {
+    try {
+      const response = await fetch(`/api/custom-trips/${tripId}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Refresh bookings to get updated data
+        await fetchBookings()
+        alert('Custom trip confirmed successfully!')
+      } else {
+        alert(data.message || 'Failed to confirm custom trip')
+      }
+    } catch (error) {
+      console.error('Error confirming custom trip:', error)
+      alert('An error occurred while confirming the custom trip')
+    }
+  }
+
+  const handleViewDetails = (trip) => {
+    console.log('=== VIEW DETAILS DEBUG ===')
+    console.log('Trip data:', trip)
+    console.log('Request details:', trip.requestDetails)
+    console.log('Staff assignment:', trip.staffAssignment)
+    console.log('Start date:', trip.requestDetails?.startDate)
+    console.log('End date:', trip.requestDetails?.endDate)
+    setSelectedTrip(trip)
+    setShowDetailsModal(true)
+  }
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false)
+    setSelectedTrip(null)
   }
 
   return (
@@ -45,76 +135,614 @@ const MyBookings = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-          <p className="mt-2 text-gray-600">Manage your tour bookings and reservations</p>
+          <p className="mt-2 text-gray-600">Manage your tour bookings and custom trips</p>
         </div>
 
-        {bookings.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Start by exploring our amazing tours.</p>
-            <div className="mt-6">
-              <Link
-                to="/tours"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+        {/* Tabs */}
+        <div className="mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('bookings')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'bookings'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                Browse Tours
-              </Link>
-            </div>
+                <Calendar className="h-4 w-4 inline mr-2" />
+                Regular Tours ({bookings.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('custom')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'custom'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Sparkles className="h-4 w-4 inline mr-2" />
+                Custom Trips ({customTrips.length})
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading your bookings...</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{booking.tourName}</h3>
-                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {booking.date}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="h-4 w-4 mr-2" />
-                        {booking.time}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {booking.location}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2" />
-                        {booking.participants} {booking.participants === 1 ? 'person' : 'people'}
-                      </div>
+          <>
+            {/* Regular Bookings Tab */}
+            {activeTab === 'bookings' && (
+              <>
+                {bookings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No tour bookings yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Start by exploring our amazing tours.</p>
+                    <div className="mt-6">
+                      <Link
+                        to="/tours"
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      >
+                        Browse Tours
+                      </Link>
                     </div>
                   </div>
-                  <div className="ml-6 flex flex-col items-end">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                    </span>
-                    <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
-                      <CreditCard className="h-4 w-4 mr-1" />
-                      LKR {booking.amount.toLocaleString()}
+                ) : (
+                  <div className="space-y-6">
+                    {bookings.map((booking) => (
+                      <div key={booking.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">{booking.title}</h3>
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {new Date(booking.startDate).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Clock className="h-4 w-4 mr-2" />
+                                {booking.duration}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                {booking.location}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Users className="h-4 w-4 mr-2" />
+                                {booking.groupSize} {booking.groupSize === 1 ? 'person' : 'people'}
+                              </div>
+                            </div>
+                            {booking.guide && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                <strong>Guide:</strong> {booking.guide.firstName} {booking.guide.lastName}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-6 flex flex-col items-end">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+                              {getStatusIcon(booking.status)}
+                              <span className="ml-1">{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
+                            </span>
+                            <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              LKR {booking.totalAmount.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end space-x-3">
+                          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            View Details
+                          </button>
+                          {booking.status === 'pending' && (
+                            <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Custom Trips Tab */}
+            {activeTab === 'custom' && (
+              <>
+                {customTrips.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Sparkles className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No custom trips yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Create your personalized Sri Lankan adventure.</p>
+                    <div className="mt-6">
+                      <Link
+                        to="/custom-trip"
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Create Custom Trip
+                      </Link>
                     </div>
                   </div>
-                </div>
-                <div className="mt-4 flex justify-end space-x-3">
-                  <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                    View Details
-                  </button>
-                  {booking.status === 'pending' && (
-                    <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                ) : (
+                  <div className="space-y-6">
+                    {customTrips.map((trip) => (
+                      <div key={trip.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center">
+                              <Sparkles className="h-5 w-5 text-primary mr-2" />
+                              <h3 className="text-lg font-semibold text-gray-900">{trip.title}</h3>
+                            </div>
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {new Date(trip.startDate).toLocaleDateString()} - {new Date(trip.endDate).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Users className="h-4 w-4 mr-2" />
+                                {trip.groupSize} {trip.groupSize === 1 ? 'person' : 'people'}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                {trip.location}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Eye className="h-4 w-4 mr-2" />
+                                {trip.guide ? `${trip.guide.firstName} ${trip.guide.lastName}` : 'Guide pending'}
+                              </div>
+                            </div>
+                            {trip.hotels && trip.hotels.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-sm text-gray-600">
+                                  <strong>Hotels:</strong> {trip.hotels.map(hotel => hotel.hotel?.name || 'Hotel').join(', ')}
+                                </p>
+                              </div>
+                            )}
+                            {trip.customTripDetails && (
+                              <div className="mt-3">
+                                {trip.customTripDetails.interests && trip.customTripDetails.interests.length > 0 && (
+                                  <p className="text-sm text-gray-600">
+                                    <strong>Interests:</strong> {trip.customTripDetails.interests.join(', ')}
+                                  </p>
+                                )}
+                                {trip.customTripDetails.accommodation && (
+                                  <p className="text-sm text-gray-600">
+                                    <strong>Accommodation:</strong> {trip.customTripDetails.accommodation}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-6 flex flex-col items-end">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(trip.status)}`}>
+                              {getStatusIcon(trip.status)}
+                              <span className="ml-1">{trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}</span>
+                            </span>
+                            <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              LKR {trip.totalAmount.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end space-x-3">
+                          <button 
+                            onClick={() => handleViewDetails(trip)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </button>
+                          {trip.status === 'approved' && (
+                            <button 
+                              onClick={() => handleConfirmCustomTrip(trip.id)}
+                              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Confirm & Pay
+                            </button>
+                          )}
+                          {trip.status === 'pending' && (
+                            <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                              Cancel Request
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
+
+      {/* Trip Details Modal */}
+      {showDetailsModal && selectedTrip && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <Sparkles className="h-6 w-6 text-primary mr-2" />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {selectedTrip.status === 'pending' ? 'Trip Request Details' : 'Approved Trip Details'}
+                  </h3>
+                </div>
+                <button
+                  onClick={closeDetailsModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Status Badge */}
+              <div className="mb-4">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedTrip.status)}`}>
+                  {getStatusIcon(selectedTrip.status)}
+                  <span className="ml-2">{selectedTrip.status.charAt(0).toUpperCase() + selectedTrip.status.slice(1)}</span>
+                </span>
+              </div>
+
+              {/* Trip Details Content */}
+              <div className="space-y-4">
+                {selectedTrip.status === 'pending' ? (
+                  /* Pending Trip - Show Customer Request Details */
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Trip Information</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Dates:</strong> {new Date(selectedTrip.startDate).toLocaleDateString()} - {new Date(selectedTrip.endDate).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Group Size:</strong> {selectedTrip.groupSize} {selectedTrip.groupSize === 1 ? 'person' : 'people'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Destination:</strong> {selectedTrip.requestDetails?.destination || 'Not specified'}</span>
+                          </div>
+                          {selectedTrip.requestDetails?.destinations && selectedTrip.requestDetails.destinations.length > 0 && (
+                            <div className="flex items-center">
+                              <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                              <span><strong>Places to Visit:</strong> {selectedTrip.requestDetails.destinations.join(', ')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Preferences</h4>
+                        <div className="space-y-2 text-sm">
+                          <div><strong>Budget:</strong> LKR {selectedTrip.requestDetails?.budget || 'Not specified'}</div>
+                          <div><strong>Accommodation:</strong> {selectedTrip.requestDetails?.accommodation || 'Not specified'}</div>
+                          {selectedTrip.requestDetails?.interests && selectedTrip.requestDetails.interests.length > 0 && (
+                            <div><strong>Interests:</strong> {selectedTrip.requestDetails.interests.join(', ')}</div>
+                          )}
+                          {selectedTrip.requestDetails?.transport && selectedTrip.requestDetails.transport.length > 0 && (
+                            <div><strong>Transport:</strong> {selectedTrip.requestDetails.transport.join(', ')}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {(selectedTrip.requestDetails?.specialRequests || selectedTrip.requestDetails?.dietaryRequirements || selectedTrip.requestDetails?.accessibility) && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Special Requirements</h4>
+                        <div className="space-y-2 text-sm">
+                          {selectedTrip.requestDetails?.specialRequests && (
+                            <div><strong>Special Requests:</strong> {selectedTrip.requestDetails.specialRequests}</div>
+                          )}
+                          {selectedTrip.requestDetails?.dietaryRequirements && (
+                            <div><strong>Dietary Requirements:</strong> {selectedTrip.requestDetails.dietaryRequirements}</div>
+                          )}
+                          {selectedTrip.requestDetails?.accessibility && (
+                            <div><strong>Accessibility:</strong> {selectedTrip.requestDetails.accessibility}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                      <div className="flex">
+                        <Clock className="h-5 w-5 text-yellow-400 mr-2" />
+                        <div>
+                          <h4 className="text-sm font-medium text-yellow-800">Under Review</h4>
+                          <p className="text-sm text-yellow-700 mt-1">
+                            Your custom trip request is being reviewed by our staff. We will contact you within 24 hours with a personalized itinerary and pricing.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Approved Trip - Show Staff Updated Details */
+                  <div className="space-y-6">
+                    {/* Trip Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Trip Information</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Dates:</strong> {
+                              selectedTrip.requestDetails?.startDate && selectedTrip.requestDetails?.endDate 
+                                ? `${new Date(selectedTrip.requestDetails.startDate).toLocaleDateString()} - ${new Date(selectedTrip.requestDetails.endDate).toLocaleDateString()}`
+                                : 'Dates not specified'
+                            }</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Group Size:</strong> {selectedTrip.requestDetails?.groupSize || 'Not specified'} {selectedTrip.requestDetails?.groupSize === 1 ? 'person' : 'people'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Destination:</strong> {selectedTrip.requestDetails?.destination || 'Not specified'}</span>
+                          </div>
+                          {selectedTrip.requestDetails?.destinations && selectedTrip.requestDetails.destinations.length > 0 && (
+                            <div className="mt-2">
+                              <p className="font-medium">Places to Visit:</p>
+                              <ul className="list-disc list-inside ml-4">
+                                {selectedTrip.requestDetails.destinations.map((dest, idx) => (
+                                  <li key={idx}>{dest}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Pricing</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Total Cost:</strong> LKR {selectedTrip.staffAssignment?.totalBudget?.totalAmount?.toLocaleString() || 'TBD'}</span>
+                          </div>
+                          {selectedTrip.staffAssignment?.totalBudget && (
+                            <div>
+                              <strong>Cost Breakdown:</strong>
+                              <ul className="ml-4 mt-1 space-y-1">
+                                {selectedTrip.staffAssignment.totalBudget.guideFees > 0 && <li>Guide Fees: LKR {selectedTrip.staffAssignment.totalBudget.guideFees.toLocaleString()}</li>}
+                                {selectedTrip.staffAssignment.totalBudget.vehicleCosts > 0 && <li>Vehicle Costs: LKR {selectedTrip.staffAssignment.totalBudget.vehicleCosts.toLocaleString()}</li>}
+                                {selectedTrip.staffAssignment.totalBudget.hotelCosts > 0 && <li>Hotel Costs: LKR {selectedTrip.staffAssignment.totalBudget.hotelCosts.toLocaleString()}</li>}
+                                {selectedTrip.staffAssignment.totalBudget.activityCosts > 0 && <li>Activity Costs: LKR {selectedTrip.staffAssignment.totalBudget.activityCosts.toLocaleString()}</li>}
+                                {selectedTrip.staffAssignment.totalBudget.additionalFees > 0 && <li>Additional Fees: LKR {selectedTrip.staffAssignment.totalBudget.additionalFees.toLocaleString()}</li>}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Staff Assigned Resources */}
+                    {selectedTrip.staffAssignment && (
+                      <div className="space-y-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">Assigned Resources</h4>
+                        
+                        {/* Assigned Guide */}
+                        {selectedTrip.staffAssignment.assignedGuide && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start">
+                              <User className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-blue-900">Your Guide</h5>
+                                <div className="mt-2 space-y-1 text-sm text-blue-800">
+                                  <p><strong>Name:</strong> {selectedTrip.staffAssignment.assignedGuide.firstName} {selectedTrip.staffAssignment.assignedGuide.lastName}</p>
+                                  <p className="flex items-center"><Phone className="h-4 w-4 mr-1" /><strong>Phone:</strong> {selectedTrip.staffAssignment.assignedGuide.phone}</p>
+                                  <p><strong>Email:</strong> {selectedTrip.staffAssignment.assignedGuide.email}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Hotel Bookings */}
+                        {selectedTrip.staffAssignment.hotelBookings && selectedTrip.staffAssignment.hotelBookings.length > 0 && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div className="flex items-start">
+                              <Building className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-green-900">Accommodation</h5>
+                                <div className="mt-2 space-y-3">
+                                  {selectedTrip.staffAssignment.hotelBookings.map((booking, idx) => (
+                                    <div key={idx} className="bg-white rounded-md p-3 border border-green-200">
+                                      <div className="space-y-1 text-sm text-green-800">
+                                        <p><strong>Hotel:</strong> {booking.hotel?.name || booking.hotelName || 'Hotel name not specified'}</p>
+                                        <p className="flex items-center"><LocationIcon className="h-4 w-4 mr-1" /><strong>Location:</strong> {booking.hotel?.location?.city || booking.city || booking.location || 'Location not specified'}</p>
+                                        {booking.hotel?.starRating && (
+                                          <p className="flex items-center"><Star className="h-4 w-4 mr-1" /><strong>Rating:</strong> {booking.hotel.starRating} stars</p>
+                                        )}
+                                        <p><strong>Room Type:</strong> {booking.roomType}</p>
+                                        <p><strong>Check-in:</strong> {new Date(booking.checkInDate).toLocaleDateString()}</p>
+                                        <p><strong>Check-out:</strong> {new Date(booking.checkOutDate).toLocaleDateString()}</p>
+                                        <p><strong>Nights:</strong> {booking.nights}</p>
+                                        <p><strong>Rooms:</strong> {booking.rooms}</p>
+                                        <p><strong>Total Price:</strong> LKR {booking.totalPrice?.toLocaleString() || booking.pricePerNight * booking.nights * booking.rooms || 'Price not calculated'}</p>
+                                        {booking.specialRequests && (
+                                          <p><strong>Special Requests:</strong> {booking.specialRequests}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Assigned Vehicles */}
+                        {selectedTrip.staffAssignment.assignedVehicles && selectedTrip.staffAssignment.assignedVehicles.length > 0 && (
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                            <div className="flex items-start">
+                              <Car className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-purple-900">Transportation</h5>
+                                <div className="mt-2 space-y-3">
+                                  {selectedTrip.staffAssignment.assignedVehicles.map((vehicle, idx) => (
+                                    <div key={idx} className="bg-white rounded-md p-3 border border-purple-200">
+                                      <div className="space-y-1 text-sm text-purple-800">
+                                        <p><strong>Vehicle:</strong> {vehicle.vehicleId?.type || vehicle.vehicleType || 'Vehicle type'} - {vehicle.vehicleId?.model || vehicle.model || 'Model not specified'}</p>
+                                        <p><strong>Capacity:</strong> {vehicle.vehicleId?.capacity || vehicle.capacity || 'Capacity not specified'} passengers</p>
+                                        <p><strong>Daily Rate:</strong> LKR {vehicle.dailyRate?.toLocaleString()}</p>
+                                        <p><strong>Total Days:</strong> {vehicle.totalDays}</p>
+                                        {vehicle.driver && (
+                                          <div className="mt-2 pt-2 border-t border-purple-200">
+                                            <p><strong>Driver:</strong> {vehicle.driver.firstName} {vehicle.driver.lastName}</p>
+                                            <p className="flex items-center"><Phone className="h-4 w-4 mr-1" /><strong>Phone:</strong> {vehicle.driver.phone}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Detailed Itinerary */}
+                    {selectedTrip.staffAssignment?.itinerary && selectedTrip.staffAssignment.itinerary.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">Detailed Itinerary</h4>
+                        <div className="space-y-3">
+                          {selectedTrip.staffAssignment.itinerary.map((day, index) => (
+                            <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                              <div className="flex items-start">
+                                <div className="bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold mr-3">
+                                  {day.day}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="space-y-2 text-sm">
+                                    {day.date && (
+                                      <p className="flex items-center text-gray-600">
+                                        <Calendar className="h-4 w-4 mr-2" />
+                                        <strong>Date:</strong> {new Date(day.date).toLocaleDateString()}
+                                      </p>
+                                    )}
+                                    {day.location && (
+                                      <p className="flex items-center text-gray-600">
+                                        <MapPin className="h-4 w-4 mr-2" />
+                                        <strong>Location:</strong> {day.location}
+                                      </p>
+                                    )}
+                                    {day.activities && day.activities.length > 0 && (
+                                      <div>
+                                        <p className="font-medium text-gray-700">Activities:</p>
+                                        <ul className="list-disc list-inside ml-4 text-gray-600">
+                                          {day.activities.map((activity, idx) => (
+                                            <li key={idx}>{activity}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {day.accommodation && (
+                                      <p><strong>Accommodation:</strong> {day.accommodation}</p>
+                                    )}
+                                    {day.meals && day.meals.length > 0 && (
+                                      <div>
+                                        <p className="font-medium text-gray-700">Meals:</p>
+                                        <ul className="list-disc list-inside ml-4 text-gray-600">
+                                          {day.meals.map((meal, idx) => (
+                                            <li key={idx}>{meal}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {day.transport && (
+                                      <p><strong>Transport:</strong> {day.transport}</p>
+                                    )}
+                                    {day.notes && (
+                                      <p className="text-gray-600 italic">"{day.notes}"</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Staff Comments and Additional Notes */}
+                    {(selectedTrip.staffAssignment?.staffComments || selectedTrip.staffAssignment?.additionalNotes) && (
+                      <div className="space-y-3">
+                        {selectedTrip.staffAssignment.staffComments && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Staff Comments</h4>
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                              <p className="text-sm text-yellow-800">{selectedTrip.staffAssignment.staffComments}</p>
+                            </div>
+                          </div>
+                        )}
+                        {selectedTrip.staffAssignment.additionalNotes && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-2">Additional Notes</h4>
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                              <p className="text-sm text-gray-700">{selectedTrip.staffAssignment.additionalNotes}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Ready to Confirm */}
+                    <div className="bg-green-50 border border-green-200 rounded-md p-4">
+                      <div className="flex">
+                        <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+                        <div>
+                          <h4 className="text-sm font-medium text-green-800">Ready to Confirm</h4>
+                          <p className="text-sm text-green-700 mt-1">
+                            Your custom trip has been approved! Click "Confirm & Pay" to secure your booking.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={closeDetailsModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  Close
+                </button>
+                {selectedTrip.status === 'approved' && (
+                  <button
+                    onClick={() => {
+                      closeDetailsModal()
+                      handleConfirmCustomTrip(selectedTrip.id)
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Confirm & Pay
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 export default MyBookings
+
+
+
