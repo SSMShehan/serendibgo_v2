@@ -17,17 +17,22 @@ const {
 const router = express.Router();
 
 // @desc    Get all bookings for a user
-// @route   GET /api/bookings
+// @route   GET /api/hotel-bookings
 // @access  Private
 router.get('/', protect, asyncHandler(getMyBookings));
 
+// @desc    Get all bookings for a user (alternative route)
+// @route   GET /api/hotel-bookings/user
+// @access  Private
+router.get('/user', protect, asyncHandler(getMyBookings));
+
 // @desc    Get booking statistics
-// @route   GET /api/bookings/stats
+// @route   GET /api/hotel-bookings/stats
 // @access  Private
 router.get('/stats', protect, asyncHandler(getBookingStats));
 
-// @desc    Get single booking by ID
-// @route   GET /api/bookings/:id
+// @desc    Get single booking by ID (must be after specific routes)
+// @route   GET /api/hotel-bookings/:id
 // @access  Private
 router.get('/:id', protect, asyncHandler(getBooking));
 
