@@ -177,6 +177,11 @@ router.get('/:hotelId/bookings/stats', [
   authorize('hotel_owner', 'admin')
 ], getBookingStats);
 
+// @desc    Get all bookings for current user
+// @route   GET /api/hotel-bookings/user
+// @access  Private
+router.get('/user', protect, getUserBookings);
+
 // @desc    Get all bookings for admin
 // @route   GET /api/hotel-bookings/admin
 // @access  Private (Admin)

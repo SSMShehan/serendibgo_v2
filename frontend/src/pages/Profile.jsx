@@ -110,9 +110,18 @@ const Profile = () => {
              response.data.driver.license?.licenseNumber === 'TBD')) {
           setNeedsDriverCompletion(true);
         }
+      } else if (response.status === 'error' && response.data?.needsRegistration) {
+        // Driver profile not found - user needs to register
+        setDriverProfile(null);
+        if (user?.role === 'driver') {
+          setNeedsDriverCompletion(true);
+        }
       }
     } catch (error) {
-      console.error('Error fetching driver profile:', error);
+      // Only log unexpected errors (not 404s which are handled by the service)
+      if (!error.suppressConsoleError && error.response?.status !== 404) {
+        console.error('Error fetching driver profile:', error);
+      }
       // If driver profile doesn't exist, show completion form
       if (user?.role === 'driver') {
         setNeedsDriverCompletion(true);
@@ -169,14 +178,51 @@ const Profile = () => {
     setLoading(true);
     try {
       console.log('Submitting driver profile data:', driverFormData);
-      await tripService.driverService.updateDriverProfile(user.id, driverFormData);
-      toast.success('Driver profile completed successfully!');
-      setNeedsDriverCompletion(false);
-      navigate('/driver/dashboard');
+      
+      // If no driver profile exists, register as driver instead of updating
+      if (!driverProfile) {
+        const result = await tripService.driverService.registerDriver(driverFormData);
+        if (result.status === 'success') {
+          toast.success('Driver registration completed successfully!');
+          setNeedsDriverCompletion(false);
+          // Refresh the page to get updated user role
+          window.location.reload();
+        } else {
+          toast.error(result.message || 'Failed to register as driver');
+        }
+      } else {
+        // Update existing driver profile
+        const result = await tripService.driverService.updateDriverProfile(user.id, driverFormData);
+        if (result.status === 'success') {
+          toast.success('Driver profile updated successfully!');
+          setNeedsDriverCompletion(false);
+          navigate('/driver/dashboard');
+        } else if (result.status === 'error' && result.data?.needsRegistration) {
+          // Driver profile was deleted or doesn't exist, register instead
+          const registerResult = await tripService.driverService.registerDriver(driverFormData);
+          if (registerResult.status === 'success') {
+            toast.success('Driver registration completed successfully!');
+            setNeedsDriverCompletion(false);
+            window.location.reload();
+          } else {
+            toast.error(registerResult.message || 'Failed to register as driver');
+          }
+        } else {
+          toast.error(result.message || 'Failed to update driver profile');
+        }
+      }
     } catch (error) {
       console.error('Error updating driver profile:', error);
       console.error('Error response:', error.response?.data);
-      toast.error('Failed to complete driver profile');
+      
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        toast.error('Driver profile not found. Please try registering as a driver first.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Failed to complete driver profile');
+      }
     } finally {
       setLoading(false);
     }

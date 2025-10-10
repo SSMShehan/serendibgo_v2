@@ -177,7 +177,7 @@ const HotelBooking = () => {
       
       // Fetch hotel details
       const hotelResponse = await hotelAPI.getHotel(id);
-      setHotel(hotelResponse.data);
+      setHotel(hotelResponse.data.hotel);
 
       // Fetch room details
       const roomId = searchParams.get('roomId');
