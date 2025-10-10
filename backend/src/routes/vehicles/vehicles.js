@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const {
   getVehicles,
   getMyVehicles,
@@ -18,6 +19,15 @@ const {
 } = require('../../controllers/vehicles/vehicleController');
 const { protect, authorize } = require('../../middleware/auth');
 const { body } = require('express-validator');
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 const { handleValidationErrors } = require('../../middleware/errorHandler');
 
 // Public routes
@@ -31,6 +41,13 @@ router.get('/:id/availability', getVehicleAvailability);
 router.post('/register', [
   protect,
   authorize('driver'),
+  upload.fields([
+    { name: 'registration', maxCount: 1 },
+    { name: 'insurance', maxCount: 1 },
+    { name: 'fitness', maxCount: 1 },
+    { name: 'revenue', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+  ]),
   body('make').notEmpty().withMessage('Vehicle make is required'),
   body('model').notEmpty().withMessage('Vehicle model is required'),
   body('year').isInt({ min: 1990, max: new Date().getFullYear() + 1 }).withMessage('Invalid year').toInt(),
@@ -42,7 +59,25 @@ router.post('/register', [
 
 router.get('/driver/:driverId', [
   protect,
-  authorize('driver', 'admin')
+  // Custom middleware to allow users with driver profiles or admin role
+  async (req, res, next) => {
+    if (req.user.role === 'driver' || req.user.role === 'admin') {
+      return next();
+    }
+    
+    // Check if user has a driver profile
+    const Driver = require('../../models/vehicles/Driver');
+    const driverProfile = await Driver.findOne({ user: req.user.id });
+    
+    if (driverProfile) {
+      return next();
+    }
+    
+    return res.status(403).json({
+      status: 'error',
+      message: 'Access denied. Driver profile required.'
+    });
+  }
 ], getDriverVehicles);
 
 // Protected routes (Vehicle Owner)

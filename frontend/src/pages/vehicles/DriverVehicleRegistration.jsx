@@ -250,7 +250,7 @@ const DriverVehicleRegistration = () => {
         year: formData.year ? parseInt(formData.year) : new Date().getFullYear(),
         engineCapacity: formData.engineCapacity || '',
         mileage: formData.mileage ? parseInt(formData.mileage) : 0,
-        seatingCapacity: formData.seatingCapacity || 4,
+        seatingCapacity: formData.seatingCapacity ? parseInt(formData.seatingCapacity) : 4,
         pricing: {
           ...formData.pricing,
           baseRate: formData.pricing.baseRate ? parseInt(formData.pricing.baseRate) : 0,
@@ -263,19 +263,25 @@ const DriverVehicleRegistration = () => {
       // Create FormData for file uploads
       const submitData = new FormData();
       
-      // Add all form data
+      // Add all form data as individual fields (not JSON strings)
       Object.keys(processedData).forEach(key => {
         if (key === 'documents' || key === 'images') {
           // Handle file uploads separately
           return;
         }
-        submitData.append(key, JSON.stringify(processedData[key]));
+        if (key === 'pricing' || key === 'location' || key === 'features' || key === 'amenities') {
+          // Handle complex objects as JSON strings
+          submitData.append(key, JSON.stringify(processedData[key]));
+        } else {
+          // Handle simple values directly
+          submitData.append(key, processedData[key]);
+        }
       });
 
       // Add documents
       Object.keys(formData.documents).forEach(docType => {
         if (formData.documents[docType]) {
-          submitData.append(`documents.${docType}`, formData.documents[docType]);
+          submitData.append(docType, formData.documents[docType]);
         }
       });
 
@@ -286,6 +292,10 @@ const DriverVehicleRegistration = () => {
 
       // Submit to backend
       console.log('Submitting vehicle data:', processedData);
+      console.log('FormData contents:');
+      for (let [key, value] of submitData.entries()) {
+        console.log(key, value);
+      }
       await tripService.vehicleService.registerVehicle(submitData);
       
       toast.success('Vehicle registered successfully! It will be reviewed by our team.');

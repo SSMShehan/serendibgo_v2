@@ -29,6 +29,7 @@ const DriverDashboard = () => {
   const { user } = useAuth();
   const [driver, setDriver] = useState(null);
   const [trips, setTrips] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -42,7 +43,9 @@ const DriverDashboard = () => {
       setLoading(true);
       
       // Fetch driver profile
+      console.log('Fetching driver profile for user ID:', user.id);
       const driverData = await tripService.driverService.getDriverByUserId(user.id);
+      console.log('Driver profile response:', driverData);
       if (driverData.status === 'success') {
         setDriver(driverData.data.driver);
         
@@ -55,6 +58,29 @@ const DriverDashboard = () => {
         } catch (tripsError) {
           console.warn('No trips found for driver:', tripsError);
           setTrips([]);
+        }
+        
+        // Fetch driver vehicles only if driver profile exists
+        if (driverData.data.driver && driverData.data.driver._id) {
+          console.log('Fetching vehicles for driver ID:', driverData.data.driver._id);
+          try {
+            const vehiclesData = await tripService.vehicleService.getDriverVehicles(driverData.data.driver._id);
+            if (vehiclesData.status === 'success') {
+              setVehicles(vehiclesData.data.vehicles || []);
+            } else if (vehiclesData.status === 'error' && vehiclesData.message.includes('Access denied')) {
+              // User doesn't have driver role yet
+              setVehicles([]);
+            }
+          } catch (vehiclesError) {
+            // Only log unexpected errors (not 403s which are expected when no driver profile)
+            if (vehiclesError.response?.status !== 403) {
+              console.warn('No vehicles found for driver:', vehiclesError);
+            }
+            setVehicles([]);
+          }
+        } else {
+          console.log('No driver profile found, skipping vehicle fetch');
+          setVehicles([]);
         }
         
         // Fetch driver stats
@@ -77,6 +103,7 @@ const DriverDashboard = () => {
         // Driver profile not found - user needs to register
         setDriver(null);
         setTrips([]);
+        setVehicles([]);
         setStats({
           totalTrips: 0,
           completedTrips: 0,
@@ -94,6 +121,7 @@ const DriverDashboard = () => {
       }
       setDriver(null);
       setTrips([]);
+      setVehicles([]);
       setStats({
         totalTrips: 0,
         completedTrips: 0,
@@ -338,22 +366,54 @@ const DriverDashboard = () => {
                     </a>
                   </div>
                   
-                  <div className="text-center py-8">
-                    <Car className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No vehicles registered</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Register your vehicle to start accepting bookings and earning money.
-                    </p>
-                    <div className="mt-4">
-                      <a 
-                        href="/driver/vehicle-registration"
-                        className="btn btn-primary"
-                      >
-                        <Car className="w-4 h-4 mr-2" />
-                        Register Your Vehicle
-                      </a>
+                  {vehicles.length > 0 ? (
+                    <div className="space-y-4">
+                      {vehicles.map((vehicle) => (
+                        <div key={vehicle._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Car className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{vehicle.name}</h4>
+                              <p className="text-sm text-gray-500">
+                                {vehicle.make} {vehicle.model} • {vehicle.licensePlate}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              vehicle.status === 'active' ? 'bg-green-100 text-green-800' :
+                              vehicle.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {vehicle.status}
+                            </span>
+                            <button className="btn btn-ghost btn-sm">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Car className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No vehicles registered</h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        Register your vehicle to start accepting bookings and earning money.
+                      </p>
+                      <div className="mt-4">
+                        <a 
+                          href="/driver/vehicle-registration"
+                          className="btn btn-primary"
+                        >
+                          <Car className="w-4 h-4 mr-2" />
+                          Register Your Vehicle
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
@@ -524,22 +584,60 @@ const DriverDashboard = () => {
                   </a>
                 </div>
                 
-                <div className="text-center py-8">
-                  <Car className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No vehicles registered</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Register your vehicle to start accepting bookings and earning money.
-                  </p>
-                  <div className="mt-4">
-                    <a 
-                      href="/driver/vehicle-registration"
-                      className="btn btn-primary"
-                    >
-                      <Car className="w-4 h-4 mr-2" />
-                      Register Your Vehicle
-                    </a>
+                {vehicles.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {vehicles.map((vehicle) => (
+                      <div key={vehicle._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Car className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            vehicle.status === 'active' ? 'bg-green-100 text-green-800' :
+                            vehicle.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {vehicle.status}
+                          </span>
+                        </div>
+                        <h4 className="font-semibold text-gray-900 mb-2">{vehicle.name}</h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {vehicle.make} {vehicle.model} • {vehicle.year}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-4">
+                          License: {vehicle.licensePlate}
+                        </p>
+                        <div className="flex space-x-2">
+                          <button className="btn btn-ghost btn-sm flex-1">
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </button>
+                          <button className="btn btn-ghost btn-sm flex-1">
+                            <Settings className="w-4 h-4 mr-1" />
+                            Manage
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Car className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No vehicles registered</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Register your vehicle to start accepting bookings and earning money.
+                    </p>
+                    <div className="mt-4">
+                      <a 
+                        href="/driver/vehicle-registration"
+                        className="btn btn-primary"
+                      >
+                        <Car className="w-4 h-4 mr-2" />
+                        Register Your Vehicle
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
