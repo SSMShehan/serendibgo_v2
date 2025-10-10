@@ -36,6 +36,9 @@ const registerDriver = asyncHandler(async (req, res) => {
   
   await driver.save();
   
+  // Update user role to driver
+  await User.findByIdAndUpdate(req.user.id, { role: 'driver' });
+  
   // Populate the response
   await driver.populate('user', 'name email phone');
   
@@ -143,8 +146,10 @@ const getDriverByUserId = asyncHandler(async (req, res) => {
   
   // Check if user is authenticated
   if (!req.user) {
-    res.status(401);
-    throw new Error('Authentication required');
+    return res.status(401).json({
+      status: 'error',
+      message: 'Authentication required'
+    });
   }
   
   const driver = await Driver.findOne({ user: userId })
@@ -152,16 +157,21 @@ const getDriverByUserId = asyncHandler(async (req, res) => {
     .populate('statusHistory.updatedBy', 'name email');
   
   if (!driver) {
-    res.status(404);
-    throw new Error('Driver not found for this user');
+    return res.status(404).json({
+      status: 'error',
+      message: 'Driver profile not found',
+      data: { needsRegistration: true }
+    });
   }
   
   // Check authorization
   if (driver.user._id.toString() !== req.user.id && 
       req.user.role !== 'admin' && 
       req.user.role !== 'vehicle_owner') {
-    res.status(403);
-    throw new Error('Not authorized to access this driver profile');
+    return res.status(403).json({
+      status: 'error',
+      message: 'Not authorized to access this driver profile'
+    });
   }
   
   res.status(200).json({
@@ -191,8 +201,11 @@ const updateDriverProfileByUserId = asyncHandler(async (req, res) => {
   const driver = await Driver.findOne({ user: userId });
   
   if (!driver) {
-    res.status(404);
-    throw new Error('Driver not found for this user');
+    return res.status(404).json({
+      status: 'error',
+      message: 'Driver not found for this user',
+      data: { needsRegistration: true }
+    });
   }
   
   // Update driver profile
@@ -409,14 +422,18 @@ const getDriverTrips = asyncHandler(async (req, res) => {
   
   const driver = await Driver.findById(driverId);
   if (!driver) {
-    res.status(404);
-    throw new Error('Driver not found');
+    return res.status(404).json({
+      status: 'error',
+      message: 'Driver not found'
+    });
   }
   
   // Check authorization
   if (driver.user.toString() !== req.user.id && req.user.role !== 'admin') {
-    res.status(403);
-    throw new Error('Not authorized to view driver trips');
+    return res.status(403).json({
+      status: 'error',
+      message: 'Not authorized to view driver trips'
+    });
   }
   
   const filters = {};
@@ -428,11 +445,27 @@ const getDriverTrips = asyncHandler(async (req, res) => {
   
   const skip = (page - 1) * limit;
   
-  const trips = await Trip.getUserTrips(driver.user._id, 'driver', filters)
+  // Build query for driver trips
+  let query = { driver: driver.user._id };
+  if (filters.status) query.status = filters.status;
+  if (filters.dateFrom && filters.dateTo) {
+    query.scheduledStartTime = {
+      $gte: new Date(filters.dateFrom),
+      $lte: new Date(filters.dateTo)
+    };
+  }
+  
+  const trips = await Trip.find(query)
+    .populate('customer', 'name email phone')
+    .populate('vehicleOwner', 'name email phone')
+    .populate('driver', 'name phone')
+    .populate('vehicle', 'name make model type')
+    .populate('bookingRequest', 'bookingReference')
+    .sort({ scheduledStartTime: -1 })
     .skip(skip)
     .limit(parseInt(limit));
   
-  const total = await Trip.countDocuments({ driver: driver.user._id });
+  const total = await Trip.countDocuments(query);
   
   res.status(200).json({
     status: 'success',

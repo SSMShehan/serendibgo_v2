@@ -65,7 +65,7 @@ const RoomDetails = () => {
       }
 
       if (hotelResponse.status === 'success') {
-        setHotel(hotelResponse.data);
+        setHotel(hotelResponse.data.hotel);
       } else {
         toast.error('Hotel not found');
         navigate('/hotels');
@@ -271,8 +271,8 @@ const RoomDetails = () => {
           infants: 0
         },
         guestDetails: {
-          firstName: user.name?.split(' ')[0] || user.email.split('@')[0],
-          lastName: user.name?.split(' ')[1] || '',
+          firstName: user.firstName || user.email.split('@')[0],
+          lastName: user.lastName || 'Guest',
           email: user.email,
           phone: user.phone || '+1234567890' // Provide default phone if not available
         },
@@ -288,7 +288,7 @@ const RoomDetails = () => {
         toast.success('Booking created successfully!');
         
         // Navigate to payment page with booking ID
-        navigate(`/payment`, { 
+        navigate(`/payment/${result.data.booking._id}`, { 
           state: { 
             bookingId: result.data.booking._id,
             amount: result.data.booking.pricing.totalPrice,
@@ -562,14 +562,16 @@ const RoomDetails = () => {
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-              <div className="text-center mb-6">
-                <div className="text-3xl font-bold text-blue-600 mb-2">
-                  {hotelUtils.formatPrice(room.pricing?.basePrice)}
-                </div>
-                <div className="text-sm text-gray-600">per night</div>
-              </div>
+              {hotelUtils.formatPrice(room.pricing?.basePrice) && (
+                <>
+                  <div className="text-center mb-6">
+                    <div className="text-3xl font-bold text-blue-600 mb-2">
+                      {hotelUtils.formatPrice(room.pricing?.basePrice)}
+                    </div>
+                    <div className="text-sm text-gray-600">per night</div>
+                  </div>
 
-              <div className="space-y-4 mb-6">
+                  <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Check-in Date
@@ -651,43 +653,45 @@ const RoomDetails = () => {
                     ) : null}
                   </div>
                 )}
-              </div>
+                  </div>
 
-              <button
-                onClick={handleBooking}
-                disabled={bookingLoading || !bookingDates.checkIn || !bookingDates.checkOut || (availability && !availability.isAvailable)}
-                className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
-                  bookingLoading || !bookingDates.checkIn || !bookingDates.checkOut || (availability && !availability.isAvailable)
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : availability?.warning
-                      ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {bookingLoading 
-                  ? 'Processing Booking...'
-                  : availability && !availability.isAvailable 
-                    ? 'Room Not Available' 
-                    : availability?.warning 
-                      ? 'Book with Warning'
-                      : 'Book This Room'
-                }
-              </button>
+                  <button
+                    onClick={handleBooking}
+                    disabled={bookingLoading || !bookingDates.checkIn || !bookingDates.checkOut || (availability && !availability.isAvailable)}
+                    className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors ${
+                      bookingLoading || !bookingDates.checkIn || !bookingDates.checkOut || (availability && !availability.isAvailable)
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : availability?.warning
+                          ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    {bookingLoading 
+                      ? 'Processing Booking...'
+                      : availability && !availability.isAvailable 
+                        ? 'Room Not Available' 
+                        : availability?.warning 
+                          ? 'Book with Warning'
+                          : 'Book This Room'
+                    }
+                  </button>
 
-              <div className="mt-4 text-center">
-                {availability?.warning && (
-                  <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-center justify-center space-x-2 text-sm text-yellow-700">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{availability.message}</span>
+                  <div className="mt-4 text-center">
+                    {availability?.warning && (
+                      <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center justify-center space-x-2 text-sm text-yellow-700">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>{availability.message}</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Free cancellation up to 24 hours before check-in</span>
                     </div>
                   </div>
-                )}
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>Free cancellation up to 24 hours before check-in</span>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           </div>
         </div>

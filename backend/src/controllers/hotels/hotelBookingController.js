@@ -338,7 +338,7 @@ const getUserBookings = asyncHandler(async (req, res) => {
 const getBookingById = asyncHandler(async (req, res) => {
   const booking = await HotelBooking.findById(req.params.id)
     .populate([
-      { path: 'hotel', select: 'name location contact amenities' },
+      { path: 'hotel', select: 'name location contact amenities owner' },
       { path: 'room', select: 'name roomType amenities images' },
       { path: 'user', select: 'firstName lastName email phone' }
     ]);
@@ -351,8 +351,8 @@ const getBookingById = asyncHandler(async (req, res) => {
   }
 
   // Check if user can access this booking
-  const isOwner = booking.user._id.toString() === req.user.id;
-  const isHotelOwner = booking.hotel.owner.toString() === req.user.id;
+  const isOwner = booking.user?._id?.toString() === req.user.id;
+  const isHotelOwner = booking.hotel?.owner?.toString() === req.user.id;
   const isAdmin = req.user.role === 'admin';
 
   if (!isOwner && !isHotelOwner && !isAdmin) {

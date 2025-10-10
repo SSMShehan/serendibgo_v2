@@ -402,7 +402,7 @@ function App() {
         } />
 
         <Route path="driver/register" element={
-          <ProtectedRoute allowedRoles={['customer']}>
+          <ProtectedRoute allowedRoles={['customer', 'tourist']}>
             <DriverRegistration />
           </ProtectedRoute>
         } />

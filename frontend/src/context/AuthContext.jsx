@@ -99,7 +99,10 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           // Token verification failed, but keep user logged in with localStorage data
-          console.warn('Token verification failed, using localStorage data')
+          // Only log in development mode to reduce console noise
+          if (import.meta.env.DEV) {
+            console.warn('Token verification failed, using localStorage data')
+          }
         }
       } catch (error) {
         localStorage.removeItem('token')

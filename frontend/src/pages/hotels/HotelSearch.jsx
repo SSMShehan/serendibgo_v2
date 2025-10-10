@@ -489,12 +489,14 @@ const HotelSearch = () => {
                               )}
                             </div>
                             
-                            <div className="text-right">
-                              <p className="text-lg font-semibold text-gray-900">
-                                {hotelUtils.formatPrice(hotel.averageRoomPrice)}
-                              </p>
-                              <p className="text-sm text-gray-600">per night</p>
-                            </div>
+                            {hotelUtils.formatPrice(hotel.averageRoomPrice) && (
+                              <div className="text-right">
+                                <p className="text-lg font-semibold text-gray-900">
+                                  {hotelUtils.formatPrice(hotel.averageRoomPrice)}
+                                </p>
+                                <p className="text-sm text-gray-600">per night</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
