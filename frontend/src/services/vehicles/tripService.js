@@ -307,7 +307,7 @@ export const driverService = {
   // Approve/Reject driver
   approveRejectDriver: async (driverId, status) => {
     try {
-      const response = await api.put(`/drivers/${driverId}/approve`, { status });
+      const response = await api.patch(`/drivers/${driverId}/status`, { status });
       return response.data;
     } catch (error) {
       console.error('Error approving/rejecting driver:', error);
@@ -502,7 +502,18 @@ export const vehicleService = {
       const response = await api.get(`/vehicles/driver/${driverId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching driver vehicles:', error);
+      // Handle 403 as expected response when user doesn't have driver role
+      if (error.response?.status === 403) {
+        return {
+          status: 'error',
+          message: 'Access denied. Driver role required.',
+          data: { vehicles: [] }
+        };
+      }
+      // Only log unexpected errors
+      if (!error.suppressConsoleError) {
+        console.error('Error fetching driver vehicles:', error);
+      }
       throw error;
     }
   },

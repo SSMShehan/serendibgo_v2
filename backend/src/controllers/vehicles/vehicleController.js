@@ -486,6 +486,7 @@ const registerVehicle = asyncHandler(async (req, res) => {
   } = req.body;
 
   console.log('Received vehicle registration data:', req.body);
+  console.log('Files received:', req.files);
 
   // Parse complex fields
   const parsedFeatures = parseFormData(features);
@@ -576,15 +577,30 @@ const registerVehicle = asyncHandler(async (req, res) => {
 const getDriverVehicles = asyncHandler(async (req, res) => {
   const driverId = req.params.driverId;
   
+  // Check if user has driver profile (even if role is still tourist)
+  const Driver = require('../../models/vehicles/Driver');
+  const driverProfile = await Driver.findOne({ user: req.user.id });
+  
   // Check if user is requesting their own vehicles or is admin
-  if (req.user.role !== 'admin' && req.user.id !== driverId) {
+  if (req.user.role !== 'admin' && req.user.role !== 'driver' && !driverProfile) {
+    return res.status(403).json({
+      status: 'error',
+      message: 'Access denied. Driver profile required.'
+    });
+  }
+
+  // For drivers, they can only view their own vehicles
+  // Use the user ID to find vehicles since vehicles are stored with user ID as owner
+  if ((req.user.role === 'driver' || driverProfile) && req.user.id !== driverId) {
     return res.status(403).json({
       status: 'error',
       message: 'Access denied. You can only view your own vehicles.'
     });
   }
 
-  const vehicles = await Vehicle.find({ owner: driverId })
+  // Find vehicles owned by the user (not the driver ID)
+  // Allow drivers to see their vehicles even if their profile is pending
+  const vehicles = await Vehicle.find({ owner: req.user.id })
     .populate('owner', 'firstName lastName email phone')
     .sort({ createdAt: -1 });
 

@@ -115,7 +115,7 @@ router.get('/:driverId', [
 // @access  Private (Admin)
 router.patch('/:driverId/status', [
   protect,
-  authorize('admin'),
+  authorize('admin', 'staff'),
   param('driverId').isMongoId().withMessage('Invalid driver ID'),
   body('status').isIn(['pending', 'active', 'suspended', 'inactive', 'blacklisted']).withMessage('Invalid status'),
   body('reason').optional().isString().withMessage('Reason must be a string'),

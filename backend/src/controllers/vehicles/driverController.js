@@ -246,7 +246,7 @@ const updateDriverStatus = asyncHandler(async (req, res) => {
   }
   
   // Check authorization
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && req.user.role !== 'staff') {
     res.status(403);
     throw new Error('Not authorized to update driver status');
   }
