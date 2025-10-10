@@ -389,8 +389,183 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// @desc    Create new booking
+// @route   POST /api/bookings
+// @access  Private
+const createBooking = async (req, res) => {
+  try {
+    const { tourId, startDate, endDate, groupSize, specialRequests } = req.body;
+
+    // Validate required fields
+    if (!tourId || !startDate || !endDate || !groupSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: tourId, startDate, endDate, groupSize'
+      });
+    }
+
+    // Get tour details
+    const tour = await Tour.findById(tourId);
+    if (!tour) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tour not found'
+      });
+    }
+
+    // Calculate duration and total amount
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const totalAmount = tour.price * groupSize * duration;
+
+    // Create booking
+    const booking = new Booking({
+      user: req.user._id,
+      tour: tourId,
+      startDate: start,
+      endDate: end,
+      duration,
+      groupSize,
+      totalAmount,
+      specialRequests,
+      status: 'pending',
+      paymentStatus: 'pending'
+    });
+
+    await booking.save();
+
+    // Populate the booking with tour and user details
+    await booking.populate('tour', 'title description images duration price location');
+    await booking.populate('user', 'firstName lastName email phone');
+
+    res.status(201).json({
+      success: true,
+      message: 'Booking created successfully',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating booking',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Update booking status
+// @route   PUT /api/bookings/:id/status
+// @access  Private
+const updateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    // Validate status
+    const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
+      });
+    }
+
+    // Find booking
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Check if user owns this booking or is admin/guide
+    if (booking.user.toString() !== req.user._id.toString() && 
+        !['admin', 'guide', 'staff'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Update booking
+    booking.status = status;
+    if (notes) {
+      booking.notes = notes;
+    }
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Booking status updated successfully',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Error updating booking status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating booking status',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get guide bookings
+// @route   GET /api/bookings/guide
+// @access  Private (Guide)
+const getGuideBookings = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+
+    // Build query
+    const query = { guide: req.user._id };
+    if (status) {
+      query.status = status;
+    }
+
+    // Get bookings
+    const bookings = await Booking.find(query)
+      .populate('tour', 'title description images duration price location')
+      .populate('user', 'firstName lastName email phone')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    // Get total count
+    const total = await Booking.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        bookings,
+        pagination: {
+          current: parseInt(page),
+          pages: Math.ceil(total / limit),
+          total,
+          limit: parseInt(limit)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching guide bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching guide bookings',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
+  createBooking,
   getUserBookings,
   getBookingById,
-  cancelBooking
+  updateBookingStatus,
+  cancelBooking,
+  getGuideBookings
 };

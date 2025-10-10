@@ -247,16 +247,16 @@ const DriverVehicleRegistration = () => {
       // Process form data to convert empty strings to proper values
       const processedData = {
         ...formData,
-        year: formData.year ? parseInt(formData.year) : new Date().getFullYear(),
+        year: formData.year && formData.year !== '' ? parseInt(formData.year) : new Date().getFullYear(),
         engineCapacity: formData.engineCapacity || '',
-        mileage: formData.mileage ? parseInt(formData.mileage) : 0,
-        seatingCapacity: formData.seatingCapacity ? parseInt(formData.seatingCapacity) : 4,
+        mileage: formData.mileage && formData.mileage !== '' ? parseInt(formData.mileage) : 0,
+        seatingCapacity: formData.seatingCapacity && formData.seatingCapacity !== '' ? parseInt(formData.seatingCapacity) : 4,
         pricing: {
           ...formData.pricing,
-          baseRate: formData.pricing.baseRate ? parseInt(formData.pricing.baseRate) : 0,
-          perKmRate: formData.pricing.perKmRate ? parseFloat(formData.pricing.perKmRate) : 0,
-          hourlyRate: formData.pricing.hourlyRate ? parseInt(formData.pricing.hourlyRate) : 0,
-          dailyRate: formData.pricing.dailyRate ? parseInt(formData.pricing.dailyRate) : 0
+          baseRate: formData.pricing.baseRate && formData.pricing.baseRate !== '' ? parseInt(formData.pricing.baseRate) : 0,
+          perKmRate: formData.pricing.perKmRate && formData.pricing.perKmRate !== '' ? parseFloat(formData.pricing.perKmRate) : 0,
+          hourlyRate: formData.pricing.hourlyRate && formData.pricing.hourlyRate !== '' ? parseInt(formData.pricing.hourlyRate) : 0,
+          dailyRate: formData.pricing.dailyRate && formData.pricing.dailyRate !== '' ? parseInt(formData.pricing.dailyRate) : 0
         }
       };
 
@@ -269,7 +269,7 @@ const DriverVehicleRegistration = () => {
           // Handle file uploads separately
           return;
         }
-        if (key === 'pricing' || key === 'location' || key === 'features' || key === 'amenities') {
+        if (key === 'pricing' || key === 'location' || key === 'features' || key === 'amenities' || key === 'availability') {
           // Handle complex objects as JSON strings
           submitData.append(key, JSON.stringify(processedData[key]));
         } else {
@@ -364,7 +364,7 @@ const DriverVehicleRegistration = () => {
                   min="1990"
                   max={new Date().getFullYear() + 1}
                   value={formData.year}
-                  onChange={(e) => handleInputChange('year', e.target.value ? parseInt(e.target.value) : '')}
+                  onChange={(e) => handleInputChange('year', e.target.value)}
                   className="input input-bordered"
                 />
               </div>

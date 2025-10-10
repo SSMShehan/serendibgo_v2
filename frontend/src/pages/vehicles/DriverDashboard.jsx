@@ -62,17 +62,22 @@ const DriverDashboard = () => {
         
         // Fetch driver vehicles only if driver profile exists
         if (driverData.data.driver && driverData.data.driver._id) {
-          console.log('Fetching vehicles for driver ID:', driverData.data.driver._id);
+          console.log('Fetching vehicles for user ID:', user.id); // Use user ID instead of driver ID
+          console.log('Current user ID:', user.id);
           try {
-            const vehiclesData = await tripService.vehicleService.getDriverVehicles(driverData.data.driver._id);
+            const vehiclesData = await tripService.vehicleService.getDriverVehicles(user.id);
+            console.log('Vehicles API response:', vehiclesData);
             if (vehiclesData.status === 'success') {
+              console.log('Vehicles found:', vehiclesData.data.vehicles);
               setVehicles(vehiclesData.data.vehicles || []);
             } else if (vehiclesData.status === 'error' && vehiclesData.message.includes('Access denied')) {
               // User doesn't have driver role yet
+              console.log('Access denied for vehicles');
               setVehicles([]);
             }
           } catch (vehiclesError) {
             // Only log unexpected errors (not 403s which are expected when no driver profile)
+            console.error('Vehicles fetch error:', vehiclesError);
             if (vehiclesError.response?.status !== 403) {
               console.warn('No vehicles found for driver:', vehiclesError);
             }
