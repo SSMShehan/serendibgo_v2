@@ -157,7 +157,6 @@ function App() {
                 <Route path="hotels/:id" element={<HotelDetails />} />
                 <Route path="hotels/:hotelId/rooms/:roomId" element={<RoomDetails />} />
                 <Route path="hotels/:id/booking" element={<HotelBooking />} />
-                <Route path="payment/:bookingId" element={<Payment />} />
                 <Route path="booking-confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="hotels/:id/reviews" element={<HotelReviews />} />
                 
@@ -368,7 +367,7 @@ function App() {
         } />
 
         <Route path="driver/register" element={
-          <ProtectedRoute allowedRoles={['customer']}>
+          <ProtectedRoute allowedRoles={['customer', 'tourist']}>
             <DriverRegistration />
           </ProtectedRoute>
         } />

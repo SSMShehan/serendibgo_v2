@@ -191,7 +191,8 @@ const DriverRegistration = () => {
       
       if (result.status === 'success') {
         toast.success('Driver registration submitted successfully!');
-        navigate('/driver/dashboard');
+        // Refresh user context to get updated role
+        window.location.reload();
       } else {
         toast.error(result.message || 'Registration failed');
       }

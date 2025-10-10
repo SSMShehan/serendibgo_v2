@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { bookingAPI } from '../services/hotels/hotelService'
-import { Calendar, MapPin, Clock, Users, CreditCard, Bed, AlertCircle } from 'lucide-react'
+import vehicleService from '../services/vehicles/vehicleService'
+import { Calendar, MapPin, Clock, Users, CreditCard, Bed, AlertCircle, Car } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const MyBookings = () => {
@@ -20,12 +21,39 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     try {
       setLoading(true)
-      const response = await bookingAPI.getMyBookings()
-      if (response.status === 'success') {
-        setBookings(response.data.bookings)
-      } else {
-        setError('Failed to fetch bookings')
+      
+      // Fetch both hotel and vehicle bookings
+      const [hotelBookingsResponse, vehicleBookingsResponse] = await Promise.allSettled([
+        bookingAPI.getMyBookings(),
+        vehicleService.vehicleBookingAPI.getUserBookings()
+      ])
+      
+      const allBookings = []
+      
+      // Add hotel bookings
+      if (hotelBookingsResponse.status === 'fulfilled' && hotelBookingsResponse.value.status === 'success') {
+        const hotelBookings = hotelBookingsResponse.value.data.bookings.map(booking => ({
+          ...booking,
+          type: 'hotel',
+          icon: Bed
+        }))
+        allBookings.push(...hotelBookings)
       }
+      
+      // Add vehicle bookings
+      if (vehicleBookingsResponse.status === 'fulfilled' && vehicleBookingsResponse.value.status === 'success') {
+        const vehicleBookings = vehicleBookingsResponse.value.data.bookings.map(booking => ({
+          ...booking,
+          type: 'vehicle',
+          icon: Car
+        }))
+        allBookings.push(...vehicleBookings)
+      }
+      
+      // Sort by booking date (most recent first)
+      allBookings.sort((a, b) => new Date(b.bookedAt || b.createdAt) - new Date(a.bookedAt || a.createdAt))
+      
+      setBookings(allBookings)
     } catch (error) {
       console.error('Error fetching bookings:', error)
       setError('Failed to fetch bookings')
@@ -96,14 +124,14 @@ const MyBookings = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-          <p className="mt-2 text-gray-600">Manage your tour bookings and reservations</p>
+          <p className="mt-2 text-gray-600">Manage your hotel and vehicle bookings</p>
         </div>
 
         {bookings.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Start by exploring our amazing hotels and tours.</p>
+            <p className="mt-1 text-sm text-gray-500">Start by exploring our amazing hotels and vehicles.</p>
             <div className="mt-6 space-x-4">
               <Link
                 to="/hotels"
@@ -112,74 +140,86 @@ const MyBookings = () => {
                 Browse Hotels
               </Link>
               <Link
-                to="/tours"
+                to="/vehicles"
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                Browse Tours
+                Browse Vehicles
               </Link>
             </div>
           </div>
         ) : (
           <div className="space-y-6">
-            {bookings.map((booking) => (
-              <div key={booking._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Bed className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {booking.hotel?.name || 'Hotel Booking'}
-                      </h3>
+            {bookings.map((booking) => {
+              const IconComponent = booking.icon || Bed;
+              const isHotel = booking.type === 'hotel';
+              const isVehicle = booking.type === 'vehicle';
+              
+              return (
+                <div key={booking._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <IconComponent className={`h-5 w-5 ${isHotel ? 'text-blue-600' : 'text-green-600'}`} />
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {isHotel && (booking.hotel?.name || 'Hotel Booking')}
+                          {isVehicle && (booking.vehicle?.name || 'Vehicle Booking')}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {isHotel && `${booking.room?.name || 'Room'} - ${booking.room?.roomType || 'Standard'}`}
+                        {isVehicle && `${booking.vehicle?.vehicleType || 'Vehicle'} - ${booking.vehicle?.make || ''} ${booking.vehicle?.model || ''}`}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          {isHotel && formatDate(booking.checkInDate)}
+                          {isVehicle && formatDate(booking.startDate)}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          {isHotel && formatDate(booking.checkOutDate)}
+                          {isVehicle && formatDate(booking.endDate)}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          {isHotel && (booking.hotel?.location?.city || 'Location')}
+                          {isVehicle && (booking.tripDetails?.pickupLocation?.city || 'Location')}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Users className="h-4 w-4 mr-2" />
+                          {isHotel && (booking.guests?.adults || 1)} {isHotel && (booking.guests?.adults === 1 ? 'guest' : 'guests')}
+                          {isVehicle && (booking.passengers?.adults || 1)} {isVehicle && (booking.passengers?.adults === 1 ? 'passenger' : 'passengers')}
+                        </div>
+                      </div>
+                      {booking.bookingReference && (
+                        <div className="mt-3 text-xs text-gray-500">
+                          Reference: {booking.bookingReference}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {booking.room?.name || 'Room'} - {booking.room?.roomType || 'Standard'}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {formatDate(booking.checkInDate)}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {formatDate(booking.checkOutDate)}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {booking.hotel?.location?.city || 'Location'}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2" />
-                        {booking.guests?.adults || 1} {booking.guests?.adults === 1 ? 'guest' : 'guests'}
+                    <div className="ml-6 flex flex-col items-end">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.bookingStatus || booking.status)}`}>
+                        {(booking.bookingStatus || booking.status).charAt(0).toUpperCase() + (booking.bookingStatus || booking.status).slice(1)}
+                      </span>
+                      <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
+                        <CreditCard className="h-4 w-4 mr-1" />
+                        {booking.pricing?.currency || 'USD'} {booking.pricing?.totalPrice?.toLocaleString() || '0'}
                       </div>
                     </div>
-                    {booking.bookingReference && (
-                      <div className="mt-3 text-xs text-gray-500">
-                        Reference: {booking.bookingReference}
-                      </div>
+                  </div>
+                  <div className="mt-4 flex justify-end space-x-3">
+                    <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                      View Details
+                    </button>
+                    {(booking.bookingStatus || booking.status) === 'pending' && (
+                      <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Cancel
+                      </button>
                     )}
                   </div>
-                  <div className="ml-6 flex flex-col items-end">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                    </span>
-                    <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
-                      <CreditCard className="h-4 w-4 mr-1" />
-                      {booking.pricing?.currency || 'USD'} {booking.pricing?.totalPrice?.toLocaleString() || '0'}
-                    </div>
-                  </div>
                 </div>
-                <div className="mt-4 flex justify-end space-x-3">
-                  <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    View Details
-                  </button>
-                  {booking.status === 'pending' && (
-                    <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

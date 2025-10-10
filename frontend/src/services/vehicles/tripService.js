@@ -223,7 +223,18 @@ export const driverService = {
       const response = await api.get(`/drivers/user/${userId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching driver by user ID:', error);
+      // Handle 404 as expected response when no driver profile exists
+      if (error.response?.status === 404) {
+        return {
+          status: 'error',
+          message: 'Driver profile not found',
+          data: { needsRegistration: true }
+        };
+      }
+      // Only log unexpected errors
+      if (!error.suppressConsoleError) {
+        console.error('Error fetching driver by user ID:', error);
+      }
       throw error;
     }
   },
@@ -245,7 +256,18 @@ export const driverService = {
       const response = await api.put(`/drivers/user/${userId}/profile`, profileData);
       return response.data;
     } catch (error) {
-      console.error('Error updating driver profile:', error);
+      // Handle 404 as expected response when no driver profile exists
+      if (error.response?.status === 404) {
+        return {
+          status: 'error',
+          message: 'Driver profile not found',
+          data: { needsRegistration: true }
+        };
+      }
+      // Only log unexpected errors
+      if (!error.suppressConsoleError) {
+        console.error('Error updating driver profile:', error);
+      }
       throw error;
     }
   },
@@ -256,7 +278,17 @@ export const driverService = {
       const response = await api.get(`/drivers/${driverId}/trips`, { params });
       return response.data;
     } catch (error) {
-      console.error('Error fetching driver trips:', error);
+      // Handle 404 as expected response when no trips exist
+      if (error.response?.status === 404) {
+        return {
+          status: 'success',
+          data: { trips: [], total: 0, page: 1, limit: 10 }
+        };
+      }
+      // Only log unexpected errors
+      if (!error.suppressConsoleError) {
+        console.error('Error fetching driver trips:', error);
+      }
       throw error;
     }
   },

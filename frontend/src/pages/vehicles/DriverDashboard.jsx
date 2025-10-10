@@ -73,11 +73,34 @@ const DriverDashboard = () => {
             totalEarnings: 0
           });
         }
+      } else if (driverData.status === 'error' && driverData.data?.needsRegistration) {
+        // Driver profile not found - user needs to register
+        setDriver(null);
+        setTrips([]);
+        setStats({
+          totalTrips: 0,
+          completedTrips: 0,
+          cancelledTrips: 0,
+          averageRating: 0,
+          totalEarnings: 0
+        });
       }
       
     } catch (error) {
-      console.error('Error fetching driver data:', error);
-      toast.error('Failed to load driver data');
+      // Only log unexpected errors (not 404s which are handled by the service)
+      if (!error.suppressConsoleError && error.response?.status !== 404) {
+        console.error('Error fetching driver data:', error);
+        toast.error('Failed to load driver data');
+      }
+      setDriver(null);
+      setTrips([]);
+      setStats({
+        totalTrips: 0,
+        completedTrips: 0,
+        cancelledTrips: 0,
+        averageRating: 0,
+        totalEarnings: 0
+      });
     } finally {
       setLoading(false);
     }

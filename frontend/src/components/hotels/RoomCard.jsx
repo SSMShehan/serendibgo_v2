@@ -98,12 +98,14 @@ const RoomCard = ({ room, onSelect, selected = false }) => {
         <div className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900">{room.name}</h3>
-            <div className="text-right">
-              <div className="text-xl font-bold text-blue-600">
-                {hotelUtils.formatPrice(room.basePrice)}
+            {hotelUtils.formatPrice(room.basePrice) && (
+              <div className="text-right">
+                <div className="text-xl font-bold text-blue-600">
+                  {hotelUtils.formatPrice(room.basePrice)}
+                </div>
+                <div className="text-sm text-gray-600">per night</div>
               </div>
-              <div className="text-sm text-gray-600">per night</div>
-            </div>
+            )}
           </div>
           
           <p className="text-gray-600 mb-4">{room.description}</p>
