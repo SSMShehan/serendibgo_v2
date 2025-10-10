@@ -125,6 +125,13 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
+      
+      // If user is staff, also store staff token for staff-specific features
+      const staffRoles = ['staff', 'admin', 'super_admin', 'manager', 'support_staff']
+      if (staffRoles.includes(user.role)) {
+        localStorage.setItem('staffToken', token)
+      }
+      
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: { user, token },
@@ -177,6 +184,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      localStorage.removeItem('staffToken') // Also clear staff token
       dispatch({ type: 'LOGOUT' })
       toast.success('Logged out successfully')
     }

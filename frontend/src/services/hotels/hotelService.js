@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // Create axios instance
 const api = axios.create({
@@ -99,6 +99,12 @@ export const roomAPI = {
     return response.data;
   },
 
+  // Get single room from hotel
+  getRoomFromHotel: async (hotelId, roomId) => {
+    const response = await api.get(`/hotels/${hotelId}/rooms/${roomId}`);
+    return response.data;
+  },
+
   // Create new room
   createRoom: async (hotelId, roomData) => {
     const response = await api.post(`/hotels/${hotelId}/rooms`, roomData);
@@ -190,9 +196,15 @@ export const bookingAPI = {
     return response.data;
   },
 
+  // Get all bookings (for admin)
+  getAllBookings: async (params = {}) => {
+    const response = await api.get('/hotel-bookings/admin', { params });
+    return response.data;
+  },
+
   // Update booking status
-  updateBookingStatus: async (bookingId, statusData) => {
-    const response = await api.put(`/hotel-bookings/${bookingId}/status`, statusData);
+  updateBookingStatus: async (id, statusData) => {
+    const response = await api.put(`/hotel-bookings/${id}/status`, statusData);
     return response.data;
   },
 
@@ -225,6 +237,9 @@ export const bookingAPI = {
 export const hotelUtils = {
   // Format price
   formatPrice: (price, currency = 'LKR') => {
+    if (!price || price === null || price === undefined || price === 0) {
+      return 'Price not available';
+    }
     if (currency === 'LKR') {
       return `Rs. ${price.toLocaleString()}`;
     }

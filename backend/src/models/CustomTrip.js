@@ -7,6 +7,17 @@ const customTripSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Customer is required']
   },
+  customerName: {
+    type: String,
+    required: true
+  },
+  customerEmail: {
+    type: String,
+    required: true
+  },
+  customerPhone: {
+    type: String
+  },
   
   // Customer Request Details
   requestDetails: {
@@ -35,6 +46,10 @@ const customTripSchema = new mongoose.Schema({
       type: Date,
       required: [true, 'End date is required']
     },
+    duration: {
+      type: Number, // in days
+      min: 1
+    },
     groupSize: {
       type: Number,
       required: [true, 'Group size is required'],
@@ -45,9 +60,18 @@ const customTripSchema = new mongoose.Schema({
       type: String,
       required: [true, 'Budget is required']
     },
+    budgetAmount: {
+      type: Number,
+      min: 0
+    },
     interests: [{
       type: String,
       enum: ['culture', 'nature', 'adventure', 'beach', 'food', 'photography', 'shopping', 'nightlife']
+    }],
+    activities: [{
+      id: String,
+      label: String,
+      price: Number
     }],
     accommodation: {
       type: String,
@@ -56,12 +80,7 @@ const customTripSchema = new mongoose.Schema({
     },
     transport: [{
       type: String,
-      enum: ['bus', 'private-car', 'train', 'flight', 'boat']
-    }],
-    activities: [{
-      id: String,
-      label: String,
-      price: Number
+      enum: ['bus', 'private-car', 'train', 'flight', 'boat', 'bike']
     }],
     specialRequests: {
       type: String,
@@ -74,6 +93,9 @@ const customTripSchema = new mongoose.Schema({
     accessibility: {
       type: String,
       maxlength: [500, 'Accessibility requirements cannot exceed 500 characters']
+    },
+    emergencyContact: {
+      type: String
     },
     contactInfo: {
       name: {
@@ -176,8 +198,13 @@ const customTripSchema = new mongoose.Schema({
   // Status and Workflow
   status: {
     type: String,
-    enum: ['pending', 'under_review', 'approved', 'rejected', 'confirmed', 'completed', 'cancelled'],
+    enum: ['pending', 'under_review', 'approved', 'rejected', 'confirmed', 'completed', 'cancelled', 'in_progress'],
     default: 'pending'
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
   },
 
   // Approval Details
@@ -192,6 +219,29 @@ const customTripSchema = new mongoose.Schema({
     customerFeedback: String
   },
 
+  // Staff Response
+  staffResponse: {
+    message: {
+      type: String
+    },
+    estimatedPrice: {
+      type: Number
+    },
+    suggestedDates: [{
+      type: Date
+    }],
+    alternativeOptions: [{
+      type: String
+    }],
+    respondedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    respondedAt: {
+      type: Date
+    }
+  },
+
   // Booking Integration
   booking: {
     type: mongoose.Schema.Types.ObjectId,
@@ -204,6 +254,14 @@ const customTripSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'refunded', 'failed'],
     default: 'pending'
   },
+
+  // Additional Information
+  notes: {
+    type: String
+  },
+  tags: [{
+    type: String
+  }],
 
   // Timestamps
   createdAt: {
@@ -221,10 +279,12 @@ const customTripSchema = new mongoose.Schema({
 // Indexes for better performance
 customTripSchema.index({ customer: 1 });
 customTripSchema.index({ status: 1 });
+customTripSchema.index({ priority: 1 });
 customTripSchema.index({ 'requestDetails.startDate': 1 });
 customTripSchema.index({ 'requestDetails.endDate': 1 });
 customTripSchema.index({ 'staffAssignment.assignedGuide': 1 });
 customTripSchema.index({ createdAt: -1 });
+customTripSchema.index({ destination: 'text', specialRequests: 'text' });
 
 // Virtual for trip duration
 customTripSchema.virtual('duration').get(function() {
@@ -232,7 +292,16 @@ customTripSchema.virtual('duration').get(function() {
     const diffTime = Math.abs(this.requestDetails.endDate - this.requestDetails.startDate);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
-  return 0;
+  return this.requestDetails.duration || 0;
+});
+
+// Virtual for calculated duration
+customTripSchema.virtual('calculatedDuration').get(function() {
+  if (this.requestDetails.startDate && this.requestDetails.endDate) {
+    const diffTime = Math.abs(this.requestDetails.endDate - this.requestDetails.startDate);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+  return this.requestDetails.duration;
 });
 
 // Virtual for days until trip
@@ -244,12 +313,23 @@ customTripSchema.virtual('daysUntilTrip').get(function() {
   return null;
 });
 
+// Virtual for budget per person
+customTripSchema.virtual('budgetPerPerson').get(function() {
+  if (this.requestDetails.budgetAmount && this.requestDetails.groupSize) {
+    return this.requestDetails.budgetAmount / this.requestDetails.groupSize;
+  }
+  return 0;
+});
+
 // Method to calculate total budget
 customTripSchema.methods.calculateTotalBudget = function() {
-  const budget = this.staffAssignment.totalBudget;
-  budget.totalAmount = budget.guideFees + budget.vehicleCosts + budget.hotelCosts + 
-                      budget.activityCosts + budget.additionalFees;
-  return budget.totalAmount;
+  if (this.staffAssignment && this.staffAssignment.totalBudget) {
+    const budget = this.staffAssignment.totalBudget;
+    budget.totalAmount = budget.guideFees + budget.vehicleCosts + budget.hotelCosts + 
+                        budget.activityCosts + budget.additionalFees;
+    return budget.totalAmount;
+  }
+  return 0;
 };
 
 // Method to check if trip can be approved
@@ -263,9 +343,31 @@ customTripSchema.methods.canBeConfirmed = function() {
   return this.status === 'approved' && this.paymentStatus === 'paid';
 };
 
+// Method to check if trip is overdue
+customTripSchema.methods.isOverdue = function() {
+  if (this.status === 'pending' && this.requestDetails.startDate) {
+    return new Date() > this.requestDetails.startDate;
+  }
+  return false;
+};
+
+// Method to get trip summary
+customTripSchema.methods.getSummary = function() {
+  return {
+    id: this._id,
+    destination: this.requestDetails.destination || this.requestDetails.destinations?.[0] || 'Multiple destinations',
+    customer: this.customerName,
+    status: this.status,
+    priority: this.priority,
+    budget: this.requestDetails.budgetAmount || this.requestDetails.budget,
+    groupSize: this.requestDetails.groupSize,
+    createdAt: this.createdAt
+  };
+};
+
 // Pre-save middleware to update timestamps and calculate totals
 customTripSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   
   // Calculate total budget if staff assignment exists
   if (this.staffAssignment && this.staffAssignment.totalBudget) {

@@ -22,12 +22,15 @@ const Register = () => {
 
   const onSubmit = async (data) => {
     try {
-      await registerUser(data)
+      const response = await registerUser(data)
       // Redirect based on user role
       if (data.role === 'guide') {
         navigate('/guide/dashboard')
       } else if (data.role === 'staff') {
         navigate('/staff')
+      } else if (data.role === 'driver') {
+        // Redirect to profile page for driver completion
+        navigate('/profile')
       } else {
         navigate('/dashboard')
       }
