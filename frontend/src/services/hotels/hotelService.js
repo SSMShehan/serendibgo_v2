@@ -238,7 +238,7 @@ export const hotelUtils = {
   // Format price
   formatPrice: (price, currency = 'LKR') => {
     if (!price || price === null || price === undefined || price === 0) {
-      return 'Price not available';
+      return null; // Return null instead of "Price not available"
     }
     if (currency === 'LKR') {
       return `Rs. ${price.toLocaleString()}`;

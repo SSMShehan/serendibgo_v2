@@ -290,16 +290,20 @@ const HotelDetails = () => {
             <div className="mt-6 lg:mt-0 lg:ml-8">
               <div className="bg-blue-50 rounded-lg p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {hotelUtils.formatPrice(rooms.length > 0 ? Math.min(...rooms.map(r => r.basePrice)) : 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">per night</div>
-                  <button
-                    onClick={() => setShowBookingForm(true)}
-                    className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Check Availability
-                  </button>
+                  {hotelUtils.formatPrice(rooms.length > 0 ? Math.min(...rooms.map(r => r.basePrice)) : 0) && (
+                    <>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {hotelUtils.formatPrice(rooms.length > 0 ? Math.min(...rooms.map(r => r.basePrice)) : 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">per night</div>
+                      <button
+                        onClick={() => setShowBookingForm(true)}
+                        className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Check Availability
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -428,12 +432,14 @@ const HotelDetails = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">{room.name}</h3>
-                        <div className="text-right">
-                          <div className="text-xl font-bold text-blue-600">
-                            {hotelUtils.formatPrice(room.pricing?.basePrice)}
+                        {hotelUtils.formatPrice(room.pricing?.basePrice) && (
+                          <div className="text-right">
+                            <div className="text-xl font-bold text-blue-600">
+                              {hotelUtils.formatPrice(room.pricing?.basePrice)}
+                            </div>
+                            <div className="text-sm text-gray-600">per night</div>
                           </div>
-                          <div className="text-sm text-gray-600">per night</div>
-                        </div>
+                        )}
                       </div>
                       
                       {/* Room Images */}

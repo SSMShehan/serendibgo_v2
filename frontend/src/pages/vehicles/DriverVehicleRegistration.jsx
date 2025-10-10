@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import tripService from '../../services/vehicles/tripService';
@@ -24,6 +24,14 @@ const DriverVehicleRegistration = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Check if user has driver role
+  useEffect(() => {
+    if (user && user.role !== 'driver') {
+      toast.error('You need to complete your driver registration first before registering a vehicle.');
+      navigate('/driver/register');
+    }
+  }, [user, navigate]);
   const [formData, setFormData] = useState({
     // Basic Information
     make: '',
@@ -285,7 +293,19 @@ const DriverVehicleRegistration = () => {
     } catch (error) {
       console.error('Error registering vehicle:', error);
       console.error('Error response:', error.response?.data);
-      toast.error(`Failed to register vehicle: ${error.response?.data?.message || error.message}`);
+      
+      // Handle specific error cases
+      if (error.response?.status === 403) {
+        toast.error('You need to complete your driver registration first before registering a vehicle.');
+        navigate('/driver/register');
+      } else if (error.response?.status === 400 && error.response?.data?.message === 'Validation failed') {
+        // Show validation errors
+        const errors = error.response.data.errors || [];
+        const errorMessages = errors.map(err => `${err.field}: ${err.message}`).join(', ');
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else {
+        toast.error(`Failed to register vehicle: ${error.response?.data?.message || error.message}`);
+      }
     } finally {
       setLoading(false);
     }
