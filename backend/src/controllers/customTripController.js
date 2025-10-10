@@ -63,6 +63,9 @@ const createCustomTrip = async (req, res) => {
 
     const customTrip = new CustomTrip({
       customer,
+      customerName: contactInfo.name,
+      customerEmail: contactInfo.email,
+      customerPhone: contactInfo.phone,
       requestDetails: {
         destination,
         destinations: destinations || [],

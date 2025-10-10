@@ -26,23 +26,49 @@ const MyBookings = () => {
       setLoading(true)
       setError(null)
       
-      // Fetch hotel bookings
-      const hotelResponse = await bookingAPI.getMyBookings()
-      if (hotelResponse.status === 'success') {
-        setBookings(hotelResponse.data.bookings)
+      // Check if user is authenticated
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Please login to view your bookings')
+        return
       }
       
-      // Fetch custom trips
-      const customResponse = await fetch('/api/bookings/user', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      const customData = await customResponse.json()
+      console.log('Fetching bookings for user:', user?.email)
       
-      if (customData.success) {
-        const customTrips = customData.data.bookings.filter(booking => booking.type === 'custom')
-        setCustomTrips(customTrips)
+      // Fetch hotel bookings
+      try {
+        const hotelResponse = await bookingAPI.getMyBookings()
+        console.log('Hotel bookings response:', hotelResponse)
+        if (hotelResponse.status === 'success') {
+          setBookings(hotelResponse.data.bookings)
+        }
+      } catch (hotelError) {
+        console.error('Hotel bookings error:', hotelError)
+      }
+      
+      // Fetch custom trips using the same API service
+      try {
+          const customResponse = await fetch('/api/bookings/user', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        console.log('Custom trips response status:', customResponse.status)
+        
+        if (customResponse.ok) {
+          const customData = await customResponse.json()
+          console.log('Custom trips data:', customData)
+          if (customData.success) {
+            const customTrips = customData.data.bookings.filter(booking => booking.type === 'custom')
+            setCustomTrips(customTrips)
+          }
+        } else {
+          console.error('Custom trips API error:', customResponse.status, customResponse.statusText)
+        }
+      } catch (customError) {
+        console.error('Custom trips fetch error:', customError)
       }
     } catch (error) {
       console.error('Error fetching bookings:', error)

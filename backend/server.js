@@ -165,10 +165,35 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000, // Timeout after 10s
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      retryWrites: true,
+      w: 'majority'
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('Database connection error:', error);
+    
+    // Try alternative connection method if SRV fails
+    if (error.code === 'ENOTFOUND' && process.env.MONGODB_URI.includes('mongodb+srv://')) {
+      console.log('SRV record failed, trying alternative connection...');
+      try {
+        // Convert SRV URI to standard format
+        const altUri = process.env.MONGODB_URI.replace('mongodb+srv://', 'mongodb://');
+        const conn = await mongoose.connect(altUri, {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 45000,
+        });
+        console.log(`MongoDB Connected (alternative): ${conn.connection.host}`);
+        return conn;
+      } catch (altError) {
+        console.error('Alternative connection also failed:', altError);
+      }
+    }
+    
     console.log('Starting server without database connection for development...');
     // Don't exit in development, allow server to start without DB
     if (process.env.NODE_ENV === 'production') {

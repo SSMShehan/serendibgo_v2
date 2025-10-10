@@ -40,7 +40,7 @@ import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
 import AdminTours from './pages/admin/AdminTours'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminBookings from './pages/admin/AdminBookings'
@@ -54,7 +54,7 @@ import HotelSearch from './pages/hotels/HotelSearch'
 import HotelDetails from './pages/hotels/HotelDetails'
 import RoomDetails from './pages/hotels/RoomDetails'
 import HotelBooking from './pages/hotels/HotelBooking'
-import Payment from './pages/hotels/booking/Payment'
+import HotelPayment from './pages/hotels/booking/Payment'
 import BookingConfirmation from './pages/hotels/booking/BookingConfirmation'
 import HotelReviews from './pages/hotels/reviews/HotelReviews'
 import StaffManagement from './pages/admin/staff/StaffManagement'
@@ -174,7 +174,7 @@ function App() {
                 {/* Admin Routes */}
                 <Route path="admin/dashboard" element={
                   <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminDashboardNew />
+                    <AdminDashboard />
                   </ProtectedRoute>
                 } />
                 <Route path="admin/staff" element={

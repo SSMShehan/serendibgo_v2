@@ -41,7 +41,7 @@ class StaffService {
 
   // Authentication
   async login(email, password) {
-    const response = await fetch(`${this.baseURL}/auth/login`, {
+    const response = await fetch(`${this.baseURL}/staff/auth/login`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ email, password }),
@@ -51,7 +51,7 @@ class StaffService {
   }
 
   async logout() {
-    const response = await fetch(`${this.baseURL}/auth/logout`, {
+    const response = await fetch(`${this.baseURL}/staff/auth/logout`, {
       method: 'POST',
       headers: this.getHeaders(),
     });
