@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const User = require('../models/User');
+const Driver = require('../models/vehicles/Driver');
 const { asyncHandler } = require('../middleware/errorHandler');
 const emailService = require('../services/emailService');
 
@@ -28,6 +29,72 @@ const register = asyncHandler(async (req, res) => {
     role
   });
 
+  // If user is registering as a driver, create a basic driver profile
+  if (role === 'driver') {
+    try {
+      // Generate driver ID
+      const driverId = Driver.generateDriverId();
+      
+      // Create basic driver profile
+      const driver = await Driver.create({
+        user: user._id,
+        driverId,
+        status: 'pending',
+        // Set minimal required fields with defaults
+        personalInfo: {
+          dateOfBirth: new Date('1990-01-01'), // Default date, user will update
+          gender: 'other', // Default, user will update
+          nationality: 'Sri Lankan', // Default, user will update
+          emergencyContact: {
+            name: `${firstName} ${lastName}`,
+            relationship: 'Self',
+            phone: phone,
+            email: email
+          }
+        },
+        license: {
+          licenseNumber: 'TBD', // To be determined
+          licenseType: 'B',
+          issueDate: new Date(),
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+          issuingAuthority: 'Department of Motor Traffic',
+          licenseClass: 'Light Vehicle'
+        },
+        vehicleTypes: [{
+          vehicleType: 'sedan',
+          experience: 0,
+          isPreferred: true
+        }],
+        serviceAreas: [{
+          city: 'Colombo',
+          district: 'Colombo',
+          radius: 50,
+          isActive: true
+        }],
+        financial: {
+          baseRate: 0,
+          currency: 'LKR',
+          paymentMethod: 'bank_transfer'
+        }
+      });
+
+      // Add initial status to history
+      driver.statusHistory.push({
+        status: 'pending',
+        timestamp: new Date(),
+        updatedBy: user._id,
+        notes: 'Basic driver profile created during registration'
+      });
+
+      await driver.save();
+      
+      console.log(`Basic driver profile created for user ${user._id}`);
+    } catch (error) {
+      console.error('Error creating driver profile:', error);
+      // Don't fail registration if driver profile creation fails
+    }
+  }
+
   // Generate email verification token
   const verificationToken = user.getEmailVerificationToken();
   await user.save({ validateBeforeSave: false });
@@ -43,9 +110,15 @@ const register = asyncHandler(async (req, res) => {
   // Generate JWT token
   const token = user.getSignedJwtToken();
 
+  // Prepare response message based on role
+  let message = 'User registered successfully. Please check your email for verification.';
+  if (role === 'driver') {
+    message += ' Please complete your driver profile to start accepting rides.';
+  }
+
   res.status(201).json({
     status: 'success',
-    message: 'User registered successfully. Please check your email for verification.',
+    message,
     data: {
       user: {
         id: user._id,
@@ -58,7 +131,8 @@ const register = asyncHandler(async (req, res) => {
         avatar: user.avatar,
         profile: user.profile
       },
-      token
+      token,
+      needsProfileCompletion: role === 'driver'
     }
   });
 });

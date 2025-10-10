@@ -1,57 +1,53 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon } from 'lucide-react'
+import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon, Bed, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { bookingAPI } from '../services/hotels/hotelService'
+import { toast } from 'react-hot-toast'
 
 const MyBookings = () => {
   const { user } = useAuth()
   const [bookings, setBookings] = useState([])
   const [customTrips, setCustomTrips] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('bookings')
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
 
   useEffect(() => {
-    fetchBookings()
-  }, [])
+    if (user) {
+      fetchBookings()
+    }
+  }, [user])
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch('/api/bookings/user', {
+      setLoading(true)
+      setError(null)
+      
+      // Fetch hotel bookings
+      const hotelResponse = await bookingAPI.getMyBookings()
+      if (hotelResponse.status === 'success') {
+        setBookings(hotelResponse.data.bookings)
+      }
+      
+      // Fetch custom trips
+      const customResponse = await fetch('/api/bookings/user', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
-      const data = await response.json()
+      const customData = await customResponse.json()
       
-      if (data.success) {
-        // Separate regular tours and custom trips
-        const regularBookings = data.data.bookings.filter(booking => booking.type === 'tour')
-        const customTrips = data.data.bookings.filter(booking => booking.type === 'custom')
-        
-        setBookings(regularBookings)
+      if (customData.success) {
+        const customTrips = customData.data.bookings.filter(booking => booking.type === 'custom')
         setCustomTrips(customTrips)
-      } else {
-        console.error('Error fetching bookings:', data.message)
-        setBookings([])
-        setCustomTrips([])
       }
     } catch (error) {
       console.error('Error fetching bookings:', error)
-      setBookings([])
-      setCustomTrips([])
+      setError('Failed to fetch bookings')
     } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchCustomTrips = async () => {
-    try {
-      // Custom trips are now fetched in fetchBookings, so this is just for loading state
-      setLoading(false)
-    } catch (error) {
-      console.error('Error fetching custom trips:', error)
       setLoading(false)
     }
   }
@@ -130,6 +126,48 @@ const MyBookings = () => {
     setSelectedTrip(null)
   }
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Error loading bookings</h3>
+            <p className="mt-1 text-sm text-gray-500">{error}</p>
+            <div className="mt-6">
+              <button
+                onClick={fetchBookings}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -195,31 +233,39 @@ const MyBookings = () => {
                 ) : (
                   <div className="space-y-6">
                     {bookings.map((booking) => (
-                      <div key={booking.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div key={booking._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">{booking.title}</h3>
-                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Bed className="h-5 w-5 text-blue-600" />
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {booking.hotel?.name || 'Hotel Booking'}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">
+                              {booking.room?.name || 'Room'} - {booking.room?.roomType || 'Standard'}
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                               <div className="flex items-center text-sm text-gray-600">
                                 <Calendar className="h-4 w-4 mr-2" />
-                                {new Date(booking.startDate).toLocaleDateString()}
+                                {formatDate(booking.checkInDate)}
                               </div>
                               <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="h-4 w-4 mr-2" />
-                                {booking.duration}
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {formatDate(booking.checkOutDate)}
                               </div>
                               <div className="flex items-center text-sm text-gray-600">
                                 <MapPin className="h-4 w-4 mr-2" />
-                                {booking.location}
+                                {booking.hotel?.location?.city || 'Location'}
                               </div>
                               <div className="flex items-center text-sm text-gray-600">
                                 <Users className="h-4 w-4 mr-2" />
-                                {booking.groupSize} {booking.groupSize === 1 ? 'person' : 'people'}
+                                {booking.guests?.adults || 1} {booking.guests?.adults === 1 ? 'guest' : 'guests'}
                               </div>
                             </div>
-                            {booking.guide && (
-                              <div className="mt-2 text-sm text-gray-600">
-                                <strong>Guide:</strong> {booking.guide.firstName} {booking.guide.lastName}
+                            {booking.bookingReference && (
+                              <div className="mt-3 text-xs text-gray-500">
+                                Reference: {booking.bookingReference}
                               </div>
                             )}
                           </div>
@@ -230,7 +276,7 @@ const MyBookings = () => {
                             </span>
                             <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
                               <CreditCard className="h-4 w-4 mr-1" />
-                              LKR {booking.totalAmount.toLocaleString()}
+                              {booking.pricing?.currency || 'USD'} {booking.pricing?.totalPrice?.toLocaleString() || '0'}
                             </div>
                           </div>
                         </div>
@@ -743,6 +789,4 @@ const MyBookings = () => {
 }
 
 export default MyBookings
-
-
 

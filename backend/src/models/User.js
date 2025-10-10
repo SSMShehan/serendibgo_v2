@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['tourist', 'hotel_owner', 'guide', 'driver', 'staff', 'admin'],
+    enum: ['tourist', 'hotel_owner', 'guide', 'driver', 'vehicle_owner', 'staff', 'admin', 'super_admin', 'manager', 'support_staff'],
     default: 'tourist'
   },
   isVerified: {
@@ -62,6 +62,41 @@ const userSchema = new mongoose.Schema({
   },
   // Additional fields for different roles
   profile: {
+    // For staff members
+    staffId: String,
+    department: {
+      type: String,
+      enum: ['operations', 'support', 'finance', 'marketing', 'technical', 'management'],
+      default: 'operations'
+    },
+    permissions: [{
+      module: String,
+      actions: [String] // ['read', 'write', 'delete', 'approve']
+    }],
+    supervisor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    hireDate: Date,
+    salary: Number,
+    workingHours: {
+      start: String,
+      end: String,
+      timezone: String
+    },
+    performance: {
+      rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+        default: 3
+      },
+      completedTasks: {
+        type: Number,
+        default: 0
+      },
+      lastReview: Date
+    },
     // For hotel owners
     hotelName: String,
     hotelAddress: String,
@@ -130,7 +165,24 @@ const userSchema = new mongoose.Schema({
     // For drivers
     driverLicense: String,
     vehicleTypes: [String],
-    licenseNumber: String
+    licenseNumber: String,
+    
+    // For staff
+    permissions: [String],
+    department: String,
+    position: String,
+    hireDate: Date,
+    salary: Number,
+    completedTasks: {
+      type: Number,
+      default: 0
+    }
+  },
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
   },
   isActive: {
     type: Boolean,

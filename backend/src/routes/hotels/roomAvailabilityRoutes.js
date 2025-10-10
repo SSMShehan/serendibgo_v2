@@ -9,28 +9,15 @@ const {
   getAvailabilityConflicts
 } = require('../../controllers/hotels/roomAvailabilityController');
 const { protect, authorize } = require('../../middleware/auth');
+const { handleValidationErrors } = require('../../middleware/errorHandler');
 const { body, param, query } = require('express-validator');
 
 const router = express.Router();
 
 // @desc    Get room availability for date range
-// @route   GET /api/hotels/rooms/:roomId/availability
+// @route   GET /api/rooms/:roomId/availability
 // @access  Public
-router.get('/rooms/:roomId/availability', [
-  param('roomId')
-    .isMongoId()
-    .withMessage('Invalid room ID'),
-  query('startDate')
-    .notEmpty()
-    .withMessage('Start date is required')
-    .isISO8601()
-    .withMessage('Invalid start date format'),
-  query('endDate')
-    .notEmpty()
-    .withMessage('End date is required')
-    .isISO8601()
-    .withMessage('Invalid end date format')
-], getRoomAvailability);
+router.get('/room-availability/:roomId', getRoomAvailability);
 
 // @desc    Get availability calendar for a room
 // @route   GET /api/hotels/rooms/:roomId/availability/calendar
