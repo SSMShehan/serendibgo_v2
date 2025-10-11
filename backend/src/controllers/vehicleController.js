@@ -81,7 +81,7 @@ const getAllVehicles = async (req, res) => {
 const getVehicleById = async (req, res) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id)
-      .populate('driver', 'firstName lastName email phone profile.driverLicense profile.vehicleTypes');
+      .populate('owner', 'firstName lastName email phone');
 
     if (!vehicle) {
       return res.status(404).json({
@@ -189,7 +189,8 @@ const updateVehicle = async (req, res) => {
     // Check if user can update this vehicle
     const canUpdate = req.user.role === 'staff' || 
                      req.user.role === 'admin' || 
-                     vehicle.driver.toString() === req.user._id.toString();
+                     (vehicle.driver && vehicle.driver.toString() === req.user._id.toString()) ||
+                     (vehicle.owner && vehicle.owner.toString() === req.user._id.toString());
 
     if (!canUpdate) {
       return res.status(403).json({
@@ -198,11 +199,57 @@ const updateVehicle = async (req, res) => {
       });
     }
 
+    // Map frontend fields to backend schema
+    const updateData = {};
+    
+    // Map basic fields that exist in schema
+    if (req.body.make) updateData.make = req.body.make;
+    if (req.body.model) updateData.model = req.body.model;
+    if (req.body.year) updateData.year = req.body.year;
+    if (req.body.licensePlate) updateData.licensePlate = req.body.licensePlate;
+    if (req.body.description) updateData.description = req.body.description;
+    
+    // Map capacity fields
+    if (req.body.seatingCapacity) {
+      updateData.capacity = {
+        ...vehicle.capacity,
+        passengers: req.body.seatingCapacity
+      };
+    }
+    
+    // Map pricing fields
+    if (req.body.pricing) {
+      updateData.pricing = {
+        ...vehicle.pricing,
+        dailyRate: req.body.pricing.dailyRate || vehicle.pricing.dailyRate,
+        hourlyRate: req.body.pricing.hourlyRate || vehicle.pricing.hourlyRate
+      };
+    }
+
+    // Map images field
+    if (req.body.images) {
+      updateData.images = req.body.images;
+    }
+
+    // Determine which field to populate based on what exists
+    const populateOptions = [];
+    if (vehicle.driver) {
+      populateOptions.push({ path: 'driver', select: 'firstName lastName email phone' });
+    }
+    if (vehicle.owner) {
+      populateOptions.push({ path: 'owner', select: 'firstName lastName email phone' });
+    }
+
     const updatedVehicle = await Vehicle.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
-    ).populate('driver', 'firstName lastName email phone');
+    );
+
+    // Populate only the fields that exist
+    if (populateOptions.length > 0) {
+      await updatedVehicle.populate(populateOptions);
+    }
 
     res.json({
       success: true,
@@ -234,9 +281,14 @@ const deleteVehicle = async (req, res) => {
     }
 
     // Check if user can delete this vehicle
+    console.log('Delete vehicle - User ID:', req.user._id || req.user.id, 'Type:', typeof (req.user._id || req.user.id));
+    console.log('Delete vehicle - Vehicle owner:', vehicle.owner, 'Type:', typeof vehicle.owner);
+    console.log('Delete vehicle - User role:', req.user.role);
+    
+    const userId = req.user._id || req.user.id;
     const canDelete = req.user.role === 'staff' || 
                      req.user.role === 'admin' || 
-                     vehicle.driver.toString() === req.user._id.toString();
+                     vehicle.owner.toString() === userId.toString();
 
     if (!canDelete) {
       return res.status(403).json({
@@ -254,6 +306,7 @@ const deleteVehicle = async (req, res) => {
 
   } catch (error) {
     console.error('Error deleting vehicle:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error deleting vehicle',
@@ -372,6 +425,130 @@ const getVehiclesNearLocation = async (req, res) => {
   }
 };
 
+// @desc    Upload vehicle images
+// @route   POST /api/vehicles/:id/images
+// @access  Private (Driver/Staff/Admin)
+const uploadVehicleImages = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findById(req.params.id);
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+
+    // Check if user can upload images for this vehicle
+    const canUpload = req.user.role === 'staff' || 
+                     req.user.role === 'admin' || 
+                     vehicle.owner.toString() === req.user._id.toString();
+
+    if (!canUpload) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No images provided'
+      });
+    }
+
+    // Process uploaded images
+    const uploadedImages = [];
+    for (const file of req.files) {
+      // Convert buffer to base64 for storage
+      const base64Image = file.buffer.toString('base64');
+      const imageData = {
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        data: base64Image,
+        url: `data:${file.mimetype};base64,${base64Image}`
+      };
+      uploadedImages.push(imageData);
+    }
+
+    // Add images to vehicle
+    vehicle.images = vehicle.images || [];
+    vehicle.images.push(...uploadedImages);
+    await vehicle.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Images uploaded successfully',
+      data: {
+        images: uploadedImages
+      }
+    });
+
+  } catch (error) {
+    console.error('Error uploading vehicle images:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading images',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Delete vehicle image
+// @route   DELETE /api/vehicles/:id/images/:imageId
+// @access  Private (Driver/Staff/Admin)
+const deleteVehicleImage = async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findById(req.params.id);
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+
+    // Check if user can delete images for this vehicle
+    const canDelete = req.user.role === 'staff' || 
+                     req.user.role === 'admin' || 
+                     vehicle.owner.toString() === req.user._id.toString();
+
+    if (!canDelete) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    const imageId = req.params.imageId;
+    const imageIndex = vehicle.images.findIndex(img => img._id.toString() === imageId);
+    
+    if (imageIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Image not found'
+      });
+    }
+
+    // Remove image from array
+    vehicle.images.splice(imageIndex, 1);
+    await vehicle.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Image deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting vehicle image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting image',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllVehicles,
   getVehicleById,
@@ -380,5 +557,7 @@ module.exports = {
   deleteVehicle,
   getVehiclesByDriver,
   checkVehicleAvailability,
-  getVehiclesNearLocation
+  getVehiclesNearLocation,
+  uploadVehicleImages,
+  deleteVehicleImage
 };

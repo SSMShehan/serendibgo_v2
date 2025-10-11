@@ -297,9 +297,103 @@ const bulkVehicleAction = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Update vehicle status (approve/reject/suspend)
+// @route   PUT /api/staff/vehicles/:id/status
+// @access  Private (Staff)
+const updateVehicleStatus = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, reason } = req.body;
+
+    const vehicle = await User.findById(id);
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+
+    let updateData = {};
+
+    switch (action) {
+      case 'approve':
+        updateData = {
+          isVerified: true,
+          isActive: true,
+          'profile.status': 'active',
+          verifiedAt: new Date(),
+          verifiedBy: req.user._id
+        };
+        break;
+      case 'reject':
+        updateData = {
+          isVerified: false,
+          isActive: false,
+          'profile.status': 'rejected',
+          rejectionReason: reason,
+          rejectedAt: new Date(),
+          rejectedBy: req.user._id
+        };
+        break;
+      case 'suspend':
+        updateData = {
+          isActive: false,
+          'profile.status': 'suspended',
+          suspensionReason: reason,
+          suspendedAt: new Date(),
+          suspendedBy: req.user._id
+        };
+        break;
+      case 'activate':
+        updateData = {
+          isActive: true,
+          'profile.status': 'active',
+          suspensionReason: null,
+          suspendedAt: null,
+          suspendedBy: null
+        };
+        break;
+      case 'maintenance':
+        updateData = {
+          'profile.status': 'maintenance',
+          maintenanceReason: reason,
+          maintenanceStartedAt: new Date(),
+          maintenanceStartedBy: req.user._id
+        };
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid action'
+        });
+    }
+
+    const updatedVehicle = await User.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({
+      success: true,
+      message: `Vehicle ${action}d successfully`,
+      data: {
+        vehicle: updatedVehicle
+      }
+    });
+  } catch (error) {
+    console.error('Update vehicle status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating vehicle status'
+    });
+  }
+});
+
 module.exports = {
   getVehicles,
   getVehicleStatistics,
   deleteVehicle,
-  bulkVehicleAction
+  bulkVehicleAction,
+  updateVehicleStatus
 };

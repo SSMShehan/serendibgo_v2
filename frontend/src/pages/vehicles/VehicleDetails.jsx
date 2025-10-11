@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useVehicle } from '../../context/vehicles/VehicleContext';
+import tripService from '../../services/vehicles/tripService';
 import { 
   Car, 
   Edit, 
@@ -24,7 +24,16 @@ const VehicleDetails = () => {
   const { vehicleId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { vehicleActions, vehicleUtils } = useVehicle();
+  
+  // Determine the correct dashboard path based on user role
+  const getDashboardPath = () => {
+    if (user.role === 'driver') {
+      return '/driver/dashboard';
+    } else if (user.role === 'vehicle_owner') {
+      return '/vehicle-owner/dashboard';
+    }
+    return '/dashboard';
+  };
   
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +46,12 @@ const VehicleDetails = () => {
   const fetchVehicle = async () => {
     try {
       setLoading(true);
-      const vehicleData = await vehicleActions.getVehicle(vehicleId);
-      setVehicle(vehicleData);
+      const response = await tripService.vehicleService.getVehicleById(vehicleId);
+      if (response.success === true) {
+        setVehicle(response.data);
+      } else {
+        setError('Failed to load vehicle details');
+      }
     } catch (error) {
       console.error('Error fetching vehicle:', error);
       setError('Failed to load vehicle details');
@@ -51,9 +64,9 @@ const VehicleDetails = () => {
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${vehicle.name}"? This action cannot be undone.`)) {
       try {
-        await vehicleActions.deleteVehicle(vehicleId);
+        await tripService.vehicleService.deleteVehicle(vehicleId);
         toast.success('Vehicle deleted successfully!');
-        navigate('/vehicle-owner/dashboard');
+        navigate(getDashboardPath());
       } catch (error) {
         console.error('Error deleting vehicle:', error);
         toast.error('Failed to delete vehicle');
@@ -111,7 +124,7 @@ const VehicleDetails = () => {
           <p className="mt-1 text-sm text-gray-500">{error || 'Vehicle not found'}</p>
           <div className="mt-6">
             <button
-              onClick={() => navigate('/vehicle-owner/dashboard')}
+              onClick={() => navigate(getDashboardPath())}
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -129,7 +142,7 @@ const VehicleDetails = () => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/vehicle-owner/dashboard')}
+            onClick={() => navigate(getDashboardPath())}
             className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -149,7 +162,13 @@ const VehicleDetails = () => {
             
             <div className="flex space-x-3">
               <button
-                onClick={() => navigate(`/vehicle-owner/vehicles/${vehicleId}/edit`)}
+                onClick={() => {
+                  if (user.role === 'driver') {
+                    navigate(`/driver/vehicles/${vehicleId}/edit`);
+                  } else if (user.role === 'vehicle_owner') {
+                    navigate(`/vehicle-owner/vehicles/${vehicleId}/edit`);
+                  }
+                }}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 <Edit className="h-4 w-4 mr-2" />

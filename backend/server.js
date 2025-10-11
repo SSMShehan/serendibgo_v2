@@ -1,6 +1,27 @@
 // Load environment variables first
 require('dotenv').config();
 
+// Set environment variables if not defined
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'your-super-secret-jwt-key-change-this-in-production';
+}
+if (!process.env.JWT_EXPIRE) {
+  process.env.JWT_EXPIRE = '30d';
+}
+if (!process.env.JWT_COOKIE_EXPIRE) {
+  process.env.JWT_COOKIE_EXPIRE = '30';
+}
+
+// Debug environment variables
+console.log('Environment variables:');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('JWT_EXPIRE:', process.env.JWT_EXPIRE);
+console.log('JWT_COOKIE_EXPIRE:', process.env.JWT_COOKIE_EXPIRE);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'development';
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -155,14 +176,10 @@ app.use(errorHandler);
 // Database connection
 const connectDB = async () => {
   try {
-    console.log('MONGODB_URI:', process.env.MONGODB_URI);
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://asbthanayamwatta2_db_user:a9tYLTCwJCXc0xjX@cluster0.gv7sbeb.mongodb.net/serendibgo?retryWrites=true&w=majority&appName=Cluster0';
+    console.log('MONGODB_URI:', mongoUri);
     
-    if (!process.env.MONGODB_URI) {
-      console.error('MONGODB_URI is not defined in environment variables');
-      process.exit(1);
-    }
-    
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const conn = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 10000, // Timeout after 10s

@@ -586,6 +586,32 @@ export const vehicleService = {
       throw error;
     }
   },
+
+  // Upload vehicle images
+  uploadVehicleImages: async (vehicleId, formData) => {
+    try {
+      const response = await api.post(`/vehicles/${vehicleId}/images`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading vehicle images:', error);
+      throw error;
+    }
+  },
+
+  // Delete vehicle image
+  deleteVehicleImage: async (vehicleId, imageId) => {
+    try {
+      const response = await api.delete(`/vehicles/${vehicleId}/images/${imageId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting vehicle image:', error);
+      throw error;
+    }
+  },
 };
 
 export default {

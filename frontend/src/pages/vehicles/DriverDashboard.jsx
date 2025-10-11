@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import tripService from '../../services/vehicles/tripService';
 import {
@@ -27,6 +28,7 @@ import toast from 'react-hot-toast';
 
 const DriverDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [driver, setDriver] = useState(null);
   const [trips, setTrips] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -394,7 +396,13 @@ const DriverDashboard = () => {
                             }`}>
                               {vehicle.status}
                             </span>
-                            <button className="btn btn-ghost btn-sm">
+                            <button 
+                              onClick={() => {
+                                console.log('Dashboard view button clicked for vehicle:', vehicle._id);
+                                navigate(`/driver/vehicles/${vehicle._id}`);
+                              }}
+                              className="btn btn-ghost btn-sm"
+                            >
                               <Eye className="w-4 h-4" />
                             </button>
                           </div>
@@ -613,7 +621,13 @@ const DriverDashboard = () => {
                           License: {vehicle.licensePlate}
                         </p>
                         <div className="flex space-x-2">
-                          <button className="btn btn-ghost btn-sm flex-1">
+                          <button 
+                            onClick={() => {
+                              console.log('View button clicked for vehicle:', vehicle._id);
+                              navigate(`/driver/vehicles/${vehicle._id}`);
+                            }}
+                            className="btn btn-ghost btn-sm flex-1"
+                          >
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </button>

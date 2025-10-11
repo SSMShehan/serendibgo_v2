@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const VehicleAvailability = require('../../models/vehicles/VehicleAvailability');
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 
 // @desc    Get vehicle availability for a date range
 // @route   GET /api/vehicles/:vehicleId/availability

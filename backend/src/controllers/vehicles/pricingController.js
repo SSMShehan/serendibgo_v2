@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const VehiclePricing = require('../../models/vehicles/VehiclePricing');
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 
 // @desc    Get all pricing rules for a vehicle
 // @route   GET /api/vehicles/:vehicleId/pricing
