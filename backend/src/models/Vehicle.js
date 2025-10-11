@@ -2,10 +2,25 @@ const mongoose = require('mongoose');
 
 const vehicleSchema = new mongoose.Schema({
   // Basic Information
+  name: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Vehicle name cannot exceed 100 characters']
+  },
+  
+  description: {
+    type: String,
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
+  },
+  
   vehicleType: {
     type: String,
     required: [true, 'Vehicle type is required'],
-    enum: ['car', 'van', 'bus', 'tuk-tuk', 'motorcycle', 'bicycle']
+    enum: [
+      'car', 'van', 'bus', 'tuk-tuk', 'motorcycle', 'bicycle',
+      'Car', 'Van', 'Tuk-tuk', 'Bus', 'Minibus', 'SUV', 'Motorcycle',
+      'Bicycle', 'Boat', 'Train', 'Airplane', 'Helicopter'
+    ]
   },
   
   make: {
@@ -80,11 +95,15 @@ const vehicleSchema = new mongoose.Schema({
     }
   },
   
-  // Driver Information
+  // Driver and Owner Information (both optional to support different use cases)
   driver: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Driver is required']
+    ref: 'User'
+  },
+  
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   
   // Location and Availability
@@ -303,6 +322,14 @@ vehicleSchema.methods.updateRatings = function() {
   // This would be called when a new review is added
   // Implementation would calculate average ratings from reviews
 };
+
+// Validation to ensure at least one of driver or owner is provided
+vehicleSchema.pre('validate', function(next) {
+  if (!this.driver && !this.owner) {
+    return next(new Error('Either driver or owner must be specified'));
+  }
+  next();
+});
 
 // Pre-save middleware to ensure only one primary image
 vehicleSchema.pre('save', function(next) {

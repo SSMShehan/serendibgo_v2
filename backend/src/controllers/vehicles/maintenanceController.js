@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const MaintenanceRecord = require('../../models/vehicles/MaintenanceRecord');
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 const User = require('../../models/User');
 
 // @desc    Create a new maintenance record

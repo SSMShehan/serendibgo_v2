@@ -1,7 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Trip = require('../../models/vehicles/Trip');
 const VehicleBookingRequest = require('../../models/vehicles/VehicleBookingRequest');
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 const User = require('../../models/User');
 
 // @desc    Create a new trip from booking request

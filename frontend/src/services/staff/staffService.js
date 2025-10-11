@@ -207,6 +207,44 @@ class StaffService {
     return this.handleResponse(response);
   }
 
+  // User Management (Drivers, Guides, etc.)
+  async getUsers(params = {}) {
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${this.baseURL}/users?${queryParams}`, {
+      headers: this.getHeaders(),
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async updateDriverStatus(driverId, action, reason = '') {
+    const response = await fetch(`${this.baseURL}/users/${driverId}/status`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ action, reason }),
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async getDriverVehicles(driverId) {
+    const response = await fetch(`${this.baseURL}/users/${driverId}/vehicles`, {
+      headers: this.getHeaders(),
+    });
+    
+    return this.handleResponse(response);
+  }
+
+  async updateVehicleStatus(vehicleId, action, reason = '') {
+    const response = await fetch(`${this.baseURL}/vehicles/${vehicleId}/status`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ action, reason }),
+    });
+    
+    return this.handleResponse(response);
+  }
+
   // Vehicle Management
   async getVehicles(params = {}) {
     const queryParams = new URLSearchParams(params);

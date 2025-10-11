@@ -75,6 +75,7 @@ import VehicleOwnerRegistration from './pages/vehicles/VehicleOwnerRegistration'
 import VehicleOwnerDashboard from './pages/vehicles/VehicleOwnerDashboard'
 import AddVehicle from './pages/vehicles/AddVehicle'
 import VehicleDetails from './pages/vehicles/VehicleDetails'
+import VehicleEdit from './pages/vehicles/VehicleEdit'
 import VehicleAvailabilityManagement from './pages/vehicles/VehicleAvailabilityManagement'
 import VehiclePricingManagement from './pages/vehicles/VehiclePricingManagement'
 import VehicleIntegrationManagement from './pages/vehicles/VehicleIntegrationManagement'
@@ -416,6 +417,18 @@ function App() {
         <Route path="driver/vehicle-registration" element={
           <ProtectedRoute allowedRoles={['driver']}>
             <DriverVehicleRegistration />
+          </ProtectedRoute>
+        } />
+
+        <Route path="driver/vehicles/:vehicleId" element={
+          <ProtectedRoute allowedRoles={['driver']}>
+            <VehicleDetails />
+          </ProtectedRoute>
+        } />
+
+        <Route path="driver/vehicles/:vehicleId/edit" element={
+          <ProtectedRoute allowedRoles={['driver']}>
+            <VehicleEdit />
           </ProtectedRoute>
         } />
 

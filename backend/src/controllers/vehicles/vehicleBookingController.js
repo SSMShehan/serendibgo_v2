@@ -1,5 +1,5 @@
 const VehicleBooking = require('../../models/vehicles/VehicleBooking');
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Create new vehicle booking

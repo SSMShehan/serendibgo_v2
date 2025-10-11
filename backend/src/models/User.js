@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Phone number is required'],
     match: [/^[0-9+\-\s()]+$/, 'Please enter a valid phone number']
   },
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'suspended', 'rejected'],
+    default: 'pending'
+  },
   role: {
     type: String,
     enum: ['tourist', 'hotel_owner', 'guide', 'driver', 'vehicle_owner', 'staff', 'admin', 'super_admin', 'manager', 'support_staff'],

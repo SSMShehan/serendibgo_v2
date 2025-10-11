@@ -9,7 +9,9 @@ const {
   updateVehicle,
   deleteVehicle,
   checkVehicleAvailability,
-  getVehiclesNearLocation
+  getVehiclesNearLocation,
+  uploadVehicleImages,
+  deleteVehicleImage
 } = require('../controllers/vehicleController');
 
 const {
@@ -62,5 +64,17 @@ router.post('/', authorize('driver', 'staff', 'admin'), createVehicle);
 router.put('/:id', authorize('driver', 'staff', 'admin'), updateVehicle);
 router.delete('/:id', authorize('driver', 'staff', 'admin'), deleteVehicle);
 router.get('/driver/:driverId', getDriverVehicles);
+
+// Image routes
+router.post('/:id/images', [
+  protect,
+  authorize('driver', 'staff', 'admin'),
+  upload.array('images', 10)
+], uploadVehicleImages);
+
+router.delete('/:id/images/:imageId', [
+  protect,
+  authorize('driver', 'staff', 'admin')
+], deleteVehicleImage);
 
 module.exports = router;

@@ -5,7 +5,8 @@ const {
   getVehicles,
   getVehicleStatistics,
   deleteVehicle,
-  bulkVehicleAction
+  bulkVehicleAction,
+  updateVehicleStatus
 } = require('../../controllers/staff/vehicleController');
 const { staffAuth, requirePermission } = require('../../middleware/staffAuth');
 
@@ -15,6 +16,7 @@ router.use(staffAuth);
 // Vehicle routes
 router.get('/', getVehicles);
 router.get('/statistics', getVehicleStatistics);
+router.put('/:id/status', updateVehicleStatus);
 router.delete('/:id', deleteVehicle);
 router.post('/bulk-action', bulkVehicleAction);
 

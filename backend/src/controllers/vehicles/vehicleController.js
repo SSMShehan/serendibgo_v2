@@ -1,4 +1,4 @@
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 const asyncHandler = require('express-async-handler');
 
 // @desc    Get all vehicles

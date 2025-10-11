@@ -173,6 +173,7 @@ import CustomTripApproval from './components/CustomTripApproval'
 import HotelManagement from './components/HotelManagement'
 import GuideManagement from './components/GuideManagement'
 import VehicleManagement from './components/VehicleManagement'
+import DriverVehicleManagement from './components/DriverVehicleManagement'
 import SupportManagement from './components/SupportManagement'
 import ReviewManagement from './components/ReviewManagement'
 import AnalyticsManagement from './components/AnalyticsManagement'
@@ -304,6 +305,7 @@ const StaffDashboard = () => {
     { id: 'trips', label: 'Trip Management', icon: Map },
     { id: 'custom-trips', label: 'Custom Trips', icon: Compass },
     { id: 'vehicles', label: 'Vehicles', icon: Car },
+    { id: 'drivers', label: 'Driver Management', icon: UserCheck },
     { id: 'guides', label: 'Guides', icon: UserCheck },
     { id: 'hotels', label: 'Hotels', icon: Building },
     { id: 'support', label: 'Support', icon: Headphones },
@@ -901,6 +903,13 @@ const StaffDashboard = () => {
               </div>
             )}
 
+            {/* Driver Management Tab */}
+            {activeTab === 'drivers' && (
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <DriverVehicleManagement />
+              </div>
+            )}
+
             {/* Vehicle Management Tab */}
             {activeTab === 'vehicles' && (
               <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
@@ -937,7 +946,7 @@ const StaffDashboard = () => {
             )}
 
             {/* Other tabs will be implemented in separate components */}
-            {activeTab !== 'overview' && activeTab !== 'approvals' && activeTab !== 'bookings' && activeTab !== 'financial' && activeTab !== 'trips' && activeTab !== 'custom-trips' && activeTab !== 'hotels' && activeTab !== 'guides' && activeTab !== 'vehicles' && activeTab !== 'support' && activeTab !== 'reviews' && activeTab !== 'analytics' && activeTab !== 'settings' && (
+            {activeTab !== 'overview' && activeTab !== 'approvals' && activeTab !== 'bookings' && activeTab !== 'financial' && activeTab !== 'trips' && activeTab !== 'custom-trips' && activeTab !== 'hotels' && activeTab !== 'guides' && activeTab !== 'vehicles' && activeTab !== 'drivers' && activeTab !== 'support' && activeTab !== 'reviews' && activeTab !== 'analytics' && activeTab !== 'settings' && (
               <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">

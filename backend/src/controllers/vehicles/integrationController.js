@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const ExternalBookingIntegration = require('../../models/vehicles/ExternalBookingIntegration');
-const Vehicle = require('../../models/vehicles/Vehicle');
+const Vehicle = require('../../models/Vehicle');
 
 // @desc    Get all external booking integrations for a vehicle
 // @route   GET /api/vehicles/:vehicleId/integrations
