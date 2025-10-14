@@ -121,13 +121,13 @@ const Vehicles = () => {
                   <div className="mt-6 flex space-x-3">
                     <button
                       onClick={() => navigate(`/vehicles/${vehicle._id}`)}
-                      className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-focus transition-colors duration-200"
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
                     >
                       View Details
                     </button>
                     <button
                       onClick={() => navigate(`/booking?vehicle=${vehicle._id}`)}
-                      className="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-colors duration-200"
+                      className="px-4 py-2 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors duration-200 font-medium"
                     >
                       Book Now
                     </button>

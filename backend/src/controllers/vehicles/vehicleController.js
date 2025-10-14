@@ -491,6 +491,8 @@ const registerVehicle = asyncHandler(async (req, res) => {
   console.log('Files received:', req.files);
   console.log('Year field value:', req.body.year, 'Type:', typeof req.body.year);
   console.log('User ID for vehicle creation:', req.user.id, 'Type:', typeof req.user.id);
+  console.log('Raw features data:', features, 'Type:', typeof features);
+  console.log('Raw amenities data:', amenities, 'Type:', typeof amenities);
 
   // Parse complex fields
   const parsedFeatures = parseFormData(features);
@@ -498,6 +500,9 @@ const registerVehicle = asyncHandler(async (req, res) => {
   const parsedLocation = parseFormData(location);
   const parsedPricing = parseFormData(pricing);
   const parsedAvailability = parseFormData(availability);
+
+  console.log('Parsed features:', parsedFeatures);
+  console.log('Parsed amenities:', parsedAmenities);
 
   // Validate and fix location data
   const validLocation = {
@@ -562,7 +567,7 @@ const registerVehicle = asyncHandler(async (req, res) => {
       passengers: parseInt(seatingCapacity) || 4,
       luggage: 2 // Default luggage capacity
     },
-    amenities: parsedAmenities || {},
+    features: parsedFeatures || {},
     location: validLocation, // Use validated location
     pricing: {
       basePrice: parsedPricing?.baseRate || 0,

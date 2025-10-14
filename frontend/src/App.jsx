@@ -229,6 +229,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="vehicles" element={<Vehicles />} />
+                <Route path="vehicles/:vehicleId" element={<VehicleDetails />} />
                 
                 {/* User Dashboard */}
                 <Route path="dashboard" element={
