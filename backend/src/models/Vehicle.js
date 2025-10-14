@@ -190,8 +190,8 @@ const vehicleSchema = new mongoose.Schema({
   // Status and Availability
   status: {
     type: String,
-    enum: ['available', 'booked', 'maintenance', 'out-of-service'],
-    default: 'available'
+    enum: ['pending', 'available', 'booked', 'maintenance', 'out-of-service'],
+    default: 'pending'
   },
   
   availability: {
@@ -261,6 +261,40 @@ const vehicleSchema = new mongoose.Schema({
   notes: {
     type: String,
     maxlength: [500, 'Notes cannot exceed 500 characters']
+  },
+  
+  // Approval Details
+  approvalDetails: {
+    submittedAt: {
+      type: Date,
+      default: Date.now
+    },
+    submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    needsApproval: {
+      type: Boolean,
+      default: false
+    },
+    approvedAt: {
+      type: Date
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectedAt: {
+      type: Date
+    },
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    rejectionReason: {
+      type: String,
+      maxlength: [500, 'Rejection reason cannot exceed 500 characters']
+    }
   }
 }, {
   timestamps: true
