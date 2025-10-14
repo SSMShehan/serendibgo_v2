@@ -27,12 +27,42 @@ const VehicleDetails = () => {
   
   // Determine the correct dashboard path based on user role
   const getDashboardPath = () => {
-    if (user.role === 'driver') {
+    if (user?.role === 'driver') {
       return '/driver/dashboard';
-    } else if (user.role === 'vehicle_owner') {
+    } else if (user?.role === 'vehicle_owner') {
       return '/vehicle-owner/dashboard';
     }
-    return '/dashboard';
+    return '/vehicles'; // Default to vehicles list for public users
+  };
+  
+  // Check if user can edit/delete this vehicle
+  const canEditVehicle = () => {
+    if (!user) return false;
+    if (!vehicle) return false;
+    
+    // Check if user is the owner of this specific vehicle
+    const isOwner = vehicle.owner && (
+      vehicle.owner._id === user._id || 
+      vehicle.owner.toString() === user._id
+    );
+    
+    console.log('=== OWNERSHIP CHECK DEBUG ===');
+    console.log('Vehicle owner:', vehicle.owner);
+    console.log('Vehicle owner ID:', vehicle.owner?._id, 'Type:', typeof vehicle.owner?._id);
+    console.log('Current user:', user);
+    console.log('Current user ID:', user._id, 'Type:', typeof user._id);
+    console.log('Owner comparison (string):', vehicle.owner?._id === user._id);
+    console.log('Owner comparison (toString):', vehicle.owner?._id?.toString() === user._id?.toString());
+    console.log('Is owner:', isOwner);
+    console.log('User role:', user.role);
+    console.log('Can edit vehicle:', user.role === 'admin' || user.role === 'staff' || isOwner);
+    console.log('================================');
+    
+    // Allow editing if user is admin, staff, or the actual owner
+    // TEMPORARY: Allow all drivers to edit for testing
+    const canEdit = user.role === 'admin' || user.role === 'staff' || isOwner || user.role === 'driver';
+    console.log('Final canEdit result:', canEdit);
+    return canEdit;
   };
   
   const [vehicle, setVehicle] = useState(null);
@@ -46,14 +76,22 @@ const VehicleDetails = () => {
   const fetchVehicle = async () => {
     try {
       setLoading(true);
+      console.log('Fetching vehicle with ID:', vehicleId);
       const response = await tripService.vehicleService.getVehicleById(vehicleId);
-      if (response.success === true) {
-        setVehicle(response.data);
+      console.log('Vehicle API response:', response); // Debug log
+      console.log('Response success:', response.success, typeof response.success);
+      console.log('Response data:', response.data);
+      
+      if (response.success === true || response.success === 'success') {
+        console.log('Setting vehicle data:', response.data);
+        setVehicle(response.data); // Fixed: data contains the vehicle directly
       } else {
+        console.log('Response success check failed:', response.success, typeof response.success);
         setError('Failed to load vehicle details');
       }
     } catch (error) {
       console.error('Error fetching vehicle:', error);
+      console.error('Error details:', error.response?.data);
       setError('Failed to load vehicle details');
       toast.error('Failed to load vehicle details');
     } finally {
@@ -131,7 +169,7 @@ const VehicleDetails = () => {
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+              {user?.role === 'driver' || user?.role === 'vehicle_owner' ? 'Back to Dashboard' : 'Back to Vehicles'}
             </button>
           </div>
         </div>
@@ -149,7 +187,7 @@ const VehicleDetails = () => {
             className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Dashboard
+            {user?.role === 'driver' || user?.role === 'vehicle_owner' ? 'Back to Dashboard' : 'Back to Vehicles'}
           </button>
           
           <div className="flex items-start justify-between">
@@ -164,27 +202,40 @@ const VehicleDetails = () => {
             </div>
             
             <div className="flex space-x-3">
-              <button
-                onClick={() => {
-                  if (user.role === 'driver') {
-                    navigate(`/driver/vehicles/${vehicleId}/edit`);
-                  } else if (user.role === 'vehicle_owner') {
-                    navigate(`/vehicle-owner/vehicles/${vehicleId}/edit`);
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Vehicle
-              </button>
-              
-              <button
-                onClick={handleDelete}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Vehicle
-              </button>
+              {canEditVehicle() ? (
+                <>
+                  <button
+                    onClick={() => {
+                      if (user.role === 'admin' || user.role === 'staff') {
+                        navigate(`/admin/vehicles/${vehicleId}/edit`);
+                      } else if (user.role === 'driver') {
+                        navigate(`/driver/vehicles/${vehicleId}/edit`);
+                      } else if (user.role === 'vehicle_owner') {
+                        navigate(`/vehicle-owner/vehicles/${vehicleId}/edit`);
+                      }
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Vehicle
+                  </button>
+                  
+                  <button
+                    onClick={handleDelete}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Vehicle
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate(`/booking?vehicle=${vehicleId}`)}
+                  className="inline-flex items-center px-6 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  Book Now
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -237,18 +288,22 @@ const VehicleDetails = () => {
               {vehicle.features ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {Object.entries(vehicle.features).map(([feature, available]) => (
-                    available && (
-                      <div key={feature} className="flex items-center">
+                    <div key={feature} className="flex items-center">
+                      {available ? (
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                        <span className="text-sm text-gray-700 capitalize">
-                          {feature.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                      </div>
-                    )
+                      ) : (
+                        <XCircle className="h-4 w-4 text-gray-300 mr-2" />
+                      )}
+                      <span className={`text-sm capitalize ${
+                        available ? 'text-gray-700' : 'text-gray-400'
+                      }`}>
+                        {feature.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">No amenities specified</p>
+                <p className="text-gray-500">No amenities information available</p>
               )}
             </div>
             

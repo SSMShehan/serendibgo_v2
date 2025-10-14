@@ -312,11 +312,7 @@ const DriverDashboard = () => {
                   Welcome back, {driver.user?.name || 'Driver'}!
                 </h1>
                 <p className="text-gray-600">
-                  Driver ID: {driver.driverId} • Status: 
-                  <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(driver.status)}`}>
-                    {getStatusIcon(driver.status)}
-                    <span className="ml-1">{driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}</span>
-                  </span>
+                  Driver ID: {driver.driverId}
                 </p>
               </div>
             </div>
@@ -795,14 +791,6 @@ const DriverDashboard = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Driver ID</label>
                       <p className="text-gray-900">{driver.driverId}</p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(driver.status)}`}>
-                        {getStatusIcon(driver.status)}
-                        <span className="ml-1">{driver.status.charAt(0).toUpperCase() + driver.status.slice(1)}</span>
-                      </span>
                     </div>
                     
                     <div>
