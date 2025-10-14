@@ -255,65 +255,61 @@ const SupportManagement = () => {
   const loadTickets = async () => {
     setLoading(true)
     try {
-      // Simulate API call with mock data
-      setTimeout(() => {
-        let filteredTickets = [...mockTickets]
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
 
-        // Apply filters
-        if (filters.search) {
-          filteredTickets = filteredTickets.filter(ticket =>
-            ticket.subject.toLowerCase().includes(filters.search.toLowerCase()) ||
-            ticket.description.toLowerCase().includes(filters.search.toLowerCase()) ||
-            ticket.ticketNumber.toLowerCase().includes(filters.search.toLowerCase()) ||
-            ticket.customer.name.toLowerCase().includes(filters.search.toLowerCase())
-          )
+      const queryParams = new URLSearchParams({
+        page: pagination.current,
+        limit: pagination.limit,
+        ...filters
+      })
+
+      const response = await fetch(`/api/staff/support/tickets?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      })
 
-        if (filters.category) {
-          filteredTickets = filteredTickets.filter(ticket => ticket.category === filters.category)
-        }
+      if (!response.ok) {
+        throw new Error('Failed to fetch support tickets')
+      }
 
-        if (filters.priority) {
-          filteredTickets = filteredTickets.filter(ticket => ticket.priority === filters.priority)
-        }
-
-        if (filters.status) {
-          filteredTickets = filteredTickets.filter(ticket => ticket.status === filters.status)
-        }
-
-        if (filters.assignedTo) {
-          filteredTickets = filteredTickets.filter(ticket => 
-            ticket.assignedTo && ticket.assignedTo.name === filters.assignedTo
-          )
-        }
-
-        setTickets(filteredTickets)
+      const data = await response.json()
+      
+      if (data.success) {
+        setTickets(data.data.tickets || [])
         setPagination(prev => ({
           ...prev,
-          total: filteredTickets.length,
-          pages: Math.ceil(filteredTickets.length / prev.limit)
+          total: data.data.pagination?.totalCount || 0,
+          pages: data.data.pagination?.totalPages || 0
         }))
-        setLoading(false)
-      }, 1000)
+      } else {
+        throw new Error(data.message || 'Failed to load tickets')
+      }
     } catch (err) {
-      setError('Failed to load support tickets')
+      setError('Failed to load support tickets: ' + err.message)
       console.error('Error loading tickets:', err)
+    } finally {
       setLoading(false)
     }
   }
 
   const loadStats = async () => {
     try {
-      const totalTickets = mockTickets.length
-      const openTickets = mockTickets.filter(t => t.status === 'open').length
-      const closedTickets = mockTickets.filter(t => t.status === 'resolved').length
-      const highPriorityTickets = mockTickets.filter(t => t.priority === 'high').length
-      const avgResponseTime = mockTickets
+      const totalTickets = tickets.length
+      const openTickets = tickets.filter(t => t.status === 'open').length
+      const closedTickets = tickets.filter(t => t.status === 'resolved').length
+      const highPriorityTickets = tickets.filter(t => t.priority === 'high').length
+      const avgResponseTime = tickets
         .filter(t => t.responseTime)
-        .reduce((sum, t) => sum + t.responseTime, 0) / mockTickets.filter(t => t.responseTime).length
-      const customerSatisfaction = mockTickets
+        .reduce((sum, t) => sum + t.responseTime, 0) / tickets.filter(t => t.responseTime).length
+      const customerSatisfaction = tickets
         .filter(t => t.satisfaction)
-        .reduce((sum, t) => sum + t.satisfaction, 0) / mockTickets.filter(t => t.satisfaction).length
+        .reduce((sum, t) => sum + t.satisfaction, 0) / tickets.filter(t => t.satisfaction).length
       
       setStats({
         totalTickets,
@@ -330,28 +326,43 @@ const SupportManagement = () => {
 
   const handleReply = async () => {
     try {
-      // Simulate API call
-      const updatedTickets = tickets.map(ticket => 
-        ticket.id === replyData.ticketId 
-          ? { 
-              ...ticket, 
-              status: 'in_progress',
-              lastResponse: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            }
-          : ticket
-      )
-      setTickets(updatedTickets)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Authentication required')
+        return
+      }
+
+      const response = await fetch(`/api/staff/support/tickets/${replyData.ticketId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: replyData.message,
+          attachments: []
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to send reply')
+      }
+
+      const data = await response.json()
       
-      setSuccess('Reply sent successfully')
-      setShowReplyModal(false)
-      setReplyData({ ticketId: '', message: '', priority: 'medium' })
-      
-      // Reload data
-      loadTickets()
-      loadStats()
+      if (data.success) {
+        setSuccess('Reply sent successfully')
+        setShowReplyModal(false)
+        setReplyData({ ticketId: '', message: '', priority: 'medium' })
+        
+        // Reload data
+        loadTickets()
+        loadStats()
+      } else {
+        throw new Error(data.message || 'Failed to send reply')
+      }
     } catch (err) {
-      setError('Failed to send reply')
+      setError('Failed to send reply: ' + err.message)
       console.error('Error sending reply:', err)
     }
   }
@@ -601,7 +612,7 @@ const SupportManagement = () => {
           <div className="space-y-4">
             {filteredTickets.map((ticket) => (
               <div
-                key={ticket.id}
+                key={ticket._id}
                 className="border border-slate-200 rounded-xl p-6 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between">
@@ -614,7 +625,7 @@ const SupportManagement = () => {
                       <div>
                         <h3 className="text-lg font-semibold text-slate-900">{ticket.subject}</h3>
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-slate-500">#{ticket.ticketNumber}</span>
+                          <span className="text-sm text-slate-500">#{ticket._id.slice(-8)}</span>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
                             {getStatusIcon(ticket.status)}
                             <span className="ml-1 capitalize">{ticket.status.replace('_', ' ')}</span>
@@ -630,11 +641,11 @@ const SupportManagement = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                       <div className="flex items-center text-sm text-slate-600">
                         <User className="h-4 w-4 mr-2" />
-                        {ticket.customer.name}
+                        {ticket.user ? `${ticket.user.firstName} ${ticket.user.lastName}` : 'Unknown User'}
                       </div>
                       <div className="flex items-center text-sm text-slate-600">
                         <Mail className="h-4 w-4 mr-2" />
-                        {ticket.customer.email}
+                        {ticket.user?.email || 'No email'}
                       </div>
                       <div className="flex items-center text-sm text-slate-600">
                         <Calendar className="h-4 w-4 mr-2" />
@@ -692,7 +703,7 @@ const SupportManagement = () => {
 
                     {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
                       <button
-                        onClick={() => openReplyModal(ticket.id)}
+                        onClick={() => openReplyModal(ticket._id)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                         title="Reply"
                       >
@@ -952,7 +963,7 @@ const SupportManagement = () => {
                   <button
                     onClick={() => {
                       setShowDetails(false)
-                      openReplyModal(selectedTicket.id)
+                      openReplyModal(selectedTicket._id)
                     }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
                   >
