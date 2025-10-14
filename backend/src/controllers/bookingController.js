@@ -2,6 +2,7 @@ const Booking = require('../models/Booking');
 const CustomTrip = require('../models/CustomTrip');
 const Tour = require('../models/Tour');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Get all user bookings (both regular tours and custom trips)
 // @route   GET /api/bookings/user
@@ -297,8 +298,11 @@ const cancelBooking = async (req, res) => {
     let booking = await Booking.findById(id);
 
     if (booking) {
-      // Check if user owns this booking
-      if (booking.user.toString() !== req.user._id.toString()) {
+      // Check if user owns this booking OR if user is the guide for this booking
+      const isOwner = booking.user.toString() === req.user._id.toString();
+      const isGuide = booking.guide && booking.guide.toString() === req.user._id.toString();
+      
+      if (!isOwner && !isGuide) {
         return res.status(403).json({
           success: false,
           message: 'Access denied'
@@ -320,6 +324,54 @@ const cancelBooking = async (req, res) => {
       booking.refundAmount = booking.totalAmount;
 
       await booking.save();
+
+      // Create notification for the guide (if not the one cancelling)
+      if (booking.guide && booking.guide.toString() !== req.user._id.toString()) {
+        try {
+          await createNotification({
+            user: booking.guide,
+            type: 'cancellation',
+            title: 'Booking Cancelled',
+            message: `${req.user.firstName} ${req.user.lastName} cancelled their booking for ${booking.duration} starting ${booking.startDate.toLocaleDateString()}`,
+            priority: 'medium',
+            booking: booking._id,
+            tourist: req.user._id,
+            actionUrl: `/guide/dashboard?tab=bookings`,
+            actionText: 'View Details',
+            metadata: {
+              bookingId: booking._id,
+              cancellationReason: cancellationReason,
+              cancelledBy: req.user._id
+            }
+          });
+        } catch (notificationError) {
+          console.error('Error creating cancellation notification:', notificationError);
+        }
+      }
+
+      // Create notification for the tourist (if not the one cancelling)
+      if (booking.user.toString() !== req.user._id.toString()) {
+        try {
+          await createNotification({
+            user: booking.user,
+            type: 'cancellation',
+            title: 'Booking Cancelled',
+            message: `Your booking for ${booking.duration} starting ${booking.startDate.toLocaleDateString()} has been cancelled`,
+            priority: 'medium',
+            booking: booking._id,
+            guide: booking.guide,
+            actionUrl: `/bookings`,
+            actionText: 'View Details',
+            metadata: {
+              bookingId: booking._id,
+              cancellationReason: cancellationReason,
+              cancelledBy: req.user._id
+            }
+          });
+        } catch (notificationError) {
+          console.error('Error creating cancellation notification:', notificationError);
+        }
+      }
 
       return res.json({
         success: true,
@@ -596,6 +648,9 @@ const createGuideBooking = async (req, res) => {
     const basePricePerPersonPerDay = 50; // $50 per person per day
     const totalAmount = basePricePerPersonPerDay * groupSize * daysDiff;
 
+    // Generate unique booking reference
+    const bookingReference = `GB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
     // Create booking
     const booking = new Booking({
       user: req.user._id,
@@ -608,7 +663,8 @@ const createGuideBooking = async (req, res) => {
       totalAmount,
       specialRequests,
       status: 'pending',
-      paymentStatus: 'pending'
+      paymentStatus: 'pending',
+      bookingReference
     });
 
     await booking.save();
@@ -626,6 +682,30 @@ const createGuideBooking = async (req, res) => {
       status: booking.status
     });
 
+    // Create notification for the guide
+    try {
+      await createNotification({
+        user: guideId,
+        type: 'booking',
+        title: 'New Guide Booking Request',
+        message: `${booking.user.firstName} ${booking.user.lastName} wants to book your services for ${booking.duration} starting ${start.toLocaleDateString()}`,
+        priority: 'high',
+        booking: booking._id,
+        tourist: booking.user._id,
+        actionUrl: `/guide/dashboard?tab=bookings`,
+        actionText: 'View Booking',
+        metadata: {
+          bookingId: booking._id,
+          duration: booking.duration,
+          groupSize: booking.groupSize,
+          totalAmount: booking.totalAmount
+        }
+      });
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+      // Don't fail the booking if notification fails
+    }
+
     res.status(201).json({
       success: true,
       message: 'Guide booking created successfully',
@@ -633,11 +713,163 @@ const createGuideBooking = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating guide booking:', error);
+    console.error('❌ Error creating guide booking:', error);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      errors: error.errors
+    });
     res.status(500).json({
       success: false,
       message: 'Error creating guide booking',
-      error: error.message
+      error: error.message,
+      details: error.errors || error.stack
+    });
+  }
+};
+
+// @desc    Create guide booking for guests (without authentication)
+// @route   POST /api/bookings/guide/guest
+// @access  Public
+const createGuestGuideBooking = async (req, res) => {
+  try {
+    const { guideId, startDate, endDate, duration, groupSize, specialRequests, guestInfo } = req.body;
+
+    console.log('🎯 Creating guest guide booking:', { guideId, startDate, endDate, duration, groupSize, specialRequests, guestInfo });
+
+    // Validate required fields
+    if (!guideId || !startDate || !endDate || !duration || !groupSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: guideId, startDate, endDate, duration, groupSize'
+      });
+    }
+
+    // Validate guest info for guest bookings
+    if (!guestInfo || !guestInfo.firstName || !guestInfo.lastName || !guestInfo.email || !guestInfo.phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Guest information is required: firstName, lastName, email, phone'
+      });
+    }
+
+    // Check if guide exists
+    const guide = await User.findById(guideId);
+    if (!guide || guide.role !== 'guide') {
+      return res.status(404).json({
+        success: false,
+        message: 'Guide not found'
+      });
+    }
+
+    // Calculate total amount (you can adjust pricing logic)
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    
+    // Base price per person per day (you can make this configurable)
+    const basePricePerPersonPerDay = 50; // $50 per person per day
+    const totalAmount = basePricePerPersonPerDay * groupSize * daysDiff;
+
+    // Check if user already exists, if not create one
+    let guestUser = await User.findOne({ email: guestInfo.email });
+    
+    if (!guestUser) {
+      // Create a temporary user record for the guest
+      guestUser = new User({
+        firstName: guestInfo.firstName,
+        lastName: guestInfo.lastName,
+        email: guestInfo.email,
+        phone: guestInfo.phone,
+        password: 'temp_password_' + Date.now(), // Temporary password
+        role: 'tourist',
+        status: 'active',
+        isVerified: false,
+        isActive: true
+      });
+
+      await guestUser.save();
+    }
+
+    // Generate unique booking reference
+    const bookingReference = `GB-GUEST-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    // Create booking
+    const booking = new Booking({
+      user: guestUser._id,
+      guide: guideId,
+      bookingDate: new Date(),
+      startDate: start,
+      endDate: end,
+      duration,
+      groupSize,
+      totalAmount,
+      specialRequests,
+      status: 'pending',
+      paymentStatus: 'pending',
+      bookingReference
+    });
+
+    await booking.save();
+
+    console.log('✅ Guest guide booking saved:', booking._id);
+
+    // Populate the booking with guide and user details
+    await booking.populate('guide', 'firstName lastName email phone avatar rating');
+    await booking.populate('user', 'firstName lastName email phone');
+
+    console.log('✅ Guest guide booking populated:', {
+      id: booking._id,
+      user: booking.user?.firstName,
+      guide: booking.guide?.firstName,
+      status: booking.status
+    });
+
+    // Create notification for the guide
+    try {
+      await createNotification({
+        user: guideId,
+        type: 'booking',
+        title: 'New Guest Guide Booking Request',
+        message: `${booking.user.firstName} ${booking.user.lastName} (Guest) wants to book your services for ${booking.duration} starting ${start.toLocaleDateString()}`,
+        priority: 'high',
+        booking: booking._id,
+        tourist: booking.user._id,
+        actionUrl: `/guide/dashboard?tab=bookings`,
+        actionText: 'View Booking',
+        metadata: {
+          bookingId: booking._id,
+          duration: booking.duration,
+          groupSize: booking.groupSize,
+          totalAmount: booking.totalAmount,
+          isGuest: true
+        }
+      });
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+      // Don't fail the booking if notification fails
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Guide booking created successfully',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating guest guide booking:', error);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      errors: error.errors
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error creating guide booking',
+      error: error.message,
+      details: error.errors || error.stack
     });
   }
 };
@@ -649,5 +881,6 @@ module.exports = {
   updateBookingStatus,
   cancelBooking,
   getGuideBookings,
-  createGuideBooking
+  createGuideBooking,
+  createGuestGuideBooking
 };

@@ -25,6 +25,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { notificationService } from '../../services/notificationService'
 
 const GuideNotifications = () => {
   const navigate = useNavigate()
@@ -33,73 +34,81 @@ const GuideNotifications = () => {
   const [filter, setFilter] = useState('all')
   const [showRead, setShowRead] = useState(true)
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ total: 0, unread: 0, byType: {} })
+  const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [hasNewNotifications, setHasNewNotifications] = useState(false)
 
-  // Mock notifications data
+  // Fetch notifications from API
   useEffect(() => {
-    const mockNotifications = [
-      {
-        id: 1,
-        type: 'booking',
-        title: 'New Booking Request',
-        message: 'John Smith wants to book your Colombo City Tour for tomorrow',
-        timestamp: '2 hours ago',
-        isRead: false,
-        priority: 'high',
-        action: 'View Booking'
-      },
-      {
-        id: 2,
-        type: 'payment',
-        title: 'Payment Received',
-        message: 'Payment of LKR 15,000 received for Sigiriya Tour completed yesterday',
-        timestamp: '4 hours ago',
-        isRead: false,
-        priority: 'medium',
-        action: 'View Details'
-      },
-      {
-        id: 3,
-        type: 'review',
-        title: 'New Review',
-        message: 'Sarah Johnson left a 5-star review for your Kandy Temple Tour',
-        timestamp: '1 day ago',
-        isRead: true,
-        priority: 'low',
-        action: 'View Review'
-      },
-      {
-        id: 4,
-        type: 'message',
-        title: 'New Message',
-        message: 'Tourist Mike Wilson sent you a message about availability',
-        timestamp: '2 days ago',
-        isRead: true,
-        priority: 'medium',
-        action: 'Reply'
-      },
-      {
-        id: 5,
-        type: 'system',
-        title: 'Profile Update Required',
-        message: 'Please update your guide license information for verification',
-        timestamp: '3 days ago',
-        isRead: false,
-        priority: 'high',
-        action: 'Update Profile'
-      },
-      {
-        id: 6,
-        type: 'booking',
-        title: 'Booking Cancelled',
-        message: 'Emma Davis cancelled her booking for Galle Fort Tour',
-        timestamp: '4 days ago',
-        isRead: true,
-        priority: 'medium',
-        action: 'View Details'
+    fetchNotifications()
+  }, [filter])
+
+  // Real-time updates - refresh notifications every 30 seconds
+  useEffect(() => {
+    let interval
+    
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden, pause polling
+        if (interval) clearInterval(interval)
+      } else {
+        // Tab is visible, resume polling
+        interval = setInterval(() => {
+          fetchNotifications(false) // Don't show loading spinner for background refresh
+        }, 30000) // 30 seconds
       }
-    ]
-    setNotifications(mockNotifications)
-  }, [])
+    }
+    
+    // Start polling
+    interval = setInterval(() => {
+      fetchNotifications(false) // Don't show loading spinner for background refresh
+    }, 30000) // 30 seconds
+    
+    // Listen for visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      if (interval) clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [filter])
+
+  const fetchNotifications = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true)
+      const params = {
+        type: filter === 'all' ? undefined : filter,
+        limit: 50
+      }
+      
+      const response = await notificationService.getNotifications(params)
+      
+      if (response.success) {
+        const previousUnreadCount = stats.unread
+        const newNotifications = response.data.notifications
+        
+        setNotifications(newNotifications)
+        setStats({
+          total: response.data.pagination.totalCount,
+          unread: response.data.unreadCount,
+          byType: {}
+        })
+        setLastRefresh(new Date())
+        
+        // Check if there are new unread notifications
+        if (response.data.unreadCount > previousUnreadCount && !showLoading) {
+          setHasNewNotifications(true)
+          // Clear the indicator after 5 seconds
+          setTimeout(() => setHasNewNotifications(false), 5000)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    } finally {
+      if (showLoading) setLoading(false)
+    }
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -138,24 +147,45 @@ const GuideNotifications = () => {
     return 'text-blue-600 bg-blue-50 border-blue-200'
   }
 
-  const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, isRead: true }
-          : notification
+  const markAsRead = async (id) => {
+    try {
+      await notificationService.markAsRead(id)
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification._id === id 
+            ? { ...notification, isRead: true }
+            : notification
+        )
       )
-    )
+      setStats(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
+    } catch (error) {
+      console.error('Error marking notification as read:', error)
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, isRead: true }))
-    )
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, isRead: true }))
+      )
+      setStats(prev => ({ ...prev, unread: 0 }))
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error)
+    }
   }
 
-  const deleteNotification = (id) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id))
+  const deleteNotification = async (id) => {
+    try {
+      await notificationService.deleteNotification(id)
+      const notification = notifications.find(n => n._id === id)
+      setNotifications(prev => prev.filter(notification => notification._id !== id))
+      if (notification && !notification.isRead) {
+        setStats(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error)
+    }
   }
 
   const filteredNotifications = notifications.filter(notification => {
@@ -168,7 +198,7 @@ const GuideNotifications = () => {
     ? filteredNotifications 
     : filteredNotifications.filter(notification => !notification.isRead)
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const unreadCount = stats.unread
 
   const handleLogout = async () => {
     try {
@@ -219,13 +249,31 @@ const GuideNotifications = () => {
                 <Bell className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
+                <h1 className="text-2xl font-bold text-slate-900 flex items-center">
+                  Notifications
+                  {hasNewNotifications && (
+                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full animate-pulse">
+                      New!
+                    </span>
+                  )}
+                </h1>
                 <p className="text-slate-600">
                   {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Last updated: {lastRefresh.toLocaleTimeString()}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              <button
+                onClick={() => fetchNotifications()}
+                className="flex items-center px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
+                title="Refresh notifications"
+              >
+                <Bell className="h-4 w-4 mr-2" />
+                Refresh
+              </button>
               <button
                 onClick={() => setShowRead(!showRead)}
                 className="flex items-center px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
@@ -388,23 +436,29 @@ const GuideNotifications = () => {
               </p>
             </div>
           ) : (
-            visibleNotifications.map((notification) => {
-              const Icon = getNotificationIcon(notification.type)
-              const colorClass = getNotificationColor(notification.type, notification.priority)
-              
-              return (
-                <div
-                  key={notification.id}
-                  className={`bg-white rounded-2xl shadow-lg border border-slate-100 p-6 transition-all duration-200 hover:shadow-xl ${
-                    !notification.isRead ? 'ring-2 ring-blue-200' : ''
-                  }`}
-                >
-                  <div className="flex items-start space-x-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 ${colorClass}`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
+            loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-slate-600">Loading notifications...</span>
+              </div>
+            ) : (
+              visibleNotifications.map((notification) => {
+                const Icon = getNotificationIcon(notification.type)
+                const colorClass = getNotificationColor(notification.type, notification.priority)
+                
+                return (
+                  <div
+                    key={notification._id}
+                    className={`bg-white rounded-2xl shadow-lg border border-slate-100 p-6 transition-all duration-200 hover:shadow-xl ${
+                      !notification.isRead ? 'ring-2 ring-blue-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-start space-x-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 ${colorClass}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className={`text-lg font-semibold ${
                           !notification.isRead ? 'text-slate-900' : 'text-slate-600'
@@ -412,7 +466,9 @@ const GuideNotifications = () => {
                           {notification.title}
                         </h3>
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-slate-500">{notification.timestamp}</span>
+                          <span className="text-sm text-slate-500">
+                            {notification.formattedTimestamp || new Date(notification.createdAt).toLocaleDateString()}
+                          </span>
                           {!notification.isRead && (
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           )}
@@ -426,14 +482,23 @@ const GuideNotifications = () => {
                       </p>
                       
                       <div className="flex items-center justify-between">
-                        <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-semibold text-sm">
-                          {notification.action}
+                        <button 
+                          onClick={() => {
+                            if (notification.actionUrl) {
+                              navigate(notification.actionUrl)
+                            } else if (notification.booking) {
+                              navigate(`/guide/dashboard?tab=bookings&booking=${notification.booking}`)
+                            }
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 font-semibold text-sm"
+                        >
+                          {notification.actionText || 'View Details'}
                         </button>
                         
                         <div className="flex items-center space-x-2">
                           {!notification.isRead && (
                             <button
-                              onClick={() => markAsRead(notification.id)}
+                              onClick={() => markAsRead(notification._id)}
                               className="p-2 text-slate-400 hover:text-green-600 transition-colors"
                               title="Mark as read"
                             >
@@ -441,7 +506,7 @@ const GuideNotifications = () => {
                             </button>
                           )}
                           <button
-                            onClick={() => deleteNotification(notification.id)}
+                            onClick={() => deleteNotification(notification._id)}
                             className="p-2 text-slate-400 hover:text-red-600 transition-colors"
                             title="Delete notification"
                           >
@@ -454,6 +519,7 @@ const GuideNotifications = () => {
                 </div>
               )
             })
+            )
           )}
         </div>
 
