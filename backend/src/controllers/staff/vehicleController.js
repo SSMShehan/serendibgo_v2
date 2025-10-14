@@ -21,50 +21,50 @@ const getVehicles = asyncHandler(async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
-    // Build filter object
-    const filter = { role: 'driver' };
+    // Build filter object for Vehicle model
+    const filter = {};
     
     if (status !== 'all') {
       switch (status) {
         case 'active':
-          filter.isActive = true;
-          filter.isVerified = true;
+          filter.status = 'available';
           break;
         case 'inactive':
-          filter.isActive = false;
+          filter.status = 'out-of-service';
           break;
         case 'pending':
-          filter.isVerified = false;
+          filter.status = 'pending';
+          break;
+        case 'needs-approval':
+          filter['approvalDetails.needsApproval'] = true;
           break;
         case 'maintenance':
-          filter['profile.status'] = 'maintenance';
+          filter.status = 'maintenance';
           break;
         case 'suspended':
-          filter.isActive = false;
-          filter.isVerified = true;
+          filter.status = 'out-of-service';
           break;
       }
     }
     
     if (type !== 'all') {
-      filter['profile.vehicleType'] = type;
+      filter.vehicleType = type;
     }
     
     if (location !== 'all') {
-      filter['profile.location'] = { $regex: location, $options: 'i' };
+      filter['location.city'] = { $regex: location, $options: 'i' };
     }
     
     if (fuelType !== 'all') {
-      filter['profile.fuelType'] = fuelType;
+      filter.fuelType = fuelType;
     }
     
     if (search) {
       filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { 'profile.vehicleModel': { $regex: search, $options: 'i' } },
-        { 'profile.vehicleType': { $regex: search, $options: 'i' } }
+        { make: { $regex: search, $options: 'i' } },
+        { model: { $regex: search, $options: 'i' } },
+        { licensePlate: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -75,34 +75,36 @@ const getVehicles = asyncHandler(async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get vehicles with pagination
-    const vehicles = await User.find(filter)
+    // Get vehicles with pagination and populate owner
+    const vehicles = await Vehicle.find(filter)
+      .populate('owner', 'firstName lastName email phone')
       .sort(sort)
       .skip(skip)
-      .limit(parseInt(limit))
-      .select('-password');
+      .limit(parseInt(limit));
 
     // Transform vehicles data for frontend
     const transformedVehicles = vehicles.map(vehicle => ({
       _id: vehicle._id,
-      name: `${vehicle.profile?.vehicleModel || 'Vehicle'} - ${vehicle.firstName} ${vehicle.lastName}`,
-      type: vehicle.profile?.vehicleType || 'unknown',
-      capacity: vehicle.profile?.vehicleCapacity || 0,
-      fuelType: vehicle.profile?.fuelType || 'unknown',
-      pricePerDay: vehicle.profile?.pricePerDay || 0,
-      location: vehicle.profile?.location || 'Not specified',
-      description: vehicle.profile?.vehicleDescription || 'No description available',
-      features: vehicle.profile?.vehicleFeatures || [],
-      images: vehicle.profile?.vehicleImages || [],
-      status: vehicle.profile?.status || (vehicle.isActive ? 'active' : 'inactive'),
-      ownerName: `${vehicle.firstName} ${vehicle.lastName}`,
-      ownerPhone: vehicle.phone,
+      name: vehicle.name || `${vehicle.make} ${vehicle.model} ${vehicle.year}`,
+      type: vehicle.vehicleType,
+      capacity: vehicle.capacity?.passengers || 0,
+      fuelType: vehicle.fuelType,
+      pricePerDay: vehicle.pricing?.dailyRate || 0,
+      location: vehicle.location?.city || 'Not specified',
+      description: vehicle.description || 'No description available',
+      features: vehicle.features || {},
+      images: vehicle.images || [],
+      status: vehicle.status,
+      approvalDetails: vehicle.approvalDetails,
+      ownerName: vehicle.owner ? `${vehicle.owner.firstName || ''} ${vehicle.owner.lastName || ''}`.trim() : 'Unknown',
+      ownerEmail: vehicle.owner?.email || 'No email',
+      ownerPhone: vehicle.owner?.phone || 'No phone',
       createdAt: vehicle.createdAt,
       updatedAt: vehicle.updatedAt
     }));
 
     // Get total count for pagination
-    const total = await User.countDocuments(filter);
+    const total = await Vehicle.countDocuments(filter);
 
     res.status(200).json({
       success: true,
@@ -138,16 +140,16 @@ const getVehicleStatistics = asyncHandler(async (req, res) => {
       totalBookings
     ] = await Promise.all([
       // Total vehicles
-      User.countDocuments({ role: 'driver' }),
+      Vehicle.countDocuments({}),
       
       // Active vehicles
-      User.countDocuments({ role: 'driver', isActive: true, isVerified: true }),
+      Vehicle.countDocuments({ status: 'available' }),
       
       // Pending vehicles
-      User.countDocuments({ role: 'driver', isVerified: false }),
+      Vehicle.countDocuments({ status: 'pending' }),
       
       // Maintenance vehicles
-      User.countDocuments({ role: 'driver', 'profile.status': 'maintenance' }),
+      Vehicle.countDocuments({ status: 'maintenance' }),
       
       // Total vehicle bookings
       Booking.countDocuments({ type: 'vehicle' })

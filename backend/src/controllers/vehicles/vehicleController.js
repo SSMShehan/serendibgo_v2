@@ -484,7 +484,9 @@ const registerVehicle = asyncHandler(async (req, res) => {
     location,
     pricing,
     description,
-    availability
+    availability,
+    images,
+    documents
   } = req.body;
 
   console.log('Received vehicle registration data:', req.body);
@@ -493,6 +495,8 @@ const registerVehicle = asyncHandler(async (req, res) => {
   console.log('User ID for vehicle creation:', req.user.id, 'Type:', typeof req.user.id);
   console.log('Raw features data:', features, 'Type:', typeof features);
   console.log('Raw amenities data:', amenities, 'Type:', typeof amenities);
+  console.log('Raw images data:', images, 'Type:', typeof images);
+  console.log('Raw documents data:', documents, 'Type:', typeof documents);
 
   // Parse complex fields
   const parsedFeatures = parseFormData(features);
@@ -500,9 +504,22 @@ const registerVehicle = asyncHandler(async (req, res) => {
   const parsedLocation = parseFormData(location);
   const parsedPricing = parseFormData(pricing);
   const parsedAvailability = parseFormData(availability);
+  const parsedImages = parseFormData(images);
+  const parsedDocuments = parseFormData(documents);
 
   console.log('Parsed features:', parsedFeatures);
   console.log('Parsed amenities:', parsedAmenities);
+  console.log('Parsed images:', parsedImages);
+  console.log('Parsed documents:', parsedDocuments);
+
+  // Process images to match Vehicle model structure
+  const processedImages = Array.isArray(parsedImages) ? parsedImages.map((url, index) => ({
+    url: url,
+    caption: '',
+    isPrimary: index === 0 // First image is primary
+  })) : [];
+
+  console.log('Processed images:', processedImages);
 
   // Validate and fix location data
   const validLocation = {
@@ -568,6 +585,7 @@ const registerVehicle = asyncHandler(async (req, res) => {
       luggage: 2 // Default luggage capacity
     },
     features: parsedFeatures || {},
+    images: processedImages,
     location: validLocation, // Use validated location
     pricing: {
       basePrice: parsedPricing?.baseRate || 0,
@@ -581,7 +599,7 @@ const registerVehicle = asyncHandler(async (req, res) => {
       workingHours: { start: '06:00', end: '22:00' },
       workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     },
-    status: 'available', // Set to available initially
+    status: 'pending', // Set to pending initially - needs staff approval
     // Add registration details with default expiry date
     registration: {
       number: licensePlate,
