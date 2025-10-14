@@ -94,17 +94,62 @@ const Guides = () => {
     navigate(`/guides/${guide.id}`)
   }
 
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault()
-    console.log('Booking submitted:', { guide: selectedGuide, ...bookingData })
-    alert('Booking request submitted successfully! We will contact you soon.')
-    setShowBookingModal(false)
-    setBookingData({
-      date: '',
-      duration: '',
-      groupSize: 1,
-      specialRequests: ''
-    })
+    
+    if (!selectedGuide) {
+      alert('Please select a guide first')
+      return
+    }
+
+    try {
+      // Calculate start and end dates based on duration
+      const startDate = new Date(bookingData.date)
+      let endDate = new Date(startDate)
+      
+      switch (bookingData.duration) {
+        case 'half-day':
+          endDate.setHours(startDate.getHours() + 4) // 4 hours
+          break
+        case 'full-day':
+          endDate.setDate(startDate.getDate() + 1) // Next day
+          break
+        case 'multi-day':
+          endDate.setDate(startDate.getDate() + 3) // 3 days
+          break
+        default:
+          endDate.setDate(startDate.getDate() + 1)
+      }
+
+      const bookingDataToSubmit = {
+        guideId: selectedGuide.id,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        duration: bookingData.duration,
+        groupSize: parseInt(bookingData.groupSize),
+        specialRequests: bookingData.specialRequests || ''
+      }
+
+      console.log('Submitting guide booking:', bookingDataToSubmit)
+      
+      const response = await guideService.createGuideBooking(bookingDataToSubmit)
+      
+      if (response.success) {
+        alert('Guide booking submitted successfully! We will contact you soon to confirm.')
+        setShowBookingModal(false)
+        setBookingData({
+          date: '',
+          duration: '',
+          groupSize: 1,
+          specialRequests: ''
+        })
+      } else {
+        alert('Failed to submit booking: ' + (response.message || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error submitting guide booking:', error)
+      alert('Failed to submit booking request. Please try again.')
+    }
   }
 
   // Booking calendar helper functions

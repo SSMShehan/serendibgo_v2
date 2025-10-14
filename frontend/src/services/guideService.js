@@ -50,6 +50,12 @@ export const guideService = {
   deleteGuide: async (id) => {
     const response = await api.delete(`/guides/${id}`);
     return response.data;
+  },
+
+  // Create guide booking
+  createGuideBooking: async (bookingData) => {
+    const response = await api.post('/bookings/guide', bookingData);
+    return response.data;
   }
 };
 
