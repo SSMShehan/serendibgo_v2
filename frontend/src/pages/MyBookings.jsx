@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon, Bed, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { bookingAPI } from '../services/hotels/hotelService'
+import { guideService } from '../services/guideService'
 import { toast } from 'react-hot-toast'
 
 const MyBookings = () => {
@@ -10,6 +11,7 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([])
   const [customTrips, setCustomTrips] = useState([])
   const [vehicleBookings, setVehicleBookings] = useState([])
+  const [guideBookings, setGuideBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('bookings')
@@ -47,7 +49,7 @@ const MyBookings = () => {
         console.error('Hotel bookings error:', hotelError)
       }
       
-      // Fetch custom trips using the same API service
+      // Fetch custom trips and guide bookings using the same API service
       try {
           const customResponse = await fetch('/api/bookings/user', {
           headers: {
@@ -64,6 +66,13 @@ const MyBookings = () => {
           if (customData.success) {
             const customTrips = customData.data.bookings.filter(booking => booking.type === 'custom')
             setCustomTrips(customTrips)
+            
+            // Filter guide bookings (bookings with guide field but no tour/customTrip)
+            const guideBookings = customData.data.bookings.filter(booking => 
+              booking.guide && !booking.tour && !booking.customTrip
+            )
+            setGuideBookings(guideBookings)
+            console.log('Guide bookings:', guideBookings)
           }
         } else {
           console.error('Custom trips API error:', customResponse.status, customResponse.statusText)
@@ -254,15 +263,26 @@ const MyBookings = () => {
                 Custom Trips ({customTrips.length})
               </button>
               <button
+<<<<<<< Updated upstream
                 onClick={() => setActiveTab('vehicles')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'vehicles'
+=======
+                onClick={() => setActiveTab('guides')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'guides'
+>>>>>>> Stashed changes
                     ? 'border-primary text-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
+<<<<<<< Updated upstream
                 <Car className="h-4 w-4 inline mr-2" />
                 Vehicle Rentals ({vehicleBookings.length})
+=======
+                <User className="h-4 w-4 inline mr-2" />
+                Guide Bookings ({guideBookings.length})
+>>>>>>> Stashed changes
               </button>
             </nav>
           </div>
@@ -468,6 +488,7 @@ const MyBookings = () => {
               </>
             )}
 
+<<<<<<< Updated upstream
             {/* Vehicle Bookings Tab */}
             {activeTab === 'vehicles' && (
               <>
@@ -483,16 +504,38 @@ const MyBookings = () => {
                       >
                         <Car className="h-4 w-4 mr-2" />
                         Browse Vehicles
+=======
+            {/* Guide Bookings Tab */}
+            {activeTab === 'guides' && (
+              <>
+                {guideBookings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <User className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No guide bookings yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Book a personal guide for your Sri Lankan adventure.</p>
+                    <div className="mt-6">
+                      <Link
+                        to="/guides"
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Browse Guides
+>>>>>>> Stashed changes
                       </Link>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-6">
+<<<<<<< Updated upstream
                     {vehicleBookings.map((booking) => (
+=======
+                    {guideBookings.map((booking) => (
+>>>>>>> Stashed changes
                       <div key={booking._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
+<<<<<<< Updated upstream
                               <Car className="h-5 w-5 text-blue-600" />
                               <h3 className="text-lg font-semibold text-gray-900">
                                 {booking.vehicle?.name || 'Vehicle Booking'}
@@ -500,10 +543,20 @@ const MyBookings = () => {
                             </div>
                             <p className="text-sm text-gray-600 mb-3">
                               {booking.vehicle?.make} {booking.vehicle?.model} - {booking.vehicle?.vehicleType}
+=======
+                              <User className="h-5 w-5 text-blue-600" />
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {booking.guide?.firstName} {booking.guide?.lastName}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Personal Guide Service
+>>>>>>> Stashed changes
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                               <div className="flex items-center text-sm text-gray-600">
                                 <Calendar className="h-4 w-4 mr-2" />
+<<<<<<< Updated upstream
                                 {formatDate(booking.tripDetails.startDate)}
                               </div>
                               <div className="flex items-center text-sm text-gray-600">
@@ -522,10 +575,37 @@ const MyBookings = () => {
                             {booking.bookingReference && (
                               <div className="mt-3 text-xs text-gray-500">
                                 Reference: {booking.bookingReference}
+=======
+                                {formatDate(booking.startDate)}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {formatDate(booking.endDate)}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Clock className="h-4 w-4 mr-2" />
+                                {booking.duration?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Users className="h-4 w-4 mr-2" />
+                                {booking.groupSize} {booking.groupSize === 1 ? 'person' : 'people'}
+                              </div>
+                            </div>
+                            {booking.specialRequests && (
+                              <div className="mt-3 text-sm text-gray-600">
+                                <strong>Special Requests:</strong> {booking.specialRequests}
+                              </div>
+                            )}
+                            {booking.guide?.phone && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                <Phone className="h-4 w-4 inline mr-1" />
+                                <strong>Guide Contact:</strong> {booking.guide.phone}
+>>>>>>> Stashed changes
                               </div>
                             )}
                           </div>
                           <div className="ml-6 flex flex-col items-end">
+<<<<<<< Updated upstream
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.bookingStatus)}`}>
                               {getStatusIcon(booking.bookingStatus)}
                               <span className="ml-1">{booking.bookingStatus.charAt(0).toUpperCase() + booking.bookingStatus.slice(1)}</span>
@@ -533,6 +613,18 @@ const MyBookings = () => {
                             <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
                               <CreditCard className="h-4 w-4 mr-1" />
                               {booking.pricing?.currency || 'LKR'} {booking.pricing?.totalPrice?.toLocaleString() || '0'}
+=======
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+                              {getStatusIcon(booking.status)}
+                              <span className="ml-1">{booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}</span>
+                            </span>
+                            <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              LKR {booking.totalAmount?.toLocaleString() || '0'}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500">
+                              Payment: {booking.paymentStatus?.charAt(0).toUpperCase() + booking.paymentStatus?.slice(1)}
+>>>>>>> Stashed changes
                             </div>
                           </div>
                         </div>
@@ -540,11 +632,24 @@ const MyBookings = () => {
                           <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
                             View Details
                           </button>
+<<<<<<< Updated upstream
                           {booking.bookingStatus === 'pending' && (
+=======
+                          {booking.status === 'pending' && (
+>>>>>>> Stashed changes
                             <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                               Cancel
                             </button>
                           )}
+<<<<<<< Updated upstream
+=======
+                          {booking.status === 'confirmed' && booking.paymentStatus === 'pending' && (
+                            <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Pay Now
+                            </button>
+                          )}
+>>>>>>> Stashed changes
                         </div>
                       </div>
                     ))}
