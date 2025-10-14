@@ -331,10 +331,6 @@ const DriverDashboard = () => {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh
               </button>
-              <button className="btn btn-primary">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </button>
             </div>
           </div>
         </div>

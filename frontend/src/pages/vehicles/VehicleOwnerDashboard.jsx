@@ -482,18 +482,21 @@ const VehicleOwnerDashboard = () => {
                   </div>
                 </div>
                 
-                {/* Vehicle Amenities */}
-                {vehicle.amenities && vehicle.amenities.length > 0 && (
+                {/* Vehicle Features */}
+                {vehicle.features && Object.values(vehicle.features).some(feature => feature) && (
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-1">
-                      {vehicle.amenities.slice(0, 3).map((amenity, index) => (
+                      {Object.entries(vehicle.features)
+                        .filter(([_, available]) => available)
+                        .slice(0, 3)
+                        .map(([feature, _], index) => (
                         <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {amenity.replace(/([A-Z])/g, ' $1').trim()}
+                          {feature.replace(/([A-Z])/g, ' $1').trim()}
                         </span>
                       ))}
-                      {vehicle.amenities.length > 3 && (
+                      {Object.values(vehicle.features).filter(feature => feature).length > 3 && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          +{vehicle.amenities.length - 3} more
+                          +{Object.values(vehicle.features).filter(feature => feature).length - 3} more
                         </span>
                       )}
                     </div>

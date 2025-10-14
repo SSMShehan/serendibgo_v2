@@ -234,14 +234,14 @@ const VehicleDetails = () => {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Amenities</h2>
               
-              {vehicle.amenities ? (
+              {vehicle.features ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {Object.entries(vehicle.amenities).map(([amenity, available]) => (
+                  {Object.entries(vehicle.features).map(([feature, available]) => (
                     available && (
-                      <div key={amenity} className="flex items-center">
+                      <div key={feature} className="flex items-center">
                         <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                         <span className="text-sm text-gray-700 capitalize">
-                          {amenity.replace(/([A-Z])/g, ' $1').trim()}
+                          {feature.replace(/([A-Z])/g, ' $1').trim()}
                         </span>
                       </div>
                     )
