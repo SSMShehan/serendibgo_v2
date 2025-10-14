@@ -1,6 +1,7 @@
 // Staff Vehicle Management Controller
 const asyncHandler = require('express-async-handler');
 const User = require('../../models/User');
+const Vehicle = require('../../models/Vehicle');
 const Booking = require('../../models/Booking');
 
 // @desc    Get all vehicles with filtering and pagination
@@ -305,7 +306,15 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { action, reason } = req.body;
 
-    const vehicle = await User.findById(id);
+    // Check if user has permission to approve vehicles
+    if (!req.user.profile?.permissions?.includes('vehicles:approve')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions. Required: vehicles:approve'
+      });
+    }
+
+    const vehicle = await Vehicle.findById(id);
     if (!vehicle) {
       return res.status(404).json({
         success: false,
@@ -318,18 +327,16 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
     switch (action) {
       case 'approve':
         updateData = {
-          isVerified: true,
-          isActive: true,
-          'profile.status': 'active',
-          verifiedAt: new Date(),
-          verifiedBy: req.user._id
+          status: 'approved',
+          isAvailable: true,
+          approvedAt: new Date(),
+          approvedBy: req.user._id
         };
         break;
       case 'reject':
         updateData = {
-          isVerified: false,
-          isActive: false,
-          'profile.status': 'rejected',
+          status: 'rejected',
+          isAvailable: false,
           rejectionReason: reason,
           rejectedAt: new Date(),
           rejectedBy: req.user._id
@@ -337,8 +344,8 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
         break;
       case 'suspend':
         updateData = {
-          isActive: false,
-          'profile.status': 'suspended',
+          status: 'inactive',
+          isAvailable: false,
           suspensionReason: reason,
           suspendedAt: new Date(),
           suspendedBy: req.user._id
@@ -346,8 +353,8 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
         break;
       case 'activate':
         updateData = {
-          isActive: true,
-          'profile.status': 'active',
+          status: 'approved',
+          isAvailable: true,
           suspensionReason: null,
           suspendedAt: null,
           suspendedBy: null
@@ -355,7 +362,8 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
         break;
       case 'maintenance':
         updateData = {
-          'profile.status': 'maintenance',
+          status: 'inactive',
+          isAvailable: false,
           maintenanceReason: reason,
           maintenanceStartedAt: new Date(),
           maintenanceStartedBy: req.user._id
@@ -368,11 +376,11 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
         });
     }
 
-    const updatedVehicle = await User.findByIdAndUpdate(
+    const updatedVehicle = await Vehicle.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
-    ).select('-password');
+    ).populate('owner', 'firstName lastName email');
 
     res.json({
       success: true,

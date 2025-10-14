@@ -23,7 +23,7 @@ const createBooking = asyncHandler(async (req, res) => {
     });
   }
 
-  if (vehicleExists.status !== 'active') {
+  if (vehicleExists.status !== 'available') {
     return res.status(400).json({
       status: 'error',
       message: 'Vehicle is not available for booking'
@@ -64,9 +64,16 @@ const createBooking = asyncHandler(async (req, res) => {
   const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60)); // hours
   const distance = tripDetails.distance || 0;
 
-  const basePrice = vehicleExists.pricing.basePrice;
-  const distancePrice = distance * vehicleExists.pricing.perKmRate;
-  const durationPrice = duration * vehicleExists.pricing.hourlyRate;
+  // Get pricing with fallback values
+  const pricing = vehicleExists.pricing || {};
+  const basePrice = pricing.basePrice || pricing.baseRate || 0;
+  const perKmRate = pricing.perKmRate || 0;
+  const hourlyRate = pricing.hourlyRate || 0;
+  const dailyRate = pricing.dailyRate || 0;
+  
+  // Calculate duration price (use daily rate if more than 8 hours, otherwise hourly)
+  const durationPrice = duration > 8 ? dailyRate : (duration * hourlyRate);
+  const distancePrice = distance * perKmRate;
   const subtotal = basePrice + distancePrice + durationPrice;
   
   const taxes = subtotal * 0.1; // 10% tax
@@ -163,8 +170,13 @@ const getUserBookings = asyncHandler(async (req, res) => {
 const getMyBookings = asyncHandler(async (req, res) => {
   const { status, vehicle, page = 1, limit = 10 } = req.query;
 
-  // Get user's vehicles
-  const userVehicles = await Vehicle.find({ owner: req.user.id }).select('_id');
+  // Get user's vehicles (both owned and driven)
+  const userVehicles = await Vehicle.find({ 
+    $or: [
+      { owner: req.user.id },
+      { driver: req.user.id }
+    ]
+  }).select('_id');
   const vehicleIds = userVehicles.map(v => v._id);
 
   if (vehicleIds.length === 0) {

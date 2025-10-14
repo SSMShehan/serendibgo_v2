@@ -44,12 +44,12 @@ router.post('/', [
 // @access  Private
 router.get('/user', protect, getUserBookings);
 
-// @desc    Get all bookings for vehicle owner
+// @desc    Get all bookings for vehicle owner/driver
 // @route   GET /api/vehicle-bookings/my-bookings
-// @access  Private (Vehicle Owner)
+// @access  Private (Vehicle Owner/Driver)
 router.get('/my-bookings', [
   protect,
-  authorize('vehicle_owner')
+  authorize('vehicle_owner', 'driver')
 ], getMyBookings);
 
 // @desc    Get single booking

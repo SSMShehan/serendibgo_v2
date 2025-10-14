@@ -5,7 +5,7 @@ const STAFF_PERMISSIONS = {
     actions: ['read', 'write', 'delete', 'approve', 'manage']
   },
   manager: {
-    modules: ['users', 'bookings', 'approvals', 'support', 'analytics', 'settings'],
+    modules: ['users', 'bookings', 'approvals', 'support', 'analytics', 'settings', 'vehicles'],
     actions: ['read', 'write', 'approve']
   },
   support_staff: {
@@ -13,8 +13,8 @@ const STAFF_PERMISSIONS = {
     actions: ['read', 'write']
   },
   staff: {
-    modules: ['users', 'bookings', 'approvals'],
-    actions: ['read', 'write']
+    modules: ['users', 'bookings', 'approvals', 'vehicles'],
+    actions: ['read', 'write', 'approve']
   }
 };
 
@@ -64,11 +64,22 @@ const MODULES = {
     name: 'Content Management',
     description: 'Manage platform content',
     permissions: ['read', 'write', 'delete', 'approve']
+  },
+  vehicles: {
+    name: 'Vehicle Management',
+    description: 'Manage vehicles and approvals',
+    permissions: ['read', 'write', 'delete', 'approve']
   }
 };
 
 // Check if user has permission for specific action
-const hasPermission = (userRole, module, action) => {
+const hasPermission = (userRole, module, action, userPermissions = []) => {
+  // First check if user has the specific permission in their profile
+  if (userPermissions && userPermissions.includes(`${module}:${action}`)) {
+    return true;
+  }
+  
+  // Fallback to role-based permissions
   const rolePermissions = STAFF_PERMISSIONS[userRole];
   
   if (!rolePermissions) return false;

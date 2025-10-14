@@ -152,8 +152,12 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/vehicles', vehicleAvailabilityRoutes);
 app.use('/api/vehicles', vehiclePricingRoutes);
 app.use('/api/vehicles', vehicleIntegrationRoutes);
+
+// Sample vehicles route (fallback when database is not available)
+const sampleVehiclesRoute = require('./src/routes/sampleVehicles');
+app.use('/api/sample-vehicles', sampleVehiclesRoute);
 app.use('/api/vehicle-bookings', vehicleBookingRoutes);
-app.use('/api/vehicle-bookings', vehicleBookingRequestRoutes);
+app.use('/api/vehicle-booking-requests', vehicleBookingRequestRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/maintenance', maintenanceRoutes);

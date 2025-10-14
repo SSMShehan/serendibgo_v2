@@ -124,11 +124,15 @@ const DriverVehicleManagement = () => {
   // Handle approval actions
   const handleApproval = async (type, action, itemId, reason = '') => {
     try {
+      console.log('handleApproval called with:', { type, action, itemId, reason });
+      
       if (type === 'driver') {
+        console.log('Calling updateDriverStatus for driver:', itemId);
         await staffService.updateDriverStatus(itemId, action, reason);
         toast.success(`Driver ${action}d successfully`);
         fetchDrivers();
       } else if (type === 'vehicle') {
+        console.log('Calling updateVehicleStatus for vehicle:', itemId);
         await staffService.updateVehicleStatus(itemId, action, reason);
         toast.success(`Vehicle ${action}d successfully`);
         if (selectedDriver) {
@@ -145,6 +149,7 @@ const DriverVehicleManagement = () => {
 
   // Open approval modal
   const openApprovalModal = (type, action, item) => {
+    console.log('openApprovalModal called with:', { type, action, item });
     setApprovalType(type);
     setApprovalAction(action);
     setSelectedVehicle(item);
@@ -232,6 +237,7 @@ const DriverVehicleManagement = () => {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="pending">Pending</option>
+                <option value="needs-approval">Needs Approval</option>
                 <option value="suspended">Suspended</option>
               </select>
             </div>
@@ -520,7 +526,7 @@ const DriverVehicleManagement = () => {
                                   <Eye className="h-4 w-4 mr-1" />
                                   View
                                 </button>
-                                {vehicle.status === 'pending' && (
+                                {(vehicle.status === 'pending' || vehicle.approvalDetails?.needsApproval) && (
                                   <>
                                     <button
                                       onClick={() => openApprovalModal('vehicle', 'approve', vehicle)}
@@ -653,7 +659,7 @@ const DriverVehicleManagement = () => {
                         </span>
                       </div>
                       
-                      {selectedVehicle.status === 'pending' && (
+                      {(selectedVehicle.status === 'pending' || selectedVehicle.approvalDetails?.needsApproval) && (
                         <div className="flex space-x-2">
                           <button
                             onClick={() => {

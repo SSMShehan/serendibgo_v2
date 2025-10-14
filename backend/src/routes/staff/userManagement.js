@@ -23,7 +23,17 @@ router.get('/', requirePermission('users', 'read'), asyncHandler(async (req, res
   }
   
   if (status && status !== 'all') {
-    filter.status = status;
+    if (status === 'needs-approval') {
+      // For needs-approval, we need to find users who have vehicles that need approval
+      const vehiclesNeedingApproval = await Vehicle.find({
+        'approvalDetails.needsApproval': true
+      }).select('driver owner');
+      
+      const userIds = vehiclesNeedingApproval.map(v => v.driver || v.owner).filter(Boolean);
+      filter._id = { $in: userIds };
+    } else {
+      filter.status = status;
+    }
   }
   
   if (verificationStatus && verificationStatus !== 'all') {

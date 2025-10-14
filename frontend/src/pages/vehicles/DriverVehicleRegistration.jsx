@@ -205,20 +205,20 @@ const DriverVehicleRegistration = () => {
     }));
   };
 
-  const handleFileUpload = (documentType, file) => {
+  const handleFileUpload = (documentType, url) => {
     setFormData(prev => ({
       ...prev,
       documents: {
         ...prev.documents,
-        [documentType]: file
+        [documentType]: url
       }
     }));
   };
 
-  const handleImageUpload = (files) => {
+  const handleImageUpload = (urls) => {
     setFormData(prev => ({
       ...prev,
-      images: [...prev.images, ...files]
+      images: [...prev.images, ...urls]
     }));
   };
 
@@ -278,25 +278,16 @@ const DriverVehicleRegistration = () => {
         }
       });
 
-      // Add documents
-      Object.keys(formData.documents).forEach(docType => {
-        if (formData.documents[docType]) {
-          submitData.append(docType, formData.documents[docType]);
-        }
-      });
-
-      // Add images
-      formData.images.forEach((image, index) => {
-        submitData.append(`images`, image);
-      });
+      // Add documents and images as URLs
+      const finalData = {
+        ...processedData,
+        documents: formData.documents,
+        images: formData.images
+      };
 
       // Submit to backend
-      console.log('Submitting vehicle data:', processedData);
-      console.log('FormData contents:');
-      for (let [key, value] of submitData.entries()) {
-        console.log(key, value);
-      }
-      await tripService.vehicleService.registerVehicle(submitData);
+      console.log('Submitting vehicle data:', finalData);
+      await tripService.vehicleService.registerVehicle(finalData);
       
       toast.success('Vehicle registered successfully! It will be reviewed by our team.');
       navigate('/driver/dashboard');
@@ -669,46 +660,46 @@ const DriverVehicleRegistration = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Vehicle Registration</span>
+                    <span className="label-text">Vehicle Registration URL</span>
                   </label>
                   <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload('registration', e.target.files[0])}
-                    className="file-input file-input-bordered w-full"
+                    type="url"
+                    placeholder="https://example.com/registration.pdf"
+                    onChange={(e) => handleFileUpload('registration', e.target.value)}
+                    className="input input-bordered w-full"
                   />
                 </div>
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Insurance Certificate</span>
+                    <span className="label-text">Insurance Certificate URL</span>
                   </label>
                   <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload('insurance', e.target.files[0])}
-                    className="file-input file-input-bordered w-full"
+                    type="url"
+                    placeholder="https://example.com/insurance.pdf"
+                    onChange={(e) => handleFileUpload('insurance', e.target.value)}
+                    className="input input-bordered w-full"
                   />
                 </div>
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Fitness Certificate</span>
+                    <span className="label-text">Fitness Certificate URL</span>
                   </label>
                   <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload('fitness', e.target.files[0])}
-                    className="file-input file-input-bordered w-full"
+                    type="url"
+                    placeholder="https://example.com/fitness.pdf"
+                    onChange={(e) => handleFileUpload('fitness', e.target.value)}
+                    className="input input-bordered w-full"
                   />
                 </div>
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Revenue License</span>
+                    <span className="label-text">Revenue License URL</span>
                   </label>
                   <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload('revenue', e.target.files[0])}
-                    className="file-input file-input-bordered w-full"
+                    type="url"
+                    placeholder="https://example.com/revenue.pdf"
+                    onChange={(e) => handleFileUpload('revenue', e.target.value)}
+                    className="input input-bordered w-full"
                   />
                 </div>
               </div>
@@ -716,15 +707,28 @@ const DriverVehicleRegistration = () => {
 
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-base-content mb-4">Vehicle Images</h3>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleImageUpload(Array.from(e.target.files))}
-                className="file-input file-input-bordered w-full"
-              />
+              <div className="space-y-4">
+                <input
+                  type="url"
+                  placeholder="https://example.com/vehicle-front.jpg"
+                  onChange={(e) => handleImageUpload([e.target.value])}
+                  className="input input-bordered w-full"
+                />
+                <input
+                  type="url"
+                  placeholder="https://example.com/vehicle-side.jpg"
+                  onChange={(e) => handleImageUpload([e.target.value])}
+                  className="input input-bordered w-full"
+                />
+                <input
+                  type="url"
+                  placeholder="https://example.com/vehicle-interior.jpg"
+                  onChange={(e) => handleImageUpload([e.target.value])}
+                  className="input input-bordered w-full"
+                />
+              </div>
               <p className="text-sm text-base-content/70 mt-2">
-                Upload multiple images showing different angles of your vehicle
+                Add URLs for multiple images showing different angles of your vehicle
               </p>
             </div>
 
