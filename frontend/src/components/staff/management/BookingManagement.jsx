@@ -245,7 +245,7 @@ const BookingManagement = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -295,6 +295,18 @@ const BookingManagement = () => {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Guide Bookings</p>
+              <p className="text-2xl font-bold text-blue-600">{statistics.guideBookings || 0}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <User className="h-6 w-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -327,6 +339,21 @@ const BookingManagement = () => {
                 <option value="confirmed">Confirmed</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Type</label>
+              <select
+                value={filters.type}
+                onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Types</option>
+                <option value="tour">Tour Bookings</option>
+                <option value="guide">Guide Bookings</option>
+                <option value="hotel">Hotel Bookings</option>
+                <option value="vehicle">Vehicle Bookings</option>
               </select>
             </div>
 
@@ -452,11 +479,16 @@ const BookingManagement = () => {
                             </div>
                             <div>
                               <h3 className="font-semibold text-slate-900">
-                                {booking.tour?.title || 'Tour Booking'}
+                                {booking.tour?.title || (booking.guide ? `Guide Booking - ${booking.guide.firstName} ${booking.guide.lastName}` : 'Booking')}
                               </h3>
                               <p className="text-sm text-slate-600">
                                 {booking.user?.firstName} {booking.user?.lastName}
                               </p>
+                              {booking.guide && !booking.tour && (
+                                <p className="text-xs text-blue-600 font-medium">
+                                  Direct Guide Booking
+                                </p>
+                              )}
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
                               {booking.status}
@@ -627,26 +659,51 @@ const BookingManagement = () => {
                   </div>
                 </div>
 
-                {/* Tour Info */}
+                {/* Tour/Guide Info */}
                 <div>
-                  <h4 className="font-semibold text-slate-900 mb-3">Tour Information</h4>
+                  <h4 className="font-semibold text-slate-900 mb-3">
+                    {selectedBooking.booking.tour ? 'Tour Information' : 'Guide Information'}
+                  </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-slate-700">Tour:</span>
-                      <p className="text-slate-600">{selectedBooking.booking.tour?.title}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-700">Duration:</span>
-                      <p className="text-slate-600">{selectedBooking.booking.tour?.duration}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-700">Location:</span>
-                      <p className="text-slate-600">{selectedBooking.booking.tour?.location}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-slate-700">Price:</span>
-                      <p className="text-slate-600">LKR {selectedBooking.booking.tour?.price?.toLocaleString()}</p>
-                    </div>
+                    {selectedBooking.booking.tour ? (
+                      <>
+                        <div>
+                          <span className="font-medium text-slate-700">Tour:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.tour.title}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-slate-700">Duration:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.tour.duration}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-slate-700">Location:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.tour.location}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-slate-700">Price:</span>
+                          <p className="text-slate-600">LKR {selectedBooking.booking.tour.price?.toLocaleString()}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <span className="font-medium text-slate-700">Guide:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.guide?.firstName} {selectedBooking.booking.guide?.lastName}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-slate-700">Email:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.guide?.email}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-slate-700">Phone:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.guide?.phone}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-slate-700">Duration:</span>
+                          <p className="text-slate-600">{selectedBooking.booking.duration}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

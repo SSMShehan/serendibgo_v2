@@ -31,7 +31,9 @@ const getAllBookings = asyncHandler(async (req, res) => {
         { 'user.firstName': { $regex: search, $options: 'i' } },
         { 'user.lastName': { $regex: search, $options: 'i' } },
         { 'user.email': { $regex: search, $options: 'i' } },
-        { 'tour.title': { $regex: search, $options: 'i' } }
+        { 'tour.title': { $regex: search, $options: 'i' } },
+        { 'guide.firstName': { $regex: search, $options: 'i' } },
+        { 'guide.lastName': { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -40,9 +42,20 @@ const getAllBookings = asyncHandler(async (req, res) => {
       filter.status = status;
     }
     
-    // Type filter (tour, hotel, vehicle)
+    // Type filter (tour, hotel, vehicle, guide)
     if (type) {
-      filter.type = type;
+      if (type === 'guide') {
+        // Guide bookings are bookings that have a guide but no tour
+        filter.guide = { $exists: true };
+        filter.tour = { $exists: false };
+      } else if (type === 'tour') {
+        // Tour bookings are bookings that have both tour and guide
+        filter.tour = { $exists: true };
+        filter.guide = { $exists: true };
+      } else {
+        // For other types, you can extend this logic
+        filter.type = type;
+      }
     }
     
     // Date range filter
@@ -78,6 +91,14 @@ const getAllBookings = asyncHandler(async (req, res) => {
       confirmed: await Booking.countDocuments({ status: 'confirmed' }),
       completed: await Booking.countDocuments({ status: 'completed' }),
       cancelled: await Booking.countDocuments({ status: 'cancelled' }),
+      guideBookings: await Booking.countDocuments({ 
+        guide: { $exists: true }, 
+        tour: { $exists: false } 
+      }),
+      tourBookings: await Booking.countDocuments({ 
+        tour: { $exists: true }, 
+        guide: { $exists: true } 
+      }),
       today: await Booking.countDocuments({
         createdAt: {
           $gte: new Date(new Date().setHours(0, 0, 0, 0)),
