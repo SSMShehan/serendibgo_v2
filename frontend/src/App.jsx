@@ -258,6 +258,13 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
+                {/* Vehicle Booking */}
+                <Route path="booking" element={
+                  <ProtectedRoute>
+                    <Booking />
+                  </ProtectedRoute>
+                } />
+                
                 <Route path="payment/:bookingId" element={
                   <ProtectedRoute>
                     <Payment />

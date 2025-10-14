@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import tripService from '../../services/vehicles/tripService';
@@ -35,13 +35,20 @@ const DriverDashboard = () => {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [showTripModal, setShowTripModal] = useState(false);
+  const hasFetched = useRef(false);
   
   useEffect(() => {
-    fetchDriverData();
-  }, []);
+    if (!hasFetched.current && user?.id) {
+      fetchDriverData();
+    }
+  }, [user?.id]);
   
   const fetchDriverData = async () => {
     try {
+      if (hasFetched.current) return;
+      hasFetched.current = true;
       setLoading(true);
       
       // Fetch driver profile
@@ -60,6 +67,52 @@ const DriverDashboard = () => {
         } catch (tripsError) {
           console.warn('No trips found for driver:', tripsError);
           setTrips([]);
+        }
+        
+        // Also fetch vehicle bookings for this driver's vehicles
+        try {
+          const vehicleBookingsResponse = await fetch('/api/vehicle-bookings/my-bookings', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (vehicleBookingsResponse.ok) {
+            const vehicleBookingsData = await vehicleBookingsResponse.json();
+            console.log('Vehicle bookings for driver:', vehicleBookingsData);
+            
+            if (vehicleBookingsData.status === 'success') {
+              // Convert vehicle bookings to trip format for display
+              const vehicleTrips = vehicleBookingsData.data.bookings.map(booking => ({
+                _id: booking._id,
+                tripReference: booking.bookingReference,
+                status: booking.bookingStatus,
+                scheduledStartTime: booking.tripDetails.startDate,
+                pickupLocation: booking.tripDetails.pickupLocation,
+                dropoffLocation: booking.tripDetails.dropoffLocation,
+                fare: booking.pricing?.totalPrice || 0,
+                customer: {
+                  name: `${booking.guestDetails.firstName} ${booking.guestDetails.lastName}`,
+                  phone: booking.guestDetails.phone
+                },
+                vehicle: booking.vehicle,
+                completedAt: booking.bookingStatus === 'completed' ? booking.updatedAt : null
+              }));
+              
+              // Merge with existing trips, avoiding duplicates
+              setTrips(prevTrips => {
+                const allTrips = [...prevTrips, ...vehicleTrips];
+                // Remove duplicates based on _id
+                const uniqueTrips = allTrips.filter((trip, index, self) => 
+                  index === self.findIndex(t => t._id === trip._id)
+                );
+                return uniqueTrips;
+              });
+            }
+          }
+        } catch (vehicleBookingsError) {
+          console.warn('No vehicle bookings found for driver:', vehicleBookingsError);
         }
         
         // Fetch driver vehicles only if driver profile exists
@@ -155,6 +208,7 @@ const DriverDashboard = () => {
       const data = await response.json();
       if (data.status === 'success') {
         toast.success(`Trip status updated to ${status}!`);
+        hasFetched.current = false;
         fetchDriverData();
       } else {
         toast.error(data.message || 'Failed to update status');
@@ -163,6 +217,16 @@ const DriverDashboard = () => {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
     }
+  };
+  
+  const handleViewTrip = (trip) => {
+    setSelectedTrip(trip);
+    setShowTripModal(true);
+  };
+  
+  const closeTripModal = () => {
+    setShowTripModal(false);
+    setSelectedTrip(null);
   };
   
   const getStatusColor = (status) => {
@@ -258,7 +322,10 @@ const DriverDashboard = () => {
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={fetchDriverData}
+                onClick={() => {
+                  hasFetched.current = false;
+                  fetchDriverData();
+                }}
                 className="btn btn-outline"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -546,6 +613,7 @@ const DriverDashboard = () => {
                       
                       <div className="ml-6 flex flex-col items-end space-y-2">
                         <button
+                          onClick={() => handleViewTrip(trip)}
                           className="btn btn-sm btn-outline"
                         >
                           <Eye className="w-4 h-4" />
@@ -793,6 +861,158 @@ const DriverDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Trip Details Modal */}
+      {showTripModal && selectedTrip && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <Car className="h-6 w-6 text-blue-600 mr-2" />
+                  <h3 className="text-lg font-semibold text-gray-900">Trip Details</h3>
+                </div>
+                <button
+                  onClick={closeTripModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Status Badge */}
+              <div className="mb-4">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedTrip.status)}`}>
+                  {getStatusIcon(selectedTrip.status)}
+                  <span className="ml-2">{selectedTrip.status.charAt(0).toUpperCase() + selectedTrip.status.slice(1)}</span>
+                </span>
+              </div>
+
+              {/* Trip Details Content */}
+              <div className="space-y-4">
+                {/* Trip Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Trip Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center">
+                        <Car className="h-4 w-4 mr-2 text-gray-500" />
+                        <span><strong>Trip ID:</strong> {selectedTrip.tripReference}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <span><strong>Date:</strong> {formatDate(selectedTrip.scheduledStartTime)}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
+                        <span><strong>Fare:</strong> {formatCurrency(selectedTrip.fare || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Locations</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                        <div>
+                          <div className="font-medium">Pickup</div>
+                          <div className="text-gray-500">{selectedTrip.pickupLocation?.address || 'Not specified'}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                        <div>
+                          <div className="font-medium">Drop-off</div>
+                          <div className="text-gray-500">{selectedTrip.dropoffLocation?.address || 'Not specified'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer Information */}
+                {selectedTrip.customer && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Customer Information</h4>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="space-y-2 text-sm text-blue-800">
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 mr-2" />
+                          <span><strong>Name:</strong> {selectedTrip.customer.name}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-2" />
+                          <span><strong>Phone:</strong> {selectedTrip.customer.phone}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Vehicle Information */}
+                {selectedTrip.vehicle && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Vehicle Information</h4>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="space-y-2 text-sm text-green-800">
+                        <div><strong>Vehicle:</strong> {selectedTrip.vehicle.name || `${selectedTrip.vehicle.make} ${selectedTrip.vehicle.model}`}</div>
+                        <div><strong>Type:</strong> {selectedTrip.vehicle.vehicleType}</div>
+                        <div><strong>License Plate:</strong> {selectedTrip.vehicle.licensePlate}</div>
+                        {selectedTrip.vehicle.capacity && (
+                          <div><strong>Capacity:</strong> {selectedTrip.vehicle.capacity.passengers || selectedTrip.vehicle.seatingCapacity} passengers</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Special Requests */}
+                {selectedTrip.specialRequests && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Special Requests</h4>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800">{selectedTrip.specialRequests}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={closeTripModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Close
+                </button>
+                {selectedTrip.status === 'confirmed' && (
+                  <button
+                    onClick={() => {
+                      closeTripModal();
+                      handleStatusUpdate(selectedTrip._id, 'in_progress');
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Start Trip
+                  </button>
+                )}
+                {selectedTrip.status === 'in_progress' && (
+                  <button
+                    onClick={() => {
+                      closeTripModal();
+                      handleStatusUpdate(selectedTrip._id, 'completed');
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    Complete Trip
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

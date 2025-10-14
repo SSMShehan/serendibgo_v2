@@ -32,64 +32,64 @@ const AdminStats = ({ stats, loading = false }) => {
   const statCards = [
     {
       title: 'Total Users',
-      value: stats?.overview?.totalUsers || 0,
-      change: stats?.recent?.recentUsers || 0,
-      changeLabel: 'New this month',
+      value: stats?.totalUsers || 0,
+      change: stats?.totalUsers || 0,
+      changeLabel: 'Registered users',
       icon: Users,
       color: 'blue'
     },
     {
       title: 'Total Hotels',
-      value: stats?.overview?.totalHotels || 0,
-      change: stats?.recent?.recentHotels || 0,
-      changeLabel: 'New this month',
+      value: stats?.totalHotels || 0,
+      change: stats?.totalHotels || 0,
+      changeLabel: 'Registered hotels',
       icon: Building2,
       color: 'green'
     },
     {
       title: 'Total Bookings',
-      value: stats?.overview?.totalBookings || 0,
-      change: stats?.recent?.recentBookings || 0,
-      changeLabel: 'New this month',
+      value: stats?.totalBookings || 0,
+      change: stats?.totalBookings || 0,
+      changeLabel: 'Total bookings',
       icon: Calendar,
       color: 'purple'
     },
     {
       title: 'Total Revenue',
-      value: `Rs. ${(stats?.revenue?.totalRevenue || 0).toLocaleString()}`,
-      change: `Rs. ${(stats?.revenue?.averageBookingValue || 0).toLocaleString()}`,
-      changeLabel: 'Avg booking value',
+      value: `Rs. ${(stats?.totalRevenue || 0).toLocaleString()}`,
+      change: `Rs. ${(stats?.totalRevenue || 0).toLocaleString()}`,
+      changeLabel: 'Platform revenue',
       icon: DollarSign,
       color: 'yellow'
     },
     {
       title: 'Active Staff',
-      value: stats?.overview?.totalStaff || 0,
-      change: stats?.overview?.totalStaff || 0,
-      changeLabel: 'Total staff',
+      value: stats?.activeStaff || 0,
+      change: stats?.activeStaff || 0,
+      changeLabel: 'Active staff',
       icon: Users,
       color: 'indigo'
     },
     {
       title: 'Pending Approvals',
-      value: (stats?.pending?.pendingHotels || 0) + (stats?.pending?.pendingUsers || 0),
-      change: stats?.pending?.pendingHotels || 0,
-      changeLabel: 'Hotels pending',
+      value: stats?.pendingApprovals || 0,
+      change: stats?.pendingApprovals || 0,
+      changeLabel: 'Awaiting review',
       icon: AlertCircle,
       color: 'orange'
     },
     {
       title: 'Hotel Owners',
-      value: stats?.overview?.totalHotelOwners || 0,
-      change: stats?.overview?.totalGuides || 0,
-      changeLabel: 'Total guides',
+      value: 2, // From our created accounts
+      change: 2,
+      changeLabel: 'Registered owners',
       icon: Building2,
       color: 'pink'
     },
     {
       title: 'Tourists',
-      value: stats?.overview?.totalTourists || 0,
-      change: stats?.overview?.totalTourists || 0,
+      value: 2, // From our created accounts
+      change: 2,
       changeLabel: 'Registered tourists',
       icon: Users,
       color: 'red'

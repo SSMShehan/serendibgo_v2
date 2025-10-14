@@ -9,6 +9,7 @@ const MyBookings = () => {
   const { user } = useAuth()
   const [bookings, setBookings] = useState([])
   const [customTrips, setCustomTrips] = useState([])
+  const [vehicleBookings, setVehicleBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('bookings')
@@ -69,6 +70,30 @@ const MyBookings = () => {
         }
       } catch (customError) {
         console.error('Custom trips fetch error:', customError)
+      }
+      
+      // Fetch vehicle bookings
+      try {
+        const vehicleResponse = await fetch('/api/vehicle-bookings/user', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        console.log('Vehicle bookings response status:', vehicleResponse.status)
+        
+        if (vehicleResponse.ok) {
+          const vehicleData = await vehicleResponse.json()
+          console.log('Vehicle bookings data:', vehicleData)
+          if (vehicleData.status === 'success') {
+            setVehicleBookings(vehicleData.data.bookings || [])
+          }
+        } else {
+          console.error('Vehicle bookings API error:', vehicleResponse.status, vehicleResponse.statusText)
+        }
+      } catch (vehicleError) {
+        console.error('Vehicle bookings fetch error:', vehicleError)
       }
     } catch (error) {
       console.error('Error fetching bookings:', error)
@@ -227,6 +252,17 @@ const MyBookings = () => {
               >
                 <Sparkles className="h-4 w-4 inline mr-2" />
                 Custom Trips ({customTrips.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('vehicles')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'vehicles'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Car className="h-4 w-4 inline mr-2" />
+                Vehicle Rentals ({vehicleBookings.length})
               </button>
             </nav>
           </div>
@@ -422,6 +458,91 @@ const MyBookings = () => {
                           {trip.status === 'pending' && (
                             <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                               Cancel Request
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Vehicle Bookings Tab */}
+            {activeTab === 'vehicles' && (
+              <>
+                {vehicleBookings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Car className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No vehicle bookings yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Start by renting a vehicle for your Sri Lankan adventure.</p>
+                    <div className="mt-6">
+                      <Link
+                        to="/vehicles"
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-focus focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                      >
+                        <Car className="h-4 w-4 mr-2" />
+                        Browse Vehicles
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {vehicleBookings.map((booking) => (
+                      <div key={booking._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Car className="h-5 w-5 text-blue-600" />
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {booking.vehicle?.name || 'Vehicle Booking'}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">
+                              {booking.vehicle?.make} {booking.vehicle?.model} - {booking.vehicle?.vehicleType}
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {formatDate(booking.tripDetails.startDate)}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {formatDate(booking.tripDetails.endDate)}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                {booking.tripDetails.pickupLocation.city}
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Users className="h-4 w-4 mr-2" />
+                                {booking.passengers.adults + booking.passengers.children + booking.passengers.infants} passengers
+                              </div>
+                            </div>
+                            {booking.bookingReference && (
+                              <div className="mt-3 text-xs text-gray-500">
+                                Reference: {booking.bookingReference}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-6 flex flex-col items-end">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.bookingStatus)}`}>
+                              {getStatusIcon(booking.bookingStatus)}
+                              <span className="ml-1">{booking.bookingStatus.charAt(0).toUpperCase() + booking.bookingStatus.slice(1)}</span>
+                            </span>
+                            <div className="mt-2 flex items-center text-lg font-semibold text-gray-900">
+                              <CreditCard className="h-4 w-4 mr-1" />
+                              {booking.pricing?.currency || 'LKR'} {booking.pricing?.totalPrice?.toLocaleString() || '0'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end space-x-3">
+                          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            View Details
+                          </button>
+                          {booking.bookingStatus === 'pending' && (
+                            <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                              Cancel
                             </button>
                           )}
                         </div>

@@ -486,8 +486,9 @@ export const vehicleService = {
     try {
       const response = await api.post('/vehicles/register', vehicleData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // Increase timeout to 30 seconds
       });
       return response.data;
     } catch (error) {

@@ -96,6 +96,9 @@ const VehicleDetails = () => {
   };
   
   const formatPrice = (price, currency = 'LKR') => {
+    if (price === undefined || price === null) {
+      return `${currency} 0`;
+    }
     return `${currency} ${price.toLocaleString()}`;
   };
   
@@ -300,8 +303,8 @@ const VehicleDetails = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">Capacity</p>
                     <p className="text-sm text-gray-600">
-                      {vehicle.capacity.passengers} passengers
-                      {vehicle.capacity.luggage > 0 && `, ${vehicle.capacity.luggage} luggage`}
+                      {vehicle.capacity?.passengers || 0} passengers
+                      {vehicle.capacity?.luggage > 0 && `, ${vehicle.capacity.luggage} luggage`}
                     </p>
                   </div>
                 </div>
@@ -334,33 +337,33 @@ const VehicleDetails = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Base Price</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatPrice(vehicle.pricing.basePrice, vehicle.pricing.currency)}
+                    {formatPrice(vehicle.pricing?.basePrice, vehicle.pricing?.currency)}
                   </span>
                 </div>
                 
-                {vehicle.pricing.perKmRate > 0 && (
+                {vehicle.pricing?.perKmRate > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Per KM</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatPrice(vehicle.pricing.perKmRate, vehicle.pricing.currency)}
+                      {formatPrice(vehicle.pricing?.perKmRate, vehicle.pricing?.currency)}
                     </span>
                   </div>
                 )}
                 
-                {vehicle.pricing.hourlyRate > 0 && (
+                {vehicle.pricing?.hourlyRate > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Hourly</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatPrice(vehicle.pricing.hourlyRate, vehicle.pricing.currency)}
+                      {formatPrice(vehicle.pricing?.hourlyRate, vehicle.pricing?.currency)}
                     </span>
                   </div>
                 )}
                 
-                {vehicle.pricing.dailyRate > 0 && (
+                {vehicle.pricing?.dailyRate > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Daily</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatPrice(vehicle.pricing.dailyRate, vehicle.pricing.currency)}
+                      {formatPrice(vehicle.pricing?.dailyRate, vehicle.pricing?.currency)}
                     </span>
                   </div>
                 )}
@@ -377,7 +380,7 @@ const VehicleDetails = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">Working Hours</p>
                     <p className="text-sm text-gray-600">
-                      {vehicle.availability.workingHours.start} - {vehicle.availability.workingHours.end}
+                      {vehicle.availability?.workingHours?.start || 'N/A'} - {vehicle.availability?.workingHours?.end || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -387,9 +390,9 @@ const VehicleDetails = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">Working Days</p>
                     <p className="text-sm text-gray-600">
-                      {vehicle.availability.workingDays.map(day => 
+                      {vehicle.availability?.workingDays?.map(day => 
                         day.charAt(0).toUpperCase() + day.slice(1)
-                      ).join(', ')}
+                      ).join(', ') || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -399,7 +402,7 @@ const VehicleDetails = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">Minimum Notice</p>
                     <p className="text-sm text-gray-600">
-                      {vehicle.availability.minimumBookingNotice} hours
+                      {vehicle.availability?.minimumBookingNotice || 0} hours
                     </p>
                   </div>
                 </div>
@@ -414,14 +417,14 @@ const VehicleDetails = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Trips</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {vehicle.stats.totalTrips || 0}
+                    {vehicle.stats?.totalTrips || 0}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Total Earnings</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {formatPrice(vehicle.stats.totalEarnings || 0)}
+                    {formatPrice(vehicle.stats?.totalEarnings || 0)}
                   </span>
                 </div>
                 
@@ -430,7 +433,7 @@ const VehicleDetails = () => {
                   <div className="flex items-center">
                     <Star className="h-4 w-4 text-yellow-400 mr-1" />
                     <span className="text-sm font-medium text-gray-900">
-                      {vehicle.stats.averageRating || 0}/5
+                      {vehicle.stats?.averageRating || 0}/5
                     </span>
                   </div>
                 </div>

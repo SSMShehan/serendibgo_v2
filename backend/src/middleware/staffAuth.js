@@ -97,7 +97,7 @@ const requirePermission = (module, action) => {
       });
     }
 
-    if (!hasPermission(req.user.role, module, action)) {
+    if (!hasPermission(req.user.role, module, action, req.user.profile?.permissions)) {
       return res.status(403).json({
         status: 'error',
         message: `Insufficient permissions. Required: ${module}:${action}`

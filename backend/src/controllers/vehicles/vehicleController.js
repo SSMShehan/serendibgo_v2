@@ -1,5 +1,6 @@
 const Vehicle = require('../../models/Vehicle');
 const asyncHandler = require('express-async-handler');
+const sampleVehicles = require('../../data/sampleVehicles');
 
 // @desc    Get all vehicles
 // @route   GET /api/vehicles
@@ -14,6 +15,7 @@ const getVehicles = asyncHandler(async (req, res) => {
     passengers,
     amenities,
     search,
+    status = 'available',
     sort = 'createdAt',
     order = 'desc',
     page = 1,
@@ -21,7 +23,7 @@ const getVehicles = asyncHandler(async (req, res) => {
   } = req.query;
 
   // Build query
-  const query = { status: 'active' }; // Only show active vehicles
+  const query = { status }; // Filter by status (default: available)
 
   // Vehicle type filter
   if (vehicleType) {
@@ -497,6 +499,32 @@ const registerVehicle = asyncHandler(async (req, res) => {
   const parsedPricing = parseFormData(pricing);
   const parsedAvailability = parseFormData(availability);
 
+  // Validate and fix location data
+  const validLocation = {
+    city: parsedLocation?.city && ['Colombo', 'Kandy', 'Galle', 'Negombo', 'Bentota', 'Hikkaduwa', 
+      'Unawatuna', 'Mirissa', 'Weligama', 'Tangalle', 'Arugam Bay',
+      'Nuwara Eliya', 'Ella', 'Bandarawela', 'Haputale',
+      'Sigiriya', 'Dambulla', 'Anuradhapura', 'Polonnaruwa', 'Trincomalee',
+      'Batticaloa', 'Jaffna', 'Kalpitiya', 'Chilaw', 'Puttalam'].includes(parsedLocation.city) 
+      ? parsedLocation.city 
+      : 'Colombo', // Default to Colombo if invalid
+    district: parsedLocation?.district && ['Colombo', 'Gampaha', 'Kalutara', 'Kandy', 'Matale', 'Nuwara Eliya',
+      'Galle', 'Matara', 'Hambantota', 'Jaffna', 'Kilinochchi', 'Mannar',
+      'Vavuniya', 'Mullaitivu', 'Batticaloa', 'Ampara', 'Trincomalee',
+      'Kurunegala', 'Puttalam', 'Anuradhapura', 'Polonnaruwa', 'Badulla',
+      'Monaragala', 'Ratnapura', 'Kegalle'].includes(parsedLocation.district)
+      ? parsedLocation.district
+      : 'Colombo', // Default to Colombo if invalid
+    coordinates: {
+      latitude: (parsedLocation?.coordinates && parsedLocation.coordinates.latitude >= 5.9 && parsedLocation.coordinates.latitude <= 9.8)
+        ? parsedLocation.coordinates.latitude
+        : 6.9271, // Default Colombo latitude
+      longitude: (parsedLocation?.coordinates && parsedLocation.coordinates.longitude >= 79.7 && parsedLocation.coordinates.longitude <= 81.9)
+        ? parsedLocation.coordinates.longitude
+        : 79.8612 // Default Colombo longitude
+    }
+  };
+
   // Check if user is a driver
   if (req.user.role !== 'driver') {
     return res.status(403).json({
@@ -535,13 +563,7 @@ const registerVehicle = asyncHandler(async (req, res) => {
       luggage: 2 // Default luggage capacity
     },
     amenities: parsedAmenities || {},
-    serviceAreas: parsedLocation ? [{
-      city: parsedLocation.city || '',
-      district: parsedLocation.district || '',
-      coordinates: parsedLocation.coordinates || { latitude: 0, longitude: 0 },
-      radius: 50,
-      isActive: true
-    }] : [],
+    location: validLocation, // Use validated location
     pricing: {
       basePrice: parsedPricing?.baseRate || 0,
       currency: parsedPricing?.currency || 'LKR',
@@ -554,10 +576,22 @@ const registerVehicle = asyncHandler(async (req, res) => {
       workingHours: { start: '06:00', end: '22:00' },
       workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     },
-    status: 'pending', // Needs approval
+    status: 'available', // Set to available initially
+    // Add registration details with default expiry date
+    registration: {
+      number: licensePlate,
+      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+    },
+    // Add insurance details with default expiry date
+    insurance: {
+      provider: 'Default Insurance',
+      policyNumber: `POL-${licensePlate}-${Date.now()}`,
+      expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+    },
     approvalDetails: {
       submittedAt: new Date(),
-      submittedBy: req.user.id
+      submittedBy: req.user.id,
+      needsApproval: true // Flag to indicate it needs admin approval
     }
   });
 
