@@ -23,14 +23,22 @@ import {
   MessageCircle,
   Camera,
   Navigation,
-  X
+  X,
+  MessageSquare,
+  Plus
 } from 'lucide-react'
 import { guideService } from '../../services/guideService'
+import { useAuth } from '../../context/AuthContext'
+import ReviewForm from '../../components/reviews/ReviewForm'
+import ReviewDisplay from '../../components/reviews/ReviewDisplay'
+import ReviewRequirements from '../../components/reviews/ReviewRequirements'
 
 const GuideDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuth()
   const [showBookingModal, setShowBookingModal] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
   const [guide, setGuide] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -42,6 +50,7 @@ const GuideDetail = () => {
   })
   const [showBookingCalendar, setShowBookingCalendar] = useState(false)
   const [selectedBookingDate, setSelectedBookingDate] = useState(new Date())
+  const [userBookings, setUserBookings] = useState([])
 
   // Fetch guide data from API
   useEffect(() => {
@@ -84,12 +93,57 @@ const GuideDetail = () => {
       setError(null)
       const response = await guideService.getGuideById(id)
       setGuide(response.data)
+      
+      // If user is authenticated, fetch their bookings with this guide
+      if (isAuthenticated && user) {
+        await fetchUserBookings()
+      }
     } catch (err) {
       console.error('Error fetching guide:', err)
       setError('Failed to load guide details. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchUserBookings = async () => {
+    try {
+      // This would typically fetch user's completed bookings with this guide
+      // For now, we'll use mock data or implement based on your booking service
+      const mockBookings = [
+        {
+          _id: 'booking1',
+          tour: { _id: 'tour1', title: 'Sigiriya Rock Fortress Tour' },
+          status: 'completed',
+          startDate: '2024-01-15',
+          endDate: '2024-01-15'
+        }
+      ];
+      setUserBookings(mockBookings);
+    } catch (err) {
+      console.error('Error fetching user bookings:', err);
+    }
+  }
+
+  const handleReviewSubmitted = () => {
+    setShowReviewForm(false);
+    // Refresh guide data to update review count and rating
+    fetchGuide();
+  }
+
+  const handleReviewUpdate = () => {
+    // Refresh guide data when reviews are updated
+    fetchGuide();
+  }
+
+  const canUserReview = () => {
+    if (!isAuthenticated || !user) return false;
+    
+    // Check if user has completed bookings with this guide
+    return userBookings.some(booking => 
+      booking.status === 'completed' && 
+      booking.guide === id
+    );
   }
 
   if (loading) {
@@ -275,17 +329,62 @@ const GuideDetail = () => {
     })
   }
 
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault()
-    console.log('Booking submitted:', { guide: guide, ...bookingData })
-    alert('Booking request submitted successfully! We will contact you soon.')
-    setShowBookingModal(false)
-    setBookingData({
-      date: '',
-      duration: '',
-      groupSize: 1,
-      specialRequests: ''
-    })
+
+    if (!guide) {
+      alert('Please select a guide first')
+      return
+    }
+
+    try {
+      // Calculate start and end dates based on duration
+      const startDate = new Date(bookingData.date)
+      let endDate = new Date(startDate)
+
+      switch (bookingData.duration) {
+        case 'half-day':
+          endDate.setHours(startDate.getHours() + 4) // 4 hours
+          break
+        case 'full-day':
+          endDate.setDate(startDate.getDate() + 1) // Next day
+          break
+        case 'multi-day':
+          endDate.setDate(startDate.getDate() + 3) // 3 days
+          break
+        default:
+          endDate.setDate(startDate.getDate() + 1)
+      }
+
+      const bookingDataToSubmit = {
+        guideId: guide.id,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        duration: bookingData.duration,
+        groupSize: parseInt(bookingData.groupSize),
+        specialRequests: bookingData.specialRequests || ''
+      }
+
+      console.log('Submitting guide booking:', bookingDataToSubmit)
+
+      const response = await guideService.createGuideBooking(bookingDataToSubmit)
+
+      if (response.success) {
+        alert('Guide booking submitted successfully! We will contact you soon to confirm.')
+        setShowBookingModal(false)
+        setBookingData({
+          date: '',
+          duration: '',
+          groupSize: 1,
+          specialRequests: ''
+        })
+      } else {
+        alert('Failed to submit booking: ' + (response.message || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error submitting guide booking:', error)
+      alert('Failed to submit booking request. Please try again.')
+    }
   }
 
   return (
@@ -406,6 +505,108 @@ const GuideDetail = () => {
                 <Share2 className="h-5 w-5 mr-2" /> Share Profile
               </button>
             </div>
+          </div>
+
+          {/* Reviews Section */}
+          <div className="space-y-6">
+            {/* Reviews Header */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-3xl p-8 border border-purple-200 shadow-lg">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <MessageSquare className="h-8 w-8 text-purple-600 mr-4" />
+                  <div>
+                    <h2 className="text-3xl font-bold text-slate-900">Reviews & Ratings</h2>
+                    <p className="text-slate-600 font-medium">What travelers say about {guide.name}</p>
+                  </div>
+                </div>
+                
+                {/* Write Review Button */}
+                {canUserReview() ? (
+                  <button
+                    onClick={() => setShowReviewForm(true)}
+                    className="flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-2xl hover:from-purple-700 hover:to-pink-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Write Review
+                  </button>
+                ) : isAuthenticated ? (
+                  <div className="text-center">
+                    <p className="text-slate-600 font-medium mb-2">Complete a tour to write a review</p>
+                    <button
+                      onClick={() => setShowBookingModal(true)}
+                      className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 mx-auto"
+                    >
+                      <BookOpen className="h-5 w-5 mr-2" />
+                      Book This Guide
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-slate-600 font-medium mb-2">Sign in to write a review</p>
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-500 text-white rounded-2xl hover:from-green-700 hover:to-emerald-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 mx-auto"
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Quick Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-4 bg-white/60 rounded-2xl border border-purple-200">
+                  <div className="text-3xl font-bold text-purple-600 mb-1">{guide.rating}</div>
+                  <div className="flex justify-center mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-5 w-5 ${
+                          star <= Math.round(guide.rating)
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-slate-600 font-medium">Average Rating</p>
+                </div>
+                <div className="text-center p-4 bg-white/60 rounded-2xl border border-purple-200">
+                  <div className="text-3xl font-bold text-purple-600 mb-1">{guide.reviewCount}</div>
+                  <p className="text-slate-600 font-medium">Total Reviews</p>
+                </div>
+                <div className="text-center p-4 bg-white/60 rounded-2xl border border-purple-200">
+                  <div className="text-3xl font-bold text-purple-600 mb-1">{guide.completedTours}</div>
+                  <p className="text-slate-600 font-medium">Tours Completed</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Review Form Modal */}
+            {showReviewForm && (
+              <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+                <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 my-4">
+                  <ReviewForm
+                    guideId={guide.id}
+                    tourId={userBookings[0]?.tour?._id || 'tour1'} // Use first available tour
+                    bookingId={userBookings[0]?._id || 'booking1'} // Use first available booking
+                    onReviewSubmitted={handleReviewSubmitted}
+                    onCancel={() => setShowReviewForm(false)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Review Requirements for users who can't review */}
+            {!canUserReview() && isAuthenticated && (
+              <ReviewRequirements guideName={guide.name} />
+            )}
+
+            {/* Reviews Display */}
+            <ReviewDisplay
+              guideId={guide.id}
+              onReviewUpdate={handleReviewUpdate}
+            />
           </div>
         </div>
 

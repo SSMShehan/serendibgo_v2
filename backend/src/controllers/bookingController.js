@@ -561,11 +561,93 @@ const getGuideBookings = async (req, res) => {
   }
 };
 
+// @desc    Create guide booking (direct guide booking without tour)
+// @route   POST /api/bookings/guide
+// @access  Private
+const createGuideBooking = async (req, res) => {
+  try {
+    const { guideId, startDate, endDate, duration, groupSize, specialRequests } = req.body;
+
+    console.log('🎯 Creating guide booking:', { guideId, startDate, endDate, duration, groupSize, specialRequests });
+
+    // Validate required fields
+    if (!guideId || !startDate || !endDate || !duration || !groupSize) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: guideId, startDate, endDate, duration, groupSize'
+      });
+    }
+
+    // Check if guide exists
+    const guide = await User.findById(guideId);
+    if (!guide || guide.role !== 'guide') {
+      return res.status(404).json({
+        success: false,
+        message: 'Guide not found'
+      });
+    }
+
+    // Calculate total amount (you can adjust pricing logic)
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    
+    // Base price per person per day (you can make this configurable)
+    const basePricePerPersonPerDay = 50; // $50 per person per day
+    const totalAmount = basePricePerPersonPerDay * groupSize * daysDiff;
+
+    // Create booking
+    const booking = new Booking({
+      user: req.user._id,
+      guide: guideId,
+      bookingDate: new Date(),
+      startDate: start,
+      endDate: end,
+      duration,
+      groupSize,
+      totalAmount,
+      specialRequests,
+      status: 'pending',
+      paymentStatus: 'pending'
+    });
+
+    await booking.save();
+
+    console.log('✅ Guide booking saved:', booking._id);
+
+    // Populate the booking with guide and user details
+    await booking.populate('guide', 'firstName lastName email phone avatar rating');
+    await booking.populate('user', 'firstName lastName email phone');
+
+    console.log('✅ Guide booking populated:', {
+      id: booking._id,
+      user: booking.user?.firstName,
+      guide: booking.guide?.firstName,
+      status: booking.status
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Guide booking created successfully',
+      data: booking
+    });
+
+  } catch (error) {
+    console.error('Error creating guide booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating guide booking',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
   getBookingById,
   updateBookingStatus,
   cancelBooking,
-  getGuideBookings
+  getGuideBookings,
+  createGuideBooking
 };
