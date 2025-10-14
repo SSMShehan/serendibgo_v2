@@ -489,8 +489,33 @@ const moderateReview = asyncHandler(async (req, res) => {
 // @access  Private
 const submitSupportTicket = asyncHandler(async (req, res) => {
   try {
+    console.log('Support ticket submission request:', {
+      body: req.body,
+      user: req.user ? {
+        _id: req.user._id,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        email: req.user.email
+      } : 'No user found'
+    });
+
     const { subject, description, category, priority, bookingId } = req.body;
     const userId = req.user._id;
+
+    // Validate required fields
+    if (!subject || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subject and description are required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required'
+      });
+    }
 
     // Create new support ticket
     const supportTicket = new SupportTicket({
@@ -521,10 +546,17 @@ const submitSupportTicket = asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Submit support ticket error:', error);
+    console.error('Submit support ticket error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      body: req.body,
+      user: req.user
+    });
     res.status(500).json({
       success: false,
-      message: 'Server error submitting support ticket'
+      message: 'Server error submitting support ticket',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
