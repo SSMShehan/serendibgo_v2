@@ -212,8 +212,8 @@ const addSupportMessage = asyncHandler(async (req, res) => {
     
     // Create new message
     const newMessage = {
-      sender: isStaff ? 'staff' : 'user',
-      senderName: `${req.user.firstName} ${req.user.lastName}`,
+      sender: userId,
+      senderType: isStaff ? 'staff' : 'user',
       message,
       timestamp: new Date(),
       attachments: attachments || []
@@ -502,8 +502,8 @@ const submitSupportTicket = asyncHandler(async (req, res) => {
       status: 'open',
       booking: bookingId || null,
       messages: [{
-        sender: 'user',
-        senderName: `${req.user.firstName} ${req.user.lastName}`,
+        sender: userId,
+        senderType: 'user',
         message: description,
         timestamp: new Date()
       }]
