@@ -52,7 +52,7 @@ const AdminVehicleManagement = () => {
         ...filters
       };
       
-      const response = await fetch(`/api/admin/vehicles?${new URLSearchParams(params)}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api'}/admin/vehicles?${new URLSearchParams(params)}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
