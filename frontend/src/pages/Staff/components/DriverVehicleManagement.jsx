@@ -54,6 +54,8 @@ const DriverVehicleManagement = () => {
   const [approvalType, setApprovalType] = useState(''); // 'driver' or 'vehicle'
   const [approvalAction, setApprovalAction] = useState(''); // 'approve' or 'reject'
   const [approvalReason, setApprovalReason] = useState('');
+  const [showVehicleReviewModal, setShowVehicleReviewModal] = useState(false);
+  const [reviewingVehicle, setReviewingVehicle] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
     verificationStatus: 'all',
@@ -154,6 +156,12 @@ const DriverVehicleManagement = () => {
     setApprovalAction(action);
     setSelectedVehicle(item);
     setShowApprovalModal(true);
+  };
+
+  // Open vehicle review modal for detailed inspection
+  const openVehicleReviewModal = (vehicle) => {
+    setReviewingVehicle(vehicle);
+    setShowVehicleReviewModal(true);
   };
 
   // Get status color
@@ -527,22 +535,13 @@ const DriverVehicleManagement = () => {
                                   View
                                 </button>
                                 {(vehicle.status === 'pending' || vehicle.approvalDetails?.needsApproval) && (
-                                  <>
-                                    <button
-                                      onClick={() => openApprovalModal('vehicle', 'approve', vehicle)}
-                                      className="flex items-center px-2 py-1 text-green-600 hover:text-green-900 transition-colors text-sm"
-                                    >
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={() => openApprovalModal('vehicle', 'reject', vehicle)}
-                                      className="flex items-center px-2 py-1 text-red-600 hover:text-red-900 transition-colors text-sm"
-                                    >
-                                      <XCircle className="h-4 w-4 mr-1" />
-                                      Reject
-                                    </button>
-                                  </>
+                                  <button
+                                    onClick={() => openVehicleReviewModal(vehicle)}
+                                    className="flex items-center px-2 py-1 text-purple-600 hover:text-purple-900 transition-colors text-sm"
+                                  >
+                                    <FileText className="h-4 w-4 mr-1" />
+                                    Review
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -761,6 +760,208 @@ const DriverVehicleManagement = () => {
                   }`}
                 >
                   {approvalAction === 'approve' ? 'Approve' : 'Reject'} {approvalType}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle Review Modal */}
+      {showVehicleReviewModal && reviewingVehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mr-4">
+                    <Car className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">Vehicle Review</h3>
+                    <p className="text-gray-600">{reviewingVehicle.make} {reviewingVehicle.model} ({reviewingVehicle.year})</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowVehicleReviewModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Vehicle Information */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Details</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">License Plate:</span>
+                        <span className="font-medium">{reviewingVehicle.licensePlate}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Vehicle Type:</span>
+                        <span className="font-medium">{reviewingVehicle.vehicleType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Fuel Type:</span>
+                        <span className="font-medium">{reviewingVehicle.fuelType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Seating Capacity:</span>
+                        <span className="font-medium">{reviewingVehicle.capacity?.passengers || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Mileage:</span>
+                        <span className="font-medium">{reviewingVehicle.mileage || 'N/A'} km</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Features */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Features</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {reviewingVehicle.features && Object.entries(reviewingVehicle.features).map(([feature, enabled]) => (
+                        <div key={feature} className="flex items-center">
+                          {enabled ? (
+                            <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-gray-300 mr-2" />
+                          )}
+                          <span className={`text-sm ${enabled ? 'text-gray-700' : 'text-gray-400'}`}>
+                            {feature.replace(/([A-Z])/g, ' $1').trim()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pricing */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Daily Rate:</span>
+                        <span className="font-medium">LKR {reviewingVehicle.pricing?.dailyRate || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Hourly Rate:</span>
+                        <span className="font-medium">LKR {reviewingVehicle.pricing?.hourlyRate || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documents and Images */}
+                <div className="space-y-6">
+                  {/* Documents */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Documents</h4>
+                    <div className="space-y-3">
+                      {reviewingVehicle.documents && Object.entries(reviewingVehicle.documents).map(([docType, url]) => (
+                        <div key={docType} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center">
+                            <FileText className="h-5 w-5 text-gray-500 mr-3" />
+                            <span className="font-medium capitalize">{docType}</span>
+                          </div>
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              View Document
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Not provided</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Images */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Images</h4>
+                    <div className="space-y-3">
+                      {reviewingVehicle.images && reviewingVehicle.images.length > 0 ? (
+                        reviewingVehicle.images.map((imageUrl, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={imageUrl}
+                              alt={`Vehicle image ${index + 1}`}
+                              className="w-full h-48 object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                            <div className="hidden w-full h-48 bg-gray-100 rounded-lg items-center justify-center">
+                              <div className="text-center">
+                                <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-gray-500 text-sm">Image not available</p>
+                              </div>
+                            </div>
+                            <a
+                              href={imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs hover:bg-opacity-70"
+                            >
+                              View Full Size
+                            </a>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 bg-gray-50 rounded-lg">
+                          <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500">No images provided</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {reviewingVehicle.description && (
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Description</h4>
+                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{reviewingVehicle.description}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowVehicleReviewModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors rounded-xl hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowVehicleReviewModal(false);
+                    openApprovalModal('vehicle', 'reject', reviewingVehicle);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                >
+                  <XCircle className="h-4 w-4 mr-2 inline" />
+                  Reject Vehicle
+                </button>
+                <button
+                  onClick={() => {
+                    setShowVehicleReviewModal(false);
+                    openApprovalModal('vehicle', 'approve', reviewingVehicle);
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2 inline" />
+                  Approve Vehicle
                 </button>
               </div>
             </div>
