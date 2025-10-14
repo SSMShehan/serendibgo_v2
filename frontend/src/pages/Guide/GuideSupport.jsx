@@ -24,6 +24,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 
 const GuideSupport = () => {
   const navigate = useNavigate()
@@ -43,12 +44,26 @@ const GuideSupport = () => {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await api.post('/support/tickets', {
+        subject: formData.subject,
+        description: formData.message,
+        category: formData.category,
+        priority: formData.priority
+      })
+      
+      if (response.data.success) {
+        setIsSubmitting(false)
+        setSubmitted(true)
+        setFormData({ subject: '', category: '', priority: 'medium', message: '' })
+      } else {
+        throw new Error(response.data.message || 'Failed to submit support ticket')
+      }
+    } catch (error) {
+      console.error('Error submitting support ticket:', error)
       setIsSubmitting(false)
-      setSubmitted(true)
-      setFormData({ subject: '', category: '', priority: 'medium', message: '' })
-    }, 2000)
+      alert('Failed to submit support ticket. Please try again.')
+    }
   }
 
   const handleInputChange = (e) => {

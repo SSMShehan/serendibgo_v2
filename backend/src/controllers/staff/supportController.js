@@ -1,5 +1,6 @@
 // Staff Support & Quality Control Controller
 const { asyncHandler } = require('../../middleware/errorHandler');
+const SupportTicket = require('../../models/SupportTicket');
 const User = require('../../models/User');
 const Booking = require('../../models/Booking');
 const Tour = require('../../models/Tour');
@@ -57,157 +58,40 @@ const getSupportTickets = asyncHandler(async (req, res) => {
     const sort = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
-    // Get support tickets (mock data for now)
-    const mockTickets = [
-      {
-        _id: '1',
-        subject: 'Booking cancellation issue',
-        description: 'Customer wants to cancel booking but system is not allowing it',
-        status: 'open',
-        priority: 'high',
-        category: 'booking',
-        user: {
-          _id: 'user1',
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'john@example.com',
-          phone: '+1234567890'
-        },
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-        assignedTo: null,
-        messages: [
-          {
-            _id: 'msg1',
-            sender: 'customer',
-            message: 'I need to cancel my booking but the system is not working',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000)
-          }
-        ]
-      },
-      {
-        _id: '2',
-        subject: 'Payment not processed',
-        description: 'Customer payment failed but money was deducted from account',
-        status: 'in_progress',
-        priority: 'urgent',
-        category: 'payment',
-        user: {
-          _id: 'user2',
-          firstName: 'Jane',
-          lastName: 'Smith',
-          email: 'jane@example.com',
-          phone: '+1234567891'
-        },
-        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-        updatedAt: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-        assignedTo: req.user._id,
-        messages: [
-          {
-            _id: 'msg2',
-            sender: 'customer',
-            message: 'My payment was deducted but booking was not confirmed',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
-          },
-          {
-            _id: 'msg3',
-            sender: 'staff',
-            message: 'We are looking into this issue. Please provide your transaction ID.',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000)
-          }
-        ]
-      },
-      {
-        _id: '3',
-        subject: 'Guide not responding',
-        description: 'Customer cannot reach their assigned guide',
-        status: 'resolved',
-        priority: 'medium',
-        category: 'service',
-        user: {
-          _id: 'user3',
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          email: 'mike@example.com',
-          phone: '+1234567892'
-        },
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        updatedAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-        assignedTo: req.user._id,
-        messages: [
-          {
-            _id: 'msg4',
-            sender: 'customer',
-            message: 'My guide is not responding to calls or messages',
-            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000)
-          },
-          {
-            _id: 'msg5',
-            sender: 'staff',
-            message: 'We have contacted the guide and resolved the issue. New guide assigned.',
-            timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000)
-          }
-        ]
-      }
-    ];
+    // Get support tickets from database
+    const tickets = await SupportTicket.find(filter)
+      .populate('user', 'firstName lastName email phone')
+      .populate('assignedTo', 'firstName lastName email')
+      .populate('messages.sender', 'firstName lastName')
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip(skip);
     
-    // Filter mock data
-    let filteredTickets = mockTickets;
-    if (status) {
-      filteredTickets = filteredTickets.filter(ticket => ticket.status === status);
-    }
-    if (priority) {
-      filteredTickets = filteredTickets.filter(ticket => ticket.priority === priority);
-    }
-    if (category) {
-      filteredTickets = filteredTickets.filter(ticket => ticket.category === category);
-    }
-    if (search) {
-      filteredTickets = filteredTickets.filter(ticket => 
-        ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.description.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.user.firstName.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.user.lastName.toLowerCase().includes(search.toLowerCase()) ||
-        ticket.user.email.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-    
-    // Sort mock data
-    filteredTickets.sort((a, b) => {
-      const aVal = a[sortBy];
-      const bVal = b[sortBy];
-      if (sortOrder === 'desc') {
-        return bVal > aVal ? 1 : -1;
-      } else {
-        return aVal > bVal ? 1 : -1;
-      }
-    });
-    
-    // Paginate mock data
-    const paginatedTickets = filteredTickets.slice(skip, skip + parseInt(limit));
+    const totalCount = await SupportTicket.countDocuments(filter);
     
     // Get ticket statistics
     const stats = {
-      total: mockTickets.length,
-      open: mockTickets.filter(t => t.status === 'open').length,
-      in_progress: mockTickets.filter(t => t.status === 'in_progress').length,
-      resolved: mockTickets.filter(t => t.status === 'resolved').length,
-      closed: mockTickets.filter(t => t.status === 'closed').length,
-      urgent: mockTickets.filter(t => t.priority === 'urgent').length,
-      high: mockTickets.filter(t => t.priority === 'high').length,
-      medium: mockTickets.filter(t => t.priority === 'medium').length,
-      low: mockTickets.filter(t => t.priority === 'low').length
+      total: await SupportTicket.countDocuments(),
+      open: await SupportTicket.countDocuments({ status: 'open' }),
+      in_progress: await SupportTicket.countDocuments({ status: 'in_progress' }),
+      resolved: await SupportTicket.countDocuments({ status: 'resolved' }),
+      closed: await SupportTicket.countDocuments({ status: 'closed' }),
+      urgent: await SupportTicket.countDocuments({ priority: 'urgent' }),
+      high: await SupportTicket.countDocuments({ priority: 'high' }),
+      medium: await SupportTicket.countDocuments({ priority: 'medium' }),
+      low: await SupportTicket.countDocuments({ priority: 'low' })
     };
     
     res.status(200).json({
       success: true,
       data: {
-        tickets: paginatedTickets,
+        tickets,
         stats,
         pagination: {
-          current: parseInt(page),
-          pages: Math.ceil(filteredTickets.length / parseInt(limit)),
-          total: filteredTickets.length
+          totalCount,
+          currentPage: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(totalCount / parseInt(limit))
         }
       }
     });
@@ -222,67 +106,36 @@ const getSupportTickets = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get single support ticket
-// @route   GET /api/staff/support/tickets/:id
-// @access  Private (Staff)
+// @route   GET /api/support/tickets/:id or /api/staff/support/tickets/:id
+// @access  Private (Staff or User)
 const getSupportTicket = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user._id;
+    const isStaff = req.user.role === 'staff' || req.user.role === 'admin';
     
-    // Mock ticket data
-    const mockTicket = {
-      _id: id,
-      subject: 'Booking cancellation issue',
-      description: 'Customer wants to cancel booking but system is not allowing it',
-      status: 'open',
-      priority: 'high',
-      category: 'booking',
-      user: {
-        _id: 'user1',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john@example.com',
-        phone: '+1234567890',
-        avatar: null
-      },
-      booking: {
-        _id: 'booking1',
-        tour: {
-          title: 'Sigiriya Rock Fortress Tour',
-          duration: '1 day'
-        },
-        startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        totalAmount: 15000
-      },
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
-      assignedTo: null,
-      messages: [
-        {
-          _id: 'msg1',
-          sender: 'customer',
-          senderName: 'John Doe',
-          message: 'I need to cancel my booking but the system is not working',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          attachments: []
-        },
-        {
-          _id: 'msg2',
-          sender: 'staff',
-          senderName: 'Staff Member',
-          message: 'I understand your concern. Let me help you with the cancellation.',
-          timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-          attachments: []
-        }
-      ],
-      tags: ['booking', 'cancellation', 'system-issue'],
-      resolution: null,
-      resolvedAt: null,
-      resolvedBy: null
-    };
+    // Build query - staff can see all tickets, users can only see their own
+    let query = { _id: id };
+    if (!isStaff) {
+      query.user = userId;
+    }
+    
+    const ticket = await SupportTicket.findOne(query)
+      .populate('user', 'firstName lastName email phone')
+      .populate('assignedTo', 'firstName lastName email')
+      .populate('booking', 'tour startDate totalAmount')
+      .populate('booking.tour', 'title duration');
+    
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found'
+      });
+    }
     
     res.status(200).json({
       success: true,
-      data: mockTicket
+      data: ticket
     });
     
   } catch (error) {
@@ -334,26 +187,45 @@ const updateSupportTicket = asyncHandler(async (req, res) => {
 });
 
 // @desc    Add message to support ticket
-// @route   POST /api/staff/support/tickets/:id/messages
-// @access  Private (Staff)
+// @route   POST /api/support/tickets/:id/messages or /api/staff/support/tickets/:id/messages
+// @access  Private (Staff or User)
 const addSupportMessage = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const { message, attachments } = req.body;
-    const staffId = req.user._id;
+    const userId = req.user._id;
+    const isStaff = req.user.role === 'staff' || req.user.role === 'admin';
     
-    // Mock message response
+    // Find the ticket and verify access
+    let query = { _id: id };
+    if (!isStaff) {
+      query.user = userId;
+    }
+    
+    const ticket = await SupportTicket.findOne(query);
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found'
+      });
+    }
+    
+    // Create new message
     const newMessage = {
-      _id: `msg_${Date.now()}`,
-      sender: 'staff',
-      senderName: req.user.firstName + ' ' + req.user.lastName,
+      sender: isStaff ? 'staff' : 'user',
+      senderName: `${req.user.firstName} ${req.user.lastName}`,
       message,
       timestamp: new Date(),
       attachments: attachments || []
     };
     
+    // Add message to ticket
+    ticket.messages.push(newMessage);
+    ticket.updatedAt = new Date();
+    await ticket.save();
+    
     // Log activity
-    console.log(`Staff ${staffId} added message to ticket ${id}`);
+    console.log(`${isStaff ? 'Staff' : 'User'} ${userId} added message to ticket ${id}`);
     
     res.status(201).json({
       success: true,
@@ -612,14 +484,155 @@ const moderateReview = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Submit a support ticket (User)
+// @route   POST /api/support/tickets
+// @access  Private
+const submitSupportTicket = asyncHandler(async (req, res) => {
+  try {
+    const { subject, description, category, priority, bookingId } = req.body;
+    const userId = req.user._id;
+
+    // Create new support ticket
+    const supportTicket = new SupportTicket({
+      user: userId,
+      subject,
+      description,
+      category: category || 'general',
+      priority: priority || 'medium',
+      status: 'open',
+      booking: bookingId || null,
+      messages: [{
+        sender: 'user',
+        senderName: `${req.user.firstName} ${req.user.lastName}`,
+        message: description,
+        timestamp: new Date()
+      }]
+    });
+
+    await supportTicket.save();
+
+    // Populate user details
+    await supportTicket.populate('user', 'firstName lastName email phone');
+
+    res.status(201).json({
+      success: true,
+      message: 'Support ticket submitted successfully',
+      data: supportTicket
+    });
+
+  } catch (error) {
+    console.error('Submit support ticket error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error submitting support ticket'
+    });
+  }
+});
+
+// @desc    Get user's support tickets
+// @route   GET /api/support/tickets
+// @access  Private
+const getUserSupportTickets = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { page = 1, limit = 10, status } = req.query;
+
+    // Build filter
+    let filter = { user: userId };
+    if (status) {
+      filter.status = status;
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get user's support tickets
+    const tickets = await SupportTicket.find(filter)
+      .populate('booking', 'tour startDate totalAmount')
+      .populate('booking.tour', 'title duration')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    const totalCount = await SupportTicket.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: tickets,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
+        totalCount,
+        hasNext: skip + tickets.length < totalCount,
+        hasPrev: parseInt(page) > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user support tickets error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching support tickets'
+    });
+  }
+});
+
+// @desc    Rate support ticket resolution (User)
+// @route   POST /api/support/tickets/:id/rate
+// @access  Private
+const rateSupportTicket = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, feedback } = req.body;
+    const userId = req.user._id;
+
+    // Find the ticket and verify ownership
+    const ticket = await SupportTicket.findOne({ _id: id, user: userId });
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Support ticket not found'
+      });
+    }
+
+    // Update ticket with rating
+    ticket.rating = rating;
+    ticket.feedback = feedback;
+    ticket.ratedAt = new Date();
+    await ticket.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Support ticket rated successfully',
+      data: {
+        ticketId: id,
+        rating,
+        feedback
+      }
+    });
+
+  } catch (error) {
+    console.error('Rate support ticket error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error rating support ticket'
+    });
+  }
+});
+
 module.exports = {
+  // Staff functions
   getSupportTickets,
   getSupportTicket,
   updateSupportTicket,
   addSupportMessage,
   resolveSupportTicket,
   getReviews,
-  moderateReview
+  moderateReview,
+  // User functions
+  submitSupportTicket,
+  getUserSupportTickets,
+  rateSupportTicket
 };
 
 

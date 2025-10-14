@@ -174,6 +174,10 @@ app.use('/api/custom-trips', customTripRoutes);
 // Notification API routes
 app.use('/api/notifications', notificationRoutes);
 
+// Support API routes
+const supportRoutes = require('./src/routes/support');
+app.use('/api/support', supportRoutes);
+
 // 404 handler
 app.all('*', (req, res) => {
   res.status(404).json({
