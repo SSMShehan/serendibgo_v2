@@ -42,6 +42,7 @@ const paymentRoutes = require('./src/routes/payments');
 const reviewRoutes = require('./src/routes/reviews');
 const adminRoutes = require('./src/routes/admin');
 const guideRoutes = require('./src/routes/guides');
+const earningsRoutes = require('./src/routes/earnings');
 
 // Staff routes
 const staffRoutes = require('./src/routes/staff');
@@ -137,6 +138,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/guides', guideRoutes);
+app.use('/api/earnings', earningsRoutes);
 
 // Staff API routes
 app.use('/api/staff', staffRoutes);
