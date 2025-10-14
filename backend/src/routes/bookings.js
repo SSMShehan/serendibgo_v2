@@ -6,7 +6,8 @@ const {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
-  getGuideBookings
+  getGuideBookings,
+  createGuideBooking
 } = require('../controllers/bookingController');
 const { protect } = require('../middleware/auth');
 
@@ -27,6 +28,11 @@ router.get('/', getUserBookings);
 // @desc    Get all user bookings (both regular tours and custom trips)
 // @access  Private
 router.get('/user', getUserBookings);
+
+// @route   POST /api/bookings/guide
+// @desc    Create guide booking (direct guide booking without tour)
+// @access  Private
+router.post('/guide', createGuideBooking);
 
 // @route   GET /api/bookings/guide
 // @desc    Get guide bookings
