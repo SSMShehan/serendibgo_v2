@@ -17,7 +17,15 @@ const sampleVehicles = [
       hourlyRate: 1000,
       perKmRate: 50
     },
-    features: ['AC', 'GPS', 'Driver'],
+    features: {
+      airConditioning: true,
+      wifi: false,
+      gps: true,
+      musicSystem: false,
+      chargingPorts: false,
+      wheelchairAccessible: false,
+      childSeat: false
+    },
     images: [],
     status: 'available',
     approvalDetails: {
@@ -42,7 +50,15 @@ const sampleVehicles = [
       hourlyRate: 1500,
       perKmRate: 60
     },
-    features: ['AC', 'GPS', 'Driver', 'Luggage Space'],
+    features: {
+      airConditioning: true,
+      wifi: false,
+      gps: true,
+      musicSystem: true,
+      chargingPorts: true,
+      wheelchairAccessible: false,
+      childSeat: true
+    },
     images: [],
     status: 'available',
     approvalDetails: {
@@ -67,7 +83,15 @@ const sampleVehicles = [
       hourlyRate: 1200,
       perKmRate: 55
     },
-    features: ['AC', 'GPS', 'Driver', 'Bluetooth'],
+    features: {
+      airConditioning: true,
+      wifi: false,
+      gps: true,
+      musicSystem: true,
+      chargingPorts: true,
+      wheelchairAccessible: false,
+      childSeat: false
+    },
     images: [],
     status: 'available',
     approvalDetails: {

@@ -50,8 +50,15 @@ const DriverVehicleRegistration = () => {
     seatingCapacity: '4',
     
     // Features & Amenities
-    features: [],
-    amenities: {},
+    features: {
+      airConditioning: false,
+      wifi: false,
+      gps: false,
+      musicSystem: false,
+      chargingPorts: false,
+      wheelchairAccessible: false,
+      childSeat: false
+    },
     
     // Location & Service
     location: {
@@ -128,34 +135,13 @@ const DriverVehicleRegistration = () => {
   ];
 
   const features = [
-    'Air Conditioning',
-    'Power Steering',
-    'Power Windows',
-    'Central Locking',
-    'ABS Brakes',
-    'Airbags',
-    'GPS Navigation',
-    'Bluetooth',
-    'USB Charging',
-    'Rear Camera',
-    'Parking Sensors',
-    'Cruise Control',
-    'Sunroof',
-    'Leather Seats',
-    'Heated Seats'
-  ];
-
-  const amenities = [
-    'WiFi',
-    'Charging Ports',
-    'Water Bottles',
-    'Snacks',
-    'Magazines',
-    'First Aid Kit',
-    'Child Seat',
-    'Wheelchair Access',
-    'Luggage Space',
-    'Climate Control'
+    { key: 'airConditioning', label: 'Air Conditioning' },
+    { key: 'wifi', label: 'WiFi' },
+    { key: 'gps', label: 'GPS Navigation' },
+    { key: 'musicSystem', label: 'Music System' },
+    { key: 'chargingPorts', label: 'Charging Ports' },
+    { key: 'wheelchairAccessible', label: 'Wheelchair Accessible' },
+    { key: 'childSeat', label: 'Child Seat' }
   ];
 
   const handleInputChange = (field, value) => {
@@ -186,21 +172,12 @@ const DriverVehicleRegistration = () => {
     }));
   };
 
-  const handleFeatureToggle = (feature) => {
+  const handleFeatureToggle = (featureKey) => {
     setFormData(prev => ({
       ...prev,
-      features: prev.features.includes(feature)
-        ? prev.features.filter(f => f !== feature)
-        : [...prev.features, feature]
-    }));
-  };
-
-  const handleAmenityToggle = (amenity) => {
-    setFormData(prev => ({
-      ...prev,
-      amenities: {
-        ...prev.amenities,
-        [amenity]: !prev.amenities[amenity]
+      features: {
+        ...prev.features,
+        [featureKey]: !prev.features[featureKey]
       }
     }));
   };
@@ -269,7 +246,7 @@ const DriverVehicleRegistration = () => {
           // Handle file uploads separately
           return;
         }
-        if (key === 'pricing' || key === 'location' || key === 'features' || key === 'amenities' || key === 'availability') {
+        if (key === 'pricing' || key === 'location' || key === 'features' || key === 'availability') {
           // Handle complex objects as JSON strings
           submitData.append(key, JSON.stringify(processedData[key]));
         } else {
@@ -502,31 +479,14 @@ const DriverVehicleRegistration = () => {
               <h3 className="text-lg font-semibold text-base-content mb-4">Vehicle Features</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {features.map(feature => (
-                  <label key={feature} className="flex items-center space-x-2 cursor-pointer">
+                  <label key={feature.key} className="flex items-center space-x-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={formData.features.includes(feature)}
-                      onChange={() => handleFeatureToggle(feature)}
+                      checked={formData.features[feature.key] || false}
+                      onChange={() => handleFeatureToggle(feature.key)}
                       className="checkbox checkbox-primary"
                     />
-                    <span className="text-sm">{feature}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold text-base-content mb-4">Amenities</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {amenities.map(amenity => (
-                  <label key={amenity} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.amenities[amenity] || false}
-                      onChange={() => handleAmenityToggle(amenity)}
-                      className="checkbox checkbox-secondary"
-                    />
-                    <span className="text-sm">{amenity}</span>
+                    <span className="text-sm">{feature.label}</span>
                   </label>
                 ))}
               </div>
