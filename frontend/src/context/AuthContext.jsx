@@ -67,55 +67,60 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is logged in on app load
   useEffect(() => {
-  const checkAuth = async () => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    
-    if (token && userData) {
-      try {
-        // Use localStorage user data first, then verify token
-        const user = JSON.parse(userData)
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: {
-            user,
-            token,
-          },
-        })
-        
-        // Optionally verify token in background
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token')
+      const userData = localStorage.getItem('user')
+      
+      if (token && userData) {
         try {
-          const response = await authService.getMe()
-          // Update with fresh data if available
-          if (response.data.user) {
-            localStorage.setItem('user', JSON.stringify(response.data.user))
+          // Use localStorage user data first, then verify token
+          const user = JSON.parse(userData)
+          dispatch({
+            type: 'AUTH_SUCCESS',
+            payload: {
+              user,
+              token,
+            },
+          })
+          
+          // Verify token in background
+          try {
+            const response = await authService.getMe()
+            // Update with fresh data if available
+            if (response.data.user) {
+              localStorage.setItem('user', JSON.stringify(response.data.user))
+              dispatch({
+                type: 'AUTH_SUCCESS',
+                payload: {
+                  user: response.data.user,
+                  token,
+                },
+              })
+            }
+          } catch (error) {
+            // Token verification failed, clear auth data
+            console.warn('Token verification failed, clearing auth data')
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            localStorage.removeItem('staffToken')
             dispatch({
-              type: 'AUTH_SUCCESS',
-              payload: {
-                user: response.data.user,
-                token,
-              },
+              type: 'AUTH_FAILURE',
+              payload: 'Session expired. Please log in again.',
             })
           }
         } catch (error) {
-          // Token verification failed, but keep user logged in with localStorage data
-          // Only log in development mode to reduce console noise
-          if (import.meta.env.DEV) {
-            console.warn('Token verification failed, using localStorage data')
-          }
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          localStorage.removeItem('staffToken')
+          dispatch({
+            type: 'AUTH_FAILURE',
+            payload: error.response?.data?.message || 'Authentication failed',
+          })
         }
-      } catch (error) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        dispatch({
-          type: 'AUTH_FAILURE',
-          payload: error.response?.data?.message || 'Authentication failed',
-        })
+      } else {
+        dispatch({ type: 'AUTH_FAILURE', payload: null })
       }
-    } else {
-      dispatch({ type: 'AUTH_FAILURE', payload: null })
     }
-  }
 
     checkAuth()
   }, [])
