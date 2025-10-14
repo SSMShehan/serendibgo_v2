@@ -36,7 +36,9 @@ import {
   TrendingUp,
   BookOpen,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react'
 import { guideService } from '../../services/guideService'
 import { useAuth } from '../../context/AuthContext'
@@ -46,6 +48,7 @@ const GuideDashboard = () => {
   const location = useLocation()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedBookingId, setSelectedBookingId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
@@ -56,6 +59,116 @@ const GuideDashboard = () => {
     totalEarnings: 0,
     newMessages: 0
   })
+  
+  // Bookings state
+  const [bookings, setBookings] = useState([])
+  const [bookingsLoading, setBookingsLoading] = useState(false)
+  const [bookingsError, setBookingsError] = useState('')
+  const [bookingsFilter, setBookingsFilter] = useState('all')
+  
+  // Cancellation state
+  const [cancellingBooking, setCancellingBooking] = useState(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [bookingToCancel, setBookingToCancel] = useState(null)
+  
+  // Cancel booking function
+  const handleCancelBooking = async (bookingId) => {
+    try {
+      setCancellingBooking(bookingId)
+      await guideService.cancelBooking(bookingId, cancelReason)
+      
+      // Refresh bookings after cancellation
+      await fetchBookings()
+      
+      setMessage({ type: 'success', text: 'Booking cancelled successfully' })
+      setShowCancelModal(false)
+      setCancelReason('')
+      setBookingToCancel(null)
+    } catch (error) {
+      console.error('Error cancelling booking:', error)
+      setMessage({ type: 'error', text: 'Failed to cancel booking' })
+    } finally {
+      setCancellingBooking(null)
+    }
+  }
+
+  // Open cancel modal
+  const openCancelModal = (booking) => {
+    setBookingToCancel(booking._id)
+    setCancellingBooking(null)
+    setShowCancelModal(true)
+  }
+
+  // Close cancel modal
+  const closeCancelModal = () => {
+    setShowCancelModal(false)
+    setCancellingBooking(null)
+    setBookingToCancel(null)
+    setCancelReason('')
+  }
+
+  // Handle URL parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const tab = searchParams.get('tab')
+    const bookingId = searchParams.get('booking')
+    
+    if (tab) {
+      setActiveTab(tab)
+    }
+    
+    if (bookingId) {
+      setSelectedBookingId(bookingId)
+    }
+  }, [location.search])
+
+  // Scroll to selected booking when bookings are loaded and selectedBookingId is set
+  useEffect(() => {
+    if (selectedBookingId && bookings.length > 0) {
+      setTimeout(() => {
+        const bookingElement = document.getElementById(`booking-${selectedBookingId}`)
+        if (bookingElement) {
+          bookingElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          bookingElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50')
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            bookingElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50')
+          }, 3000)
+        }
+      }, 500)
+    }
+  }, [selectedBookingId, bookings])
+
+  // Handle tab changes
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    // Clear selected booking when changing tabs
+    if (tab !== 'bookings') {
+      setSelectedBookingId(null)
+    }
+  }
+
+  // Fetch bookings function
+  const fetchBookings = async () => {
+    try {
+      setBookingsLoading(true)
+      setBookingsError('')
+      
+      const response = await guideService.getGuideBookings({ status: bookingsFilter === 'all' ? '' : bookingsFilter })
+      
+      if (response.success) {
+        setBookings(response.data.bookings || [])
+      } else {
+        setBookingsError(response.message || 'Failed to fetch bookings')
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error)
+      setBookingsError('Failed to fetch bookings')
+    } finally {
+      setBookingsLoading(false)
+    }
+  }
   
   // Guide profile state
   const [profile, setProfile] = useState({
@@ -220,6 +333,20 @@ const GuideDashboard = () => {
     }
   }, [user?.id])
 
+  // Fetch bookings when bookings tab is active or filter changes
+  useEffect(() => {
+    if (activeTab === 'bookings' && user?.id) {
+      fetchBookings()
+    }
+  }, [activeTab, bookingsFilter, user?.id])
+
+  // Fetch bookings for overview tab
+  useEffect(() => {
+    if (activeTab === 'overview' && user?.id) {
+      fetchBookings()
+    }
+  }, [activeTab, user?.id])
+
   const showMessage = (type, text) => {
     setMessage({ type, text })
     setTimeout(() => setMessage({ type: '', text: '' }), 5000)
@@ -363,11 +490,18 @@ const GuideDashboard = () => {
   const fetchGuideStats = async () => {
     try {
       if (user?.id) {
-        const response = await guideService.getGuideStats(user.id)
+        // Fetch both stats and bookings to get accurate counts
+        const [statsResponse, bookingsResponse] = await Promise.all([
+          guideService.getGuideStats(user.id),
+          guideService.getGuideBookings({ status: 'confirmed' })
+        ])
+        
+        const confirmedBookings = bookingsResponse.data.bookings || []
+        
         setGuideStats({
-          activeBookings: response.data.totalBookings || 0,
-          averageRating: response.data.averageRating || 0,
-          totalEarnings: response.data.totalRevenue || 0,
+          activeBookings: confirmedBookings.length,
+          averageRating: statsResponse.data.averageRating || 0,
+          totalEarnings: statsResponse.data.totalRevenue || 0,
           newMessages: Math.floor(Math.random() * 5) // Placeholder for now
         })
       }
@@ -375,10 +509,10 @@ const GuideDashboard = () => {
       console.error('Error fetching guide stats:', error)
       // Set default values if API fails
       setGuideStats({
-        activeBookings: 12,
-        averageRating: 4.8,
-        totalEarnings: 45000,
-        newMessages: 3
+        activeBookings: 0,
+        averageRating: 0,
+        totalEarnings: 0,
+        newMessages: 0
       })
     }
   }
@@ -828,6 +962,7 @@ const GuideDashboard = () => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Home },
+    { id: 'bookings', label: 'Bookings', icon: Calendar },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'services', label: 'Services', icon: Briefcase },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
@@ -1065,7 +1200,7 @@ const GuideDashboard = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <button
-                      onClick={() => setActiveTab('profile')}
+                      onClick={() => handleTabChange('profile')}
                       className="p-6 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 text-left group"
                     >
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
@@ -1076,14 +1211,14 @@ const GuideDashboard = () => {
                     </button>
 
                     <button
-                      onClick={() => setActiveTab('availability')}
+                      onClick={() => handleTabChange('bookings')}
                       className="p-6 border-2 border-slate-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 text-left group"
                     >
                       <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
                         <Calendar className="h-6 w-6 text-green-600" />
                       </div>
-                      <h3 className="font-semibold text-slate-900 mb-2">Set Availability</h3>
-                      <p className="text-sm text-slate-600">Manage your schedule</p>
+                      <h3 className="font-semibold text-slate-900 mb-2">View Bookings</h3>
+                      <p className="text-sm text-slate-600">Manage your bookings</p>
                     </button>
 
                     <button
@@ -1095,6 +1230,17 @@ const GuideDashboard = () => {
                       </div>
                       <h3 className="font-semibold text-slate-900 mb-2">View Notifications</h3>
                       <p className="text-sm text-slate-600">Check messages and updates</p>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('availability')}
+                      className="p-6 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-200 text-left group"
+                    >
+                      <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                        <Calendar className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <h3 className="font-semibold text-slate-900 mb-2">Set Availability</h3>
+                      <p className="text-sm text-slate-600">Manage your schedule</p>
                     </button>
 
                     <button
@@ -1134,46 +1280,338 @@ const GuideDashboard = () => {
 
                 {/* Recent Activity */}
                 <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
-                  <div className="flex items-center mb-6">
-                    <BookOpen className="h-6 w-6 text-blue-600 mr-3" />
-                    <h2 className="text-2xl font-bold text-slate-900">Recent Activity</h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center">
+                      <BookOpen className="h-6 w-6 text-blue-600 mr-3" />
+                      <h2 className="text-2xl font-bold text-slate-900">Recent Activity</h2>
+                    </div>
+                    <button
+                      onClick={() => handleTabChange('bookings')}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      View All Bookings
+                    </button>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="flex items-center p-4 bg-green-50 rounded-xl border border-green-200">
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                        <Calendar className="h-5 w-5 text-green-600" />
+                    {bookings.length > 0 ? (
+                      bookings.slice(0, 3).map((booking) => (
+                        <div key={booking._id} className="flex items-center p-4 bg-green-50 rounded-xl border border-green-200">
+                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                            <Calendar className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-slate-900">
+                              {booking.status === 'pending' ? 'New booking received' : 
+                               booking.status === 'confirmed' ? 'Booking confirmed' :
+                               booking.status === 'completed' ? 'Tour completed' : 'Booking updated'}
+                            </h3>
+                            <p className="text-sm text-slate-600">
+                              {booking.tour?.title || 'Custom Tour'} - {booking.user?.firstName} {booking.user?.lastName}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {new Date(booking.startDate).toLocaleDateString()} - {booking.duration}
+                            </p>
+                          </div>
+                          <span className="text-sm text-slate-500">
+                            {new Date(booking.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                        <p className="text-slate-500">No recent bookings</p>
+                        <p className="text-sm text-slate-400">Your recent bookings will appear here</p>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900">New booking received</h3>
-                        <p className="text-sm text-slate-600">Colombo City Tour - Tomorrow 9:00 AM</p>
-                      </div>
-                      <span className="text-sm text-slate-500">2 hours ago</span>
-                    </div>
-
-                    <div className="flex items-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                      <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
-                        <Star className="h-5 w-5 text-yellow-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900">New review received</h3>
-                        <p className="text-sm text-slate-600">5-star rating for Sigiriya Tour</p>
-                      </div>
-                      <span className="text-sm text-slate-500">1 day ago</span>
-                    </div>
-
-                    <div className="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                        <MessageSquare className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900">Message from tourist</h3>
-                        <p className="text-sm text-slate-600">Question about Kandy Temple Tour</p>
-                      </div>
-                      <span className="text-sm text-slate-500">2 days ago</span>
-                    </div>
+                    )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Bookings Tab */}
+            {activeTab === 'bookings' && (
+              <div className="space-y-8">
+                {/* Bookings Header */}
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center">
+                      <Calendar className="h-6 w-6 text-blue-600 mr-3" />
+                      <h2 className="text-2xl font-bold text-slate-900">My Bookings</h2>
+                    </div>
+                    
+                    {/* Filter Dropdown */}
+                    <div className="flex items-center space-x-4">
+                      <label className="text-sm font-medium text-slate-700">Filter by status:</label>
+                      <select
+                        value={bookingsFilter}
+                        onChange={(e) => setBookingsFilter(e.target.value)}
+                        className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Bookings</option>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Bookings List */}
+                  {bookingsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="ml-3 text-slate-600">Loading bookings...</span>
+                    </div>
+                  ) : bookingsError ? (
+                    <div className="text-center py-12">
+                      <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                      <p className="text-red-600 mb-4">{bookingsError}</p>
+                      <button
+                        onClick={fetchBookings}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  ) : bookings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Calendar className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-slate-700 mb-2">No bookings found</h3>
+                      <p className="text-slate-500">
+                        {bookingsFilter === 'all' 
+                          ? "You don't have any bookings yet. When tourists book your services, they'll appear here."
+                          : `No ${bookingsFilter} bookings found.`
+                        }
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {bookings.map((booking) => (
+                        <div key={booking._id} id={`booking-${booking._id}`} className="border border-slate-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <h3 className="text-lg font-semibold text-slate-900">
+                                  {booking.tour?.title || 'Custom Tour'}
+                                </h3>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  booking.status === 'confirmed' 
+                                    ? 'bg-green-100 text-green-800'
+                                    : booking.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : booking.status === 'completed'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                </span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  booking.paymentStatus === 'paid' 
+                                    ? 'bg-green-100 text-green-800'
+                                    : booking.paymentStatus === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                                </span>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-slate-600">
+                                <div className="flex items-center">
+                                  <User className="h-4 w-4 mr-2 text-slate-400" />
+                                  <span className="font-medium">Customer:</span>
+                                  <span className="ml-2">{booking.user?.firstName} {booking.user?.lastName}</span>
+                                </div>
+                                
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                                  <span className="font-medium">Start Date:</span>
+                                  <span className="ml-2">{new Date(booking.startDate).toLocaleDateString()}</span>
+                                </div>
+                                
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                                  <span className="font-medium">End Date:</span>
+                                  <span className="ml-2">{new Date(booking.endDate).toLocaleDateString()}</span>
+                                </div>
+                                
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-2 text-slate-400" />
+                                  <span className="font-medium">Duration:</span>
+                                  <span className="ml-2 capitalize">{booking.duration}</span>
+                                </div>
+                                
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-2 text-slate-400" />
+                                  <span className="font-medium">Group Size:</span>
+                                  <span className="ml-2">{booking.groupSize} people</span>
+                                </div>
+                                
+                                <div className="flex items-center">
+                                  <DollarSign className="h-4 w-4 mr-2 text-slate-400" />
+                                  <span className="font-medium">Total Amount:</span>
+                                  <span className="ml-2 font-semibold text-green-600">LKR {booking.totalAmount?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                              
+                              {booking.specialRequests && (
+                                <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                                  <div className="flex items-start">
+                                    <FileText className="h-4 w-4 mr-2 text-slate-400 mt-0.5" />
+                                    <div>
+                                      <span className="font-medium text-slate-700">Special Requests:</span>
+                                      <p className="text-slate-600 mt-1">{booking.specialRequests}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mt-4 flex items-center justify-between">
+                                <div className="text-xs text-slate-500">
+                                  Booking created: {new Date(booking.createdAt).toLocaleDateString()}
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => {
+                                      // Handle contact customer
+                                      if (booking.user?.email) {
+                                        window.open(`mailto:${booking.user.email}`, '_blank')
+                                      }
+                                    }}
+                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+                                  >
+                                    <Mail className="h-3 w-3 mr-1 inline" />
+                                    Contact
+                                  </button>
+                                  
+                                  {booking.user?.phone && (
+                                    <button
+                                      onClick={() => {
+                                        window.open(`tel:${booking.user.phone}`, '_self')
+                                      }}
+                                      className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+                                    >
+                                      <Phone className="h-3 w-3 mr-1 inline" />
+                                      Call
+                                    </button>
+                                  )}
+
+                                  {/* Cancel button - only show for pending and confirmed bookings */}
+                                  {['pending', 'confirmed'].includes(booking.status) && (
+                                    <button
+                                      onClick={() => openCancelModal(booking)}
+                                      disabled={cancellingBooking === booking._id}
+                                      className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <XCircle className="h-3 w-3 mr-1 inline" />
+                                      {cancellingBooking === booking._id ? 'Cancelling...' : 'Cancel'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled Bookings Section */}
+            {activeTab === 'bookings' && bookingsFilter === 'cancelled' && (
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
+                <div className="flex items-center mb-6">
+                  <XCircle className="h-6 w-6 text-red-600 mr-3" />
+                  <h2 className="text-2xl font-bold text-slate-900">Cancelled Bookings</h2>
+                </div>
+                
+                {bookings.filter(booking => booking.status === 'cancelled').length === 0 ? (
+                  <div className="text-center py-12">
+                    <XCircle className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-slate-700 mb-2">No cancelled bookings</h3>
+                    <p className="text-slate-500">You haven't cancelled any bookings yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.filter(booking => booking.status === 'cancelled').map((booking) => (
+                      <div key={booking._id} className="border border-red-200 rounded-xl p-6 bg-red-50">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h3 className="text-lg font-semibold text-slate-900">
+                                {booking.tour?.title || 'Custom Tour'}
+                              </h3>
+                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Cancelled
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-slate-600">
+                              <div className="flex items-center">
+                                <User className="h-4 w-4 mr-2 text-slate-400" />
+                                <span className="font-medium">Customer:</span>
+                                <span className="ml-2">{booking.user?.firstName} {booking.user?.lastName}</span>
+                              </div>
+                              
+                              <div className="flex items-center">
+                                <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                                <span className="font-medium">Start Date:</span>
+                                <span className="ml-2">{new Date(booking.startDate).toLocaleDateString()}</span>
+                              </div>
+                              
+                              <div className="flex items-center">
+                                <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                                <span className="font-medium">End Date:</span>
+                                <span className="ml-2">{new Date(booking.endDate).toLocaleDateString()}</span>
+                              </div>
+                              
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-slate-400" />
+                                <span className="font-medium">Duration:</span>
+                                <span className="ml-2 capitalize">{booking.duration}</span>
+                              </div>
+                              
+                              <div className="flex items-center">
+                                <Users className="h-4 w-4 mr-2 text-slate-400" />
+                                <span className="font-medium">Group Size:</span>
+                                <span className="ml-2">{booking.groupSize} people</span>
+                              </div>
+                              
+                              <div className="flex items-center">
+                                <DollarSign className="h-4 w-4 mr-2 text-slate-400" />
+                                <span className="font-medium">Total Amount:</span>
+                                <span className="ml-2 font-semibold text-red-600">LKR {booking.totalAmount?.toLocaleString()}</span>
+                              </div>
+                            </div>
+                            
+                            {booking.cancellationReason && (
+                              <div className="mt-4 p-3 bg-red-100 rounded-lg border border-red-200">
+                                <div className="flex items-start">
+                                  <AlertTriangle className="h-4 w-4 mr-2 text-red-600 mt-0.5" />
+                                  <div>
+                                    <span className="font-medium text-red-800">Cancellation Reason:</span>
+                                    <p className="text-red-700 mt-1">{booking.cancellationReason}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="mt-4 flex items-center justify-between">
+                              <div className="text-xs text-slate-500">
+                                Booking cancelled: {new Date(booking.updatedAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1937,6 +2375,63 @@ const GuideDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Booking Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <AlertTriangle className="h-6 w-6 text-red-600 mr-2" />
+                  <h3 className="text-lg font-semibold text-gray-900">Cancel Booking</h3>
+                </div>
+                <button
+                  onClick={closeCancelModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Are you sure you want to cancel this booking? This action cannot be undone.
+                </p>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cancellation Reason (Optional)
+                  </label>
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    rows={3}
+                    placeholder="Please provide a reason for cancellation..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeCancelModal}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  onClick={() => handleCancelBooking(bookingToCancel)}
+                  disabled={cancellingBooking !== null}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancellingBooking !== null ? 'Cancelling...' : 'Cancel Booking'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

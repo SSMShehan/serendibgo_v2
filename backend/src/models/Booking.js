@@ -75,6 +75,11 @@ const bookingSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  bookingReference: {
+    type: String,
+    unique: true,
+    sparse: true
   }
 }, {
   timestamps: true

@@ -56,6 +56,40 @@ export const guideService = {
   createGuideBooking: async (bookingData) => {
     const response = await api.post('/bookings/guide', bookingData);
     return response.data;
+  },
+
+  // Create guest guide booking (without authentication)
+  createGuestGuideBooking: async (bookingData) => {
+    const response = await api.post('/bookings/guide/guest', bookingData);
+    return response.data;
+  },
+
+  // Get guide bookings (for guides to see their bookings)
+  getGuideBookings: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    Object.keys(params).forEach(key => {
+      if (params[key] !== '' && params[key] !== null && params[key] !== undefined) {
+        queryParams.append(key, params[key]);
+      }
+    });
+    
+    const response = await api.get(`/bookings/guide?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  // Get user's guide bookings (for tourists to see their guide bookings)
+  getUserGuideBookings: async () => {
+    const response = await api.get('/bookings/user');
+    return response.data;
+  },
+
+  // Cancel booking
+  cancelBooking: async (bookingId, cancellationReason = '') => {
+    const response = await api.put(`/bookings/${bookingId}/cancel`, {
+      cancellationReason
+    });
+    return response.data;
   }
 };
 
