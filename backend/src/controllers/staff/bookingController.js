@@ -497,6 +497,12 @@ const getBookingStatistics = asyncHandler(async (req, res) => {
       completed: await Booking.countDocuments({ status: 'completed' }),
       cancelled: await Booking.countDocuments({ status: 'cancelled' }),
       
+      // Guide bookings count
+      guideBookings: await Booking.countDocuments({ 
+        guide: { $exists: true }, 
+        tour: { $exists: false } 
+      }),
+      
       // Recent bookings
       recent: await Booking.countDocuments({ createdAt: { $gte: startDate } }),
       

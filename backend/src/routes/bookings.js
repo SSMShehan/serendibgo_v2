@@ -7,11 +7,18 @@ const {
   updateBookingStatus,
   cancelBooking,
   getGuideBookings,
-  createGuideBooking
+  createGuideBooking,
+  createGuestGuideBooking
 } = require('../controllers/bookingController');
 const { protect } = require('../middleware/auth');
 
-// Apply authentication middleware to all routes
+// Public routes (no authentication required)
+// @route   POST /api/bookings/guide/guest
+// @desc    Create guide booking for guests (without authentication)
+// @access  Public
+router.post('/guide/guest', createGuestGuideBooking);
+
+// Apply authentication middleware to all other routes
 router.use(protect);
 
 // @route   POST /api/bookings

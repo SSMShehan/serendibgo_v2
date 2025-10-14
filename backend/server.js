@@ -56,6 +56,9 @@ const roomAvailabilityRoutes = require('./src/routes/hotels/roomAvailabilityRout
 // Custom trip routes
 const customTripRoutes = require('./src/routes/customTrips');
 
+// Notification routes
+const notificationRoutes = require('./src/routes/notifications');
+
 // Vehicle routes
 const vehicleRoutes = require('./src/routes/vehicles');
 const vehicleBookingRoutes = require('./src/routes/vehicles/vehicleBookings');
@@ -167,6 +170,9 @@ app.use('/api/revenue', revenueRoutes);
 
 // Custom trip API routes
 app.use('/api/custom-trips', customTripRoutes);
+
+// Notification API routes
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.all('*', (req, res) => {

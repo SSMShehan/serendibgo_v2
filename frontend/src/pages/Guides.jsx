@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Star, Clock, Users, Search, Filter, Calendar, Phone, Mail, Award, Globe, Heart, ChevronDown, X, Shield, CheckCircle, Zap, Crown, Sparkles, Eye, BookOpen, ArrowLeft } from 'lucide-react'
+import { MapPin, Star, Clock, Users, Search, Filter, Calendar, Phone, Mail, Award, Globe, Heart, ChevronDown, X, Shield, CheckCircle, Zap, Crown, Sparkles, Eye, BookOpen, ArrowLeft, User } from 'lucide-react'
 import { guideService } from '../services/guideService'
 
 const Guides = () => {
@@ -18,6 +18,12 @@ const Guides = () => {
     duration: '',
     groupSize: 1,
     specialRequests: ''
+  })
+  const [guestInfo, setGuestInfo] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: ''
   })
   const [showBookingCalendar, setShowBookingCalendar] = useState(false)
   const [selectedBookingDate, setSelectedBookingDate] = useState(new Date())
@@ -127,12 +133,18 @@ const Guides = () => {
         endDate: endDate.toISOString(),
         duration: bookingData.duration,
         groupSize: parseInt(bookingData.groupSize),
-        specialRequests: bookingData.specialRequests || ''
+        specialRequests: bookingData.specialRequests || '',
+        guestInfo: {
+          firstName: guestInfo.firstName,
+          lastName: guestInfo.lastName,
+          email: guestInfo.email,
+          phone: guestInfo.phone
+        }
       }
 
       console.log('Submitting guide booking:', bookingDataToSubmit)
       
-      const response = await guideService.createGuideBooking(bookingDataToSubmit)
+      const response = await guideService.createGuestGuideBooking(bookingDataToSubmit)
       
       if (response.success) {
         alert('Guide booking submitted successfully! We will contact you soon to confirm.')
@@ -142,6 +154,12 @@ const Guides = () => {
           duration: '',
           groupSize: 1,
           specialRequests: ''
+        })
+        setGuestInfo({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: ''
         })
       } else {
         alert('Failed to submit booking: ' + (response.message || 'Unknown error'))
@@ -756,6 +774,68 @@ const Guides = () => {
                     placeholder="Any special requirements or requests..."
                     className="w-full px-3 sm:px-4 py-3 sm:py-4 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-slate-50 hover:bg-white transition-all duration-200 font-medium resize-none text-sm sm:text-base"
                   />
+                </div>
+
+                {/* Guest Information */}
+                <div className="bg-blue-50 rounded-2xl p-4 sm:p-6 border border-blue-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center">
+                    <User className="h-5 w-5 mr-2 text-blue-600" />
+                    Your Information
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={guestInfo.firstName}
+                        onChange={(e) => setGuestInfo({...guestInfo, firstName: e.target.value})}
+                        className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all duration-200 font-medium text-sm"
+                        placeholder="Enter your first name"
+                        required
+                      />
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={guestInfo.lastName}
+                        onChange={(e) => setGuestInfo({...guestInfo, lastName: e.target.value})}
+                        className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all duration-200 font-medium text-sm"
+                        placeholder="Enter your last name"
+                        required
+                      />
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={guestInfo.email}
+                        onChange={(e) => setGuestInfo({...guestInfo, email: e.target.value})}
+                        className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all duration-200 font-medium text-sm"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        value={guestInfo.phone}
+                        onChange={(e) => setGuestInfo({...guestInfo, phone: e.target.value})}
+                        className="w-full px-3 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all duration-200 font-medium text-sm"
+                        placeholder="Enter your phone number"
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-4 sm:p-6 border border-green-200">
