@@ -160,6 +160,76 @@ const BookingManagement = () => {
     }
   };
 
+  // Test function to create a guide booking
+  const createTestGuideBooking = async () => {
+    try {
+      console.log('🧪 Creating test guide booking...');
+      
+      // First, get a guide
+      const guidesResponse = await fetch('/api/guides', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!guidesResponse.ok) {
+        throw new Error('Failed to fetch guides');
+      }
+      
+      const guidesData = await guidesResponse.json();
+      const guides = guidesData.data || [];
+      
+      if (guides.length === 0) {
+        toast.error('No guides found. Please create a guide first.');
+        return;
+      }
+      
+      const testGuide = guides[0];
+      console.log('📋 Using guide:', testGuide.firstName, testGuide.lastName);
+      
+      // Create test booking data
+      const testBookingData = {
+        guideId: testGuide.id,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+        duration: 'full-day',
+        groupSize: 2,
+        specialRequests: 'Test guide booking created from staff dashboard'
+      };
+      
+      console.log('📝 Test booking data:', testBookingData);
+      
+      // Create the guide booking
+      const response = await fetch('/api/bookings/guide', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testBookingData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success('Test guide booking created successfully!');
+        console.log('✅ Test booking created:', result.data);
+        
+        // Refresh the bookings list
+        fetchBookings();
+        fetchStatistics();
+      } else {
+        toast.error('Failed to create test booking: ' + result.message);
+        console.error('❌ Test booking failed:', result);
+      }
+      
+    } catch (error) {
+      console.error('❌ Test booking error:', error);
+      toast.error('Failed to create test guide booking: ' + error.message);
+    }
+  };
+
   // Toggle selection
   const toggleSelection = (bookingId) => {
     setSelectedBookings(prev => 
@@ -226,6 +296,13 @@ const BookingManagement = () => {
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Booking
+          </button>
+          <button
+            onClick={createTestGuideBooking}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Test Guide Booking
           </button>
           <button
             onClick={fetchBookings}
