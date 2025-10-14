@@ -11,10 +11,6 @@ import {
   CheckCircle, 
   ArrowLeft, 
   ArrowRight,
-  Calendar,
-  Users,
-  Fuel,
-  Settings,
   Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -24,6 +20,7 @@ const DriverVehicleRegistration = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 2; // Simplified to 2 steps
 
   // Check if user has driver role
   useEffect(() => {
@@ -32,6 +29,7 @@ const DriverVehicleRegistration = () => {
       navigate('/driver/register');
     }
   }, [user, navigate]);
+
   const [formData, setFormData] = useState({
     // Basic Information
     make: '',
@@ -49,7 +47,7 @@ const DriverVehicleRegistration = () => {
     mileage: '',
     seatingCapacity: '4',
     
-    // Features & Amenities
+    // Features
     features: {
       airConditioning: false,
       wifi: false,
@@ -60,14 +58,13 @@ const DriverVehicleRegistration = () => {
       childSeat: false
     },
     
-    // Location & Service
+    // Location
     location: {
-      city: '',
-      district: '',
-      address: '',
+      city: 'Colombo',
+      district: 'Colombo',
       coordinates: {
-        latitude: 0,
-        longitude: 0
+        latitude: 6.9271,
+        longitude: 79.8612
       }
     },
     
@@ -82,28 +79,22 @@ const DriverVehicleRegistration = () => {
     
     // Documents
     documents: {
-      registration: null,
-      insurance: null,
-      fitness: null,
-      revenue: null
+      registration: '',
+      insurance: '',
+      fitness: '',
+      revenue: ''
     },
     
-    // Images
-    images: [],
-    
-    // Additional Info
-    description: '',
-    availability: {
-      isAvailable: true,
-      workingHours: {
-        start: '06:00',
-        end: '22:00'
-      },
-      workingDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-    }
+    // Description
+    description: ''
   });
 
-  const totalSteps = 6;
+  // Separate state for image URLs to fix the handling
+  const [imageUrls, setImageUrls] = useState({
+    front: '',
+    side: '',
+    interior: ''
+  });
 
   const vehicleTypes = [
     { value: 'Car', label: 'Car' },
@@ -111,27 +102,14 @@ const DriverVehicleRegistration = () => {
     { value: 'Tuk-tuk', label: 'Tuk-tuk' },
     { value: 'Bus', label: 'Bus' },
     { value: 'Minibus', label: 'Minibus' },
-    { value: 'SUV', label: 'SUV' },
-    { value: 'Motorcycle', label: 'Motorcycle' },
-    { value: 'Bicycle', label: 'Bicycle' },
-    { value: 'Boat', label: 'Boat' },
-    { value: 'Train', label: 'Train' },
-    { value: 'Airplane', label: 'Airplane' },
-    { value: 'Helicopter', label: 'Helicopter' }
+    { value: 'Motorcycle', label: 'Motorcycle' }
   ];
 
   const fuelTypes = [
     { value: 'petrol', label: 'Petrol' },
     { value: 'diesel', label: 'Diesel' },
     { value: 'hybrid', label: 'Hybrid' },
-    { value: 'electric', label: 'Electric' },
-    { value: 'cng', label: 'CNG' }
-  ];
-
-  const transmissionTypes = [
-    { value: 'manual', label: 'Manual' },
-    { value: 'automatic', label: 'Automatic' },
-    { value: 'semi_automatic', label: 'Semi-Automatic' }
+    { value: 'electric', label: 'Electric' }
   ];
 
   const features = [
@@ -162,16 +140,6 @@ const DriverVehicleRegistration = () => {
     }
   };
 
-  const handleNestedInputChange = (parent, child, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [parent]: {
-        ...prev[parent],
-        [child]: value
-      }
-    }));
-  };
-
   const handleFeatureToggle = (featureKey) => {
     setFormData(prev => ({
       ...prev,
@@ -192,10 +160,10 @@ const DriverVehicleRegistration = () => {
     }));
   };
 
-  const handleImageUpload = (urls) => {
-    setFormData(prev => ({
+  const handleImageUpload = (imageType, url) => {
+    setImageUrls(prev => ({
       ...prev,
-      images: [...prev.images, ...urls]
+      [imageType]: url
     }));
   };
 
@@ -237,33 +205,17 @@ const DriverVehicleRegistration = () => {
         }
       };
 
-      // Create FormData for file uploads
-      const submitData = new FormData();
-      
-      // Add all form data as individual fields (not JSON strings)
-      Object.keys(processedData).forEach(key => {
-        if (key === 'documents' || key === 'images') {
-          // Handle file uploads separately
-          return;
-        }
-        if (key === 'pricing' || key === 'location' || key === 'features' || key === 'availability') {
-          // Handle complex objects as JSON strings
-          submitData.append(key, JSON.stringify(processedData[key]));
-        } else {
-          // Handle simple values directly
-          submitData.append(key, processedData[key]);
-        }
-      });
-
-      // Add documents and images as URLs
+      // Add documents and images as URLs to the processed data
       const finalData = {
         ...processedData,
         documents: formData.documents,
-        images: formData.images
+        images: Object.values(imageUrls).filter(url => url.trim() !== '')
       };
 
       // Submit to backend
       console.log('Submitting vehicle data:', finalData);
+      console.log('Features being sent:', finalData.features);
+      console.log('Images being sent:', finalData.images);
       await tripService.vehicleService.registerVehicle(finalData);
       
       toast.success('Vehicle registered successfully! It will be reviewed by our team.');
@@ -296,12 +248,13 @@ const DriverVehicleRegistration = () => {
           <div>
             <h2 className="text-2xl font-semibold text-base-content mb-6 flex items-center">
               <Car className="w-6 h-6 mr-2" />
-              Basic Information
+              Vehicle Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Information */}
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Make</span>
+                  <span className="label-text">Make *</span>
                 </label>
                 <input
                   type="text"
@@ -309,11 +262,12 @@ const DriverVehicleRegistration = () => {
                   onChange={(e) => handleInputChange('make', e.target.value)}
                   className="input input-bordered"
                   placeholder="Toyota"
+                  required
                 />
               </div>
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Model</span>
+                  <span className="label-text">Model *</span>
                 </label>
                 <input
                   type="text"
@@ -321,6 +275,7 @@ const DriverVehicleRegistration = () => {
                   onChange={(e) => handleInputChange('model', e.target.value)}
                   className="input input-bordered"
                   placeholder="Camry"
+                  required
                 />
               </div>
               <div className="form-control">
@@ -329,11 +284,12 @@ const DriverVehicleRegistration = () => {
                 </label>
                 <input
                   type="number"
-                  min="1990"
-                  max={new Date().getFullYear() + 1}
                   value={formData.year}
                   onChange={(e) => handleInputChange('year', e.target.value)}
                   className="input input-bordered"
+                  placeholder="2024"
+                  min="1990"
+                  max={new Date().getFullYear() + 1}
                 />
               </div>
               <div className="form-control">
@@ -350,7 +306,7 @@ const DriverVehicleRegistration = () => {
               </div>
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">License Plate</span>
+                  <span className="label-text">License Plate *</span>
                 </label>
                 <input
                   type="text"
@@ -358,32 +314,9 @@ const DriverVehicleRegistration = () => {
                   onChange={(e) => handleInputChange('licensePlate', e.target.value)}
                   className="input input-bordered"
                   placeholder="ABC-1234"
+                  required
                 />
               </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">VIN Number</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.vin}
-                  onChange={(e) => handleInputChange('vin', e.target.value)}
-                  className="input input-bordered"
-                  placeholder="17-digit VIN"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div>
-            <h2 className="text-2xl font-semibold text-base-content mb-6 flex items-center">
-              <Settings className="w-6 h-6 mr-2" />
-              Vehicle Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="form-control">
                 <label className="label">
                   <span className="label-text">Vehicle Type</span>
@@ -407,48 +340,10 @@ const DriverVehicleRegistration = () => {
                   onChange={(e) => handleInputChange('fuelType', e.target.value)}
                   className="select select-bordered"
                 >
-                  {fuelTypes.map(fuel => (
-                    <option key={fuel.value} value={fuel.value}>{fuel.label}</option>
+                  {fuelTypes.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Transmission</span>
-                </label>
-                <select
-                  value={formData.transmission}
-                  onChange={(e) => handleInputChange('transmission', e.target.value)}
-                  className="select select-bordered"
-                >
-                  {transmissionTypes.map(trans => (
-                    <option key={trans.value} value={trans.value}>{trans.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Engine Capacity (CC)</span>
-                </label>
-                <input
-                  type="number"
-                  value={formData.engineCapacity}
-                  onChange={(e) => handleInputChange('engineCapacity', e.target.value)}
-                  className="input input-bordered"
-                  placeholder="1500"
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Mileage (KM)</span>
-                </label>
-                <input
-                  type="number"
-                  value={formData.mileage}
-                  onChange={(e) => handleInputChange('mileage', e.target.value ? parseInt(e.target.value) : '')}
-                  className="input input-bordered"
-                  placeholder="50000"
-                />
               </div>
               <div className="form-control">
                 <label className="label">
@@ -456,26 +351,18 @@ const DriverVehicleRegistration = () => {
                 </label>
                 <input
                   type="number"
+                  value={formData.seatingCapacity}
+                  onChange={(e) => handleInputChange('seatingCapacity', e.target.value)}
+                  className="input input-bordered"
+                  placeholder="4"
                   min="1"
                   max="50"
-                  value={formData.seatingCapacity}
-                  onChange={(e) => handleInputChange('seatingCapacity', e.target.value ? parseInt(e.target.value) : 4)}
-                  className="input input-bordered"
                 />
               </div>
             </div>
-          </div>
-        );
 
-      case 3:
-        return (
-          <div>
-            <h2 className="text-2xl font-semibold text-base-content mb-6 flex items-center">
-              <CheckCircle className="w-6 h-6 mr-2" />
-              Features & Amenities
-            </h2>
-            
-            <div className="mb-8">
+            {/* Features */}
+            <div className="mt-8">
               <h3 className="text-lg font-semibold text-base-content mb-4">Vehicle Features</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {features.map(feature => (
@@ -494,205 +381,95 @@ const DriverVehicleRegistration = () => {
           </div>
         );
 
-      case 4:
-        return (
-          <div>
-            <h2 className="text-2xl font-semibold text-base-content mb-6 flex items-center">
-              <MapPin className="w-6 h-6 mr-2" />
-              Location & Service Area
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">City</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.location.city}
-                  onChange={(e) => handleNestedInputChange('location', 'city', e.target.value)}
-                  className="input input-bordered"
-                  placeholder="Colombo"
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">District</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.location.district}
-                  onChange={(e) => handleNestedInputChange('location', 'district', e.target.value)}
-                  className="input input-bordered"
-                  placeholder="Colombo"
-                />
-              </div>
-              <div className="form-control md:col-span-2">
-                <label className="label">
-                  <span className="label-text">Address</span>
-                </label>
-                <textarea
-                  value={formData.location.address}
-                  onChange={(e) => handleNestedInputChange('location', 'address', e.target.value)}
-                  className="textarea textarea-bordered"
-                  placeholder="Full address"
-                  rows={3}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 5:
+      case 2:
         return (
           <div>
             <h2 className="text-2xl font-semibold text-base-content mb-6 flex items-center">
               <DollarSign className="w-6 h-6 mr-2" />
-              Pricing
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Base Rate (LKR)</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.pricing.baseRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'baseRate', e.target.value ? parseInt(e.target.value) : '')}
-                  className="input input-bordered"
-                  placeholder="500"
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Per KM Rate (LKR)</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={formData.pricing.perKmRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'perKmRate', e.target.value ? parseFloat(e.target.value) : '')}
-                  className="input input-bordered"
-                  placeholder="50"
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Hourly Rate (LKR)</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.pricing.hourlyRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'hourlyRate', e.target.value ? parseInt(e.target.value) : '')}
-                  className="input input-bordered"
-                  placeholder="2000"
-                />
-              </div>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Daily Rate (LKR)</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.pricing.dailyRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'dailyRate', e.target.value ? parseInt(e.target.value) : '')}
-                  className="input input-bordered"
-                  placeholder="15000"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 6:
-        return (
-          <div>
-            <h2 className="text-2xl font-semibold text-base-content mb-6 flex items-center">
-              <FileText className="w-6 h-6 mr-2" />
-              Documents & Images
+              Pricing & Images
             </h2>
             
+            {/* Pricing */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-base-content mb-4">Required Documents</h3>
+              <h3 className="text-lg font-semibold text-base-content mb-4">Pricing</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Vehicle Registration URL</span>
+                    <span className="label-text">Daily Rate (LKR)</span>
                   </label>
                   <input
-                    type="url"
-                    placeholder="https://example.com/registration.pdf"
-                    onChange={(e) => handleFileUpload('registration', e.target.value)}
-                    className="input input-bordered w-full"
+                    type="number"
+                    value={formData.pricing.dailyRate}
+                    onChange={(e) => handleInputChange('pricing.dailyRate', e.target.value)}
+                    className="input input-bordered"
+                    placeholder="5000"
+                    min="0"
                   />
                 </div>
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Insurance Certificate URL</span>
+                    <span className="label-text">Hourly Rate (LKR)</span>
                   </label>
                   <input
-                    type="url"
-                    placeholder="https://example.com/insurance.pdf"
-                    onChange={(e) => handleFileUpload('insurance', e.target.value)}
-                    className="input input-bordered w-full"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Fitness Certificate URL</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://example.com/fitness.pdf"
-                    onChange={(e) => handleFileUpload('fitness', e.target.value)}
-                    className="input input-bordered w-full"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Revenue License URL</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://example.com/revenue.pdf"
-                    onChange={(e) => handleFileUpload('revenue', e.target.value)}
-                    className="input input-bordered w-full"
+                    type="number"
+                    value={formData.pricing.hourlyRate}
+                    onChange={(e) => handleInputChange('pricing.hourlyRate', e.target.value)}
+                    className="input input-bordered"
+                    placeholder="500"
+                    min="0"
                   />
                 </div>
               </div>
             </div>
 
+            {/* Vehicle Images */}
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-base-content mb-4">Vehicle Images</h3>
               <div className="space-y-4">
-                <input
-                  type="url"
-                  placeholder="https://example.com/vehicle-front.jpg"
-                  onChange={(e) => handleImageUpload([e.target.value])}
-                  className="input input-bordered w-full"
-                />
-                <input
-                  type="url"
-                  placeholder="https://example.com/vehicle-side.jpg"
-                  onChange={(e) => handleImageUpload([e.target.value])}
-                  className="input input-bordered w-full"
-                />
-                <input
-                  type="url"
-                  placeholder="https://example.com/vehicle-interior.jpg"
-                  onChange={(e) => handleImageUpload([e.target.value])}
-                  className="input input-bordered w-full"
-                />
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Front View Image URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={imageUrls.front}
+                    onChange={(e) => handleImageUpload('front', e.target.value)}
+                    className="input input-bordered"
+                    placeholder="https://example.com/vehicle-front.jpg"
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Side View Image URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={imageUrls.side}
+                    onChange={(e) => handleImageUpload('side', e.target.value)}
+                    className="input input-bordered"
+                    placeholder="https://example.com/vehicle-side.jpg"
+                  />
+                </div>
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text">Interior Image URL</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={imageUrls.interior}
+                    onChange={(e) => handleImageUpload('interior', e.target.value)}
+                    className="input input-bordered"
+                    placeholder="https://example.com/vehicle-interior.jpg"
+                  />
+                </div>
               </div>
               <p className="text-sm text-base-content/70 mt-2">
-                Add URLs for multiple images showing different angles of your vehicle
+                Add URLs for images showing different angles of your vehicle
               </p>
             </div>
 
-            <div>
+            {/* Description */}
+            <div className="mb-8">
               <h3 className="text-lg font-semibold text-base-content mb-4">Description</h3>
               <textarea
                 value={formData.description}
@@ -715,23 +492,17 @@ const DriverVehicleRegistration = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-base-content mb-4">
-            Register Your Vehicle
-          </h1>
-          <p className="text-xl text-base-content/70">
-            Add your vehicle to our platform and start earning
-          </p>
+          <h1 className="text-3xl font-bold text-base-content mb-2">Add Your Vehicle</h1>
+          <p className="text-base-content/70">Add your vehicle to our platform and start earning.</p>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-base-content">Step {currentStep} of {totalSteps}</span>
-            <span className="text-sm text-base-content/70">
-              {Math.round((currentStep / totalSteps) * 100)}% Complete
-            </span>
+            <span className="text-sm text-base-content/70">{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
           </div>
-          <div className="w-full bg-base-300 rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
               className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${(currentStep / totalSteps) * 100}%` }}
@@ -739,16 +510,16 @@ const DriverVehicleRegistration = () => {
           </div>
         </div>
 
-        {/* Form Steps */}
-        <div className="bg-base-200 rounded-lg p-6">
+        {/* Form Card */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           {renderStepContent()}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
+          {/* Navigation */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="btn btn-outline"
+              className={`btn ${currentStep === 1 ? 'btn-disabled' : 'btn-ghost'}`}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Previous

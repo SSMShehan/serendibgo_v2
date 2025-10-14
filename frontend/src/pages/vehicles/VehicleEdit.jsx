@@ -34,6 +34,7 @@ const VehicleEdit = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [images, setImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
@@ -68,9 +69,15 @@ const VehicleEdit = () => {
   const fetchVehicle = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('Fetching vehicle with ID:', vehicleId);
       const response = await tripService.vehicleService.getVehicleById(vehicleId);
+      console.log('Vehicle API response:', response);
+      
       if (response.success === true) {
         const vehicleData = response.data;
+        console.log('Vehicle data received:', vehicleData);
         setVehicle(vehicleData);
         setImages(vehicleData.images || []);
         setFormData({
@@ -95,13 +102,38 @@ const VehicleEdit = () => {
             currency: vehicleData.pricing?.currency || 'LKR'
           }
         });
+        toast.success('Vehicle details loaded successfully');
       } else {
+        console.error('API returned success: false');
         setError('Failed to load vehicle details');
+        toast.error('Failed to load vehicle details');
       }
     } catch (error) {
       console.error('Error fetching vehicle:', error);
-      setError('Failed to load vehicle details');
-      toast.error('Failed to load vehicle details');
+      
+      // Provide more specific error messages
+      if (error.code === 'ECONNABORTED') {
+        setError('Request timed out. Please check your connection and try again.');
+        toast.error('Request timed out. Please try again.');
+      } else if (error.response?.status === 404) {
+        setError('Vehicle not found.');
+        toast.error('Vehicle not found.');
+      } else if (error.response?.status === 403) {
+        setError('You do not have permission to edit this vehicle.');
+        toast.error('Access denied.');
+      } else {
+        setError('Failed to load vehicle details. Please try again.');
+        toast.error('Failed to load vehicle details.');
+      }
+      
+      // Auto-retry for timeout errors (max 2 retries)
+      if (error.code === 'ECONNABORTED' && retryCount < 2) {
+        console.log(`Retrying fetchVehicle (attempt ${retryCount + 1}/2)...`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchVehicle();
+        }, 2000); // Wait 2 seconds before retry
+      }
     } finally {
       setLoading(false);
     }
@@ -252,12 +284,24 @@ const VehicleEdit = () => {
           <AlertCircle className="mx-auto h-12 w-12 text-red-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">Error</h3>
           <p className="mt-1 text-sm text-gray-500">{error}</p>
-          <button
-            onClick={() => navigate(getDashboardPath())}
-            className="mt-4 btn btn-primary"
-          >
-            Back to Dashboard
-          </button>
+          <div className="mt-4 space-x-3">
+            <button
+              onClick={() => {
+                setError(null);
+                setRetryCount(0);
+                fetchVehicle();
+              }}
+              className="btn btn-primary"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate(getDashboardPath())}
+              className="btn btn-ghost"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
