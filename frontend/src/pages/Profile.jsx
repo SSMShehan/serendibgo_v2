@@ -25,7 +25,7 @@ import {
 import toast from 'react-hot-toast';
 
 const Profile = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -163,7 +163,7 @@ const Profile = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await updateUser(formData);
+      await updateProfile(formData);
       toast.success('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
