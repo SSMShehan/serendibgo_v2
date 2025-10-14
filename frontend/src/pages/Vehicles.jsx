@@ -104,12 +104,14 @@ const Vehicles = () => {
                   <div className="mt-4">
                     <h4 className="text-sm font-medium text-gray-900 mb-2">Features</h4>
                     <div className="flex flex-wrap gap-2">
-                      {vehicle.features && vehicle.features.length > 0 ? (
-                        vehicle.features.map((feature, index) => (
-                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                            {feature}
-                          </span>
-                        ))
+                      {vehicle.features && Object.values(vehicle.features).some(feature => feature) ? (
+                        Object.entries(vehicle.features)
+                          .filter(([_, enabled]) => enabled)
+                          .map(([feature, _]) => (
+                            <span key={feature} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            </span>
+                          ))
                       ) : (
                         <span className="text-gray-500 text-sm">No features listed</span>
                       )}
