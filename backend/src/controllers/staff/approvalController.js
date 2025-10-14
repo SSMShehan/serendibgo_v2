@@ -1,6 +1,7 @@
 // Staff Approval Controller
 const { asyncHandler } = require('../../middleware/errorHandler');
 const User = require('../../models/User');
+const Driver = require('../../models/vehicles/Driver');
 const { staffAuth, requirePermission, logActivity } = require('../../middleware/staffAuth');
 
 // @desc    Get pending approvals
@@ -187,6 +188,22 @@ const approveServiceProvider = asyncHandler(async (req, res) => {
     
     await user.save();
     
+    // If user is a driver, also update their Driver model status
+    if (user.role === 'driver') {
+      const driver = await Driver.findOne({ user: user._id });
+      if (driver) {
+        driver.status = 'active';
+        driver.statusHistory.push({
+          status: 'active',
+          timestamp: new Date(),
+          updatedBy: staffId,
+          notes: 'Driver approved by staff'
+        });
+        await driver.save();
+        console.log(`Driver ${driver.driverId} status updated to active`);
+      }
+    }
+    
     // Log activity
     console.log(`Staff ${staffId} approved ${user.role} ${user._id}`);
     
@@ -319,6 +336,21 @@ const bulkApproveServiceProviders = asyncHandler(async (req, res) => {
         user.verificationConditions = conditions;
         
         await user.save();
+        
+        // If user is a driver, also update their Driver model status
+        if (user.role === 'driver') {
+          const driver = await Driver.findOne({ user: user._id });
+          if (driver) {
+            driver.status = 'active';
+            driver.statusHistory.push({
+              status: 'active',
+              timestamp: new Date(),
+              updatedBy: staffId,
+              notes: 'Driver approved by staff (bulk approval)'
+            });
+            await driver.save();
+          }
+        }
         
         results.push({ 
           userId, 
