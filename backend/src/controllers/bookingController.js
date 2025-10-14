@@ -568,6 +568,8 @@ const createGuideBooking = async (req, res) => {
   try {
     const { guideId, startDate, endDate, duration, groupSize, specialRequests } = req.body;
 
+    console.log('🎯 Creating guide booking:', { guideId, startDate, endDate, duration, groupSize, specialRequests });
+
     // Validate required fields
     if (!guideId || !startDate || !endDate || !duration || !groupSize) {
       return res.status(400).json({
@@ -611,9 +613,18 @@ const createGuideBooking = async (req, res) => {
 
     await booking.save();
 
+    console.log('✅ Guide booking saved:', booking._id);
+
     // Populate the booking with guide and user details
     await booking.populate('guide', 'firstName lastName email phone avatar rating');
     await booking.populate('user', 'firstName lastName email phone');
+
+    console.log('✅ Guide booking populated:', {
+      id: booking._id,
+      user: booking.user?.firstName,
+      guide: booking.guide?.firstName,
+      status: booking.status
+    });
 
     res.status(201).json({
       success: true,

@@ -22,18 +22,47 @@ const getAllBookings = asyncHandler(async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
     
+    console.log('🔍 Staff booking request:', { page, limit, search, status, type, dateFrom, dateTo });
+    
     // Build filter object
     let filter = {};
     
-    // Search filter
+    // Search filter - search in actual fields, not populated ones
     if (search) {
+      // First, try to find users by name/email
+      const users = await User.find({
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      
+      const userIds = users.map(user => user._id);
+      
+      // Try to find guides by name
+      const guides = await User.find({
+        role: 'guide',
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      
+      const guideIds = guides.map(guide => guide._id);
+      
+      // Try to find tours by title
+      const tours = await Tour.find({
+        title: { $regex: search, $options: 'i' }
+      }).select('_id');
+      
+      const tourIds = tours.map(tour => tour._id);
+      
+      // Build search filter
       filter.$or = [
-        { 'user.firstName': { $regex: search, $options: 'i' } },
-        { 'user.lastName': { $regex: search, $options: 'i' } },
-        { 'user.email': { $regex: search, $options: 'i' } },
-        { 'tour.title': { $regex: search, $options: 'i' } },
-        { 'guide.firstName': { $regex: search, $options: 'i' } },
-        { 'guide.lastName': { $regex: search, $options: 'i' } }
+        { user: { $in: userIds } },
+        { guide: { $in: guideIds } },
+        { tour: { $in: tourIds } }
       ];
     }
     
@@ -80,6 +109,9 @@ const getAllBookings = asyncHandler(async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
+    
+    console.log('📊 Found bookings:', bookings.length);
+    console.log('🔍 Filter used:', JSON.stringify(filter, null, 2));
     
     // Get total count for pagination
     const total = await Booking.countDocuments(filter);

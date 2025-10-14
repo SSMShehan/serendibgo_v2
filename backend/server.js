@@ -211,7 +211,15 @@ const connectDB = async () => {
       }
     }
     
+    console.log('❌ MongoDB connection failed. Please install and start MongoDB:');
+    console.log('   1. Download MongoDB Community Server from https://www.mongodb.com/try/download/community');
+    console.log('   2. Install MongoDB');
+    console.log('   3. Start MongoDB service: net start MongoDB');
+    console.log('   4. Or use MongoDB Atlas cloud database');
+    console.log('');
     console.log('Starting server without database connection for development...');
+    console.log('⚠️  Some features may not work without database connection.');
+    
     // Don't exit in development, allow server to start without DB
     if (process.env.NODE_ENV === 'production') {
       process.exit(1);

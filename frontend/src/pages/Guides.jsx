@@ -168,13 +168,17 @@ const Guides = () => {
   }
 
   const isDateBlocked = (date) => {
-    // For now, no dates are blocked. You can add logic here to block specific dates
-    return false
+    if (!selectedGuide?.blockedDates) return false
+    return selectedGuide.blockedDates.some(blockout => 
+      new Date(blockout.date).toDateString() === date.toDateString()
+    )
   }
 
   const isWorkingDay = (date) => {
-    // For now, all days are working days. You can add logic here to exclude weekends or holidays
-    return true
+    if (!selectedGuide?.workingDays) return true
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const dayName = dayNames[date.getDay()]
+    return selectedGuide.workingDays.includes(dayName)
   }
 
   const isDateAvailable = (date) => {
@@ -188,9 +192,9 @@ const Guides = () => {
       if (isDateInPast(dateToSelect)) {
         alert('Cannot select past dates')
       } else if (isDateBlocked(dateToSelect)) {
-        alert('This date is not available')
-      } else {
-        alert('This date is not a working day')
+        alert('This date is not available (blocked by guide)')
+      } else if (!isWorkingDay(dateToSelect)) {
+        alert('Guide is not available on this day')
       }
       return
     }
@@ -233,36 +237,25 @@ const Guides = () => {
       const isSelected = bookingData.date === currentDate.toISOString().split('T')[0]
       const isAvailable = isDateAvailable(currentDate)
 
-      let bgColor = 'bg-white'
-      let textColor = 'text-slate-900'
-      let cursor = 'cursor-pointer'
-
+      let buttonClass = 'h-10 w-10 rounded-lg text-sm font-medium transition-all duration-200 '
+      
       if (isSelected) {
-        bgColor = 'bg-blue-500'
-        textColor = 'text-white'
+        buttonClass += 'bg-blue-500 text-white'
       } else if (isPast) {
-        bgColor = 'bg-gray-300'
-        textColor = 'text-gray-500'
-        cursor = 'cursor-not-allowed'
+        buttonClass += 'text-gray-300 cursor-not-allowed'
       } else if (isBlocked) {
-        bgColor = 'bg-red-100'
-        textColor = 'text-red-600'
-        cursor = 'cursor-not-allowed'
+        buttonClass += 'bg-red-100 text-red-500 cursor-not-allowed'
       } else if (!isWorking) {
-        bgColor = 'bg-yellow-100'
-        textColor = 'text-yellow-600'
-        cursor = 'cursor-not-allowed'
-      } else {
-        bgColor = 'bg-green-100'
-        textColor = 'text-green-800'
+        buttonClass += 'bg-yellow-100 text-yellow-600 cursor-not-allowed'
+      } else if (isAvailable) {
+        buttonClass += 'text-gray-700 hover:bg-green-100 hover:text-green-600'
       }
 
       days.push(
         <button
           key={day}
           onClick={() => handleBookingDateSelect(day)}
-          disabled={!isAvailable}
-          className={`h-10 w-10 ${bgColor} ${textColor} ${cursor} rounded-lg text-sm font-medium hover:opacity-80 transition-all duration-200 flex items-center justify-center`}
+          className={buttonClass}
         >
           {day}
         </button>
@@ -567,7 +560,7 @@ const Guides = () => {
                     className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center group"
                   >
                     <BookOpen className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
-                    Book Now
+                    Book This Guide
                   </button>
                 </div>
               </div>
