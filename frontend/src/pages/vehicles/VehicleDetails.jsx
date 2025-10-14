@@ -314,35 +314,6 @@ const VehicleDetails = () => {
               )}
             </div>
             
-            {/* Service Areas */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Service Areas</h2>
-              
-              {vehicle.serviceAreas && vehicle.serviceAreas.length > 0 ? (
-                <div className="space-y-4">
-                  {vehicle.serviceAreas.map((area, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center mb-2">
-                        <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="font-medium text-gray-900">
-                          {area.city}, {area.district}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Service radius: {area.radius} km
-                      </p>
-                      {area.coordinates.latitude && area.coordinates.longitude && (
-                        <p className="text-sm text-gray-500">
-                          Coordinates: {area.coordinates.latitude}, {area.coordinates.longitude}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">No service areas specified</p>
-              )}
-            </div>
           </div>
           
           {/* Sidebar */}
