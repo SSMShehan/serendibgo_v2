@@ -40,29 +40,36 @@ const VehicleDetails = () => {
     if (!user) return false;
     if (!vehicle) return false;
     
+    // Get user ID - handle both _id and id fields
+    const userId = user._id || user.id;
+    if (!userId) return false;
+    
     // Check if user is the owner of this specific vehicle
-    const isOwner = vehicle.owner && (
-      vehicle.owner._id === user._id || 
-      vehicle.owner.toString() === user._id
-    );
+    // Handle both cases: owner as object with _id or owner as string ID
+    let isOwner = false;
+    
+    if (vehicle.owner) {
+      if (typeof vehicle.owner === 'object' && vehicle.owner._id) {
+        // Owner is populated object
+        isOwner = vehicle.owner._id.toString() === userId.toString();
+      } else if (typeof vehicle.owner === 'string') {
+        // Owner is just the ID string
+        isOwner = vehicle.owner.toString() === userId.toString();
+      }
+    }
     
     console.log('=== OWNERSHIP CHECK DEBUG ===');
     console.log('Vehicle owner:', vehicle.owner);
-    console.log('Vehicle owner ID:', vehicle.owner?._id, 'Type:', typeof vehicle.owner?._id);
+    console.log('Vehicle owner type:', typeof vehicle.owner);
+    console.log('Vehicle owner ID:', vehicle.owner?._id || vehicle.owner, 'Type:', typeof (vehicle.owner?._id || vehicle.owner));
     console.log('Current user:', user);
-    console.log('Current user ID:', user._id, 'Type:', typeof user._id);
-    console.log('Owner comparison (string):', vehicle.owner?._id === user._id);
-    console.log('Owner comparison (toString):', vehicle.owner?._id?.toString() === user._id?.toString());
+    console.log('Current user ID:', userId, 'Type:', typeof userId);
     console.log('Is owner:', isOwner);
     console.log('User role:', user.role);
-    console.log('Can edit vehicle:', user.role === 'admin' || user.role === 'staff' || isOwner);
     console.log('================================');
     
     // Allow editing if user is admin, staff, or the actual owner
-    // TEMPORARY: Allow all drivers to edit for testing
-    const canEdit = user.role === 'admin' || user.role === 'staff' || isOwner || user.role === 'driver';
-    console.log('Final canEdit result:', canEdit);
-    return canEdit;
+    return user.role === 'admin' || user.role === 'staff' || isOwner;
   };
   
   const [vehicle, setVehicle] = useState(null);

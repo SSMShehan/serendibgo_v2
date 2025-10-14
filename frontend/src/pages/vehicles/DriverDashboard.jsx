@@ -691,7 +691,13 @@ const DriverDashboard = () => {
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </button>
-                          <button className="btn btn-ghost btn-sm flex-1">
+                          <button 
+                            onClick={() => {
+                              console.log('Manage button clicked for vehicle:', vehicle._id);
+                              navigate(`/driver/vehicles/${vehicle._id}/edit`);
+                            }}
+                            className="btn btn-ghost btn-sm flex-1"
+                          >
                             <Settings className="w-4 h-4 mr-1" />
                             Manage
                           </button>
@@ -835,7 +841,13 @@ const DriverDashboard = () => {
                 </div>
                 
                 <div className="pt-6 border-t border-gray-200">
-                  <button className="btn btn-primary">
+                  <button 
+                    onClick={() => {
+                      console.log('Edit Profile button clicked');
+                      navigate('/profile');
+                    }}
+                    className="btn btn-primary"
+                  >
                     <Settings className="w-4 h-4 mr-2" />
                     Edit Profile
                   </button>
