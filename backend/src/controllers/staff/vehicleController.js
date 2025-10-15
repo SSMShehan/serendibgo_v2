@@ -82,26 +82,29 @@ const getVehicles = asyncHandler(async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Transform vehicles data for frontend
-    const transformedVehicles = vehicles.map(vehicle => ({
-      _id: vehicle._id,
-      name: vehicle.name || `${vehicle.make} ${vehicle.model} ${vehicle.year}`,
-      type: vehicle.vehicleType,
-      capacity: vehicle.capacity?.passengers || 0,
-      fuelType: vehicle.fuelType,
-      pricePerDay: vehicle.pricing?.dailyRate || 0,
-      location: vehicle.location?.city || 'Not specified',
-      description: vehicle.description || 'No description available',
-      features: vehicle.features || {},
-      images: vehicle.images || [],
-      status: vehicle.status,
-      approvalDetails: vehicle.approvalDetails,
-      ownerName: vehicle.owner ? `${vehicle.owner.firstName || ''} ${vehicle.owner.lastName || ''}`.trim() : 'Unknown',
-      ownerEmail: vehicle.owner?.email || 'No email',
-      ownerPhone: vehicle.owner?.phone || 'No phone',
-      createdAt: vehicle.createdAt,
-      updatedAt: vehicle.updatedAt
-    }));
+        // Transform vehicles data for frontend
+        const transformedVehicles = vehicles.map(vehicle => {
+          console.log('Vehicle images in backend:', vehicle.images);
+          return {
+            _id: vehicle._id,
+            name: vehicle.name || `${vehicle.make} ${vehicle.model} ${vehicle.year}`,
+            type: vehicle.vehicleType,
+            capacity: vehicle.capacity?.passengers || 0,
+            fuelType: vehicle.fuelType,
+            pricePerDay: vehicle.pricing?.dailyRate || 0,
+            location: vehicle.location?.city || 'Not specified',
+            description: vehicle.description || 'No description available',
+            features: vehicle.features || {},
+            images: vehicle.images || [],
+            status: vehicle.status,
+            approvalDetails: vehicle.approvalDetails,
+            ownerName: vehicle.owner ? `${vehicle.owner.firstName || ''} ${vehicle.owner.lastName || ''}`.trim() : 'Unknown',
+            ownerEmail: vehicle.owner?.email || 'No email',
+            ownerPhone: vehicle.owner?.phone || 'No phone',
+            createdAt: vehicle.createdAt,
+            updatedAt: vehicle.updatedAt
+          };
+        });
 
     // Get total count for pagination
     const total = await Vehicle.countDocuments(filter);
@@ -329,46 +332,43 @@ const updateVehicleStatus = asyncHandler(async (req, res) => {
     switch (action) {
       case 'approve':
         updateData = {
-          status: 'approved',
-          isAvailable: true,
-          approvedAt: new Date(),
-          approvedBy: req.user._id
+          status: 'available',
+          'approvalDetails.approvedAt': new Date(),
+          'approvalDetails.approvedBy': req.user._id,
+          'approvalDetails.needsApproval': false
         };
         break;
       case 'reject':
         updateData = {
-          status: 'rejected',
-          isAvailable: false,
-          rejectionReason: reason,
-          rejectedAt: new Date(),
-          rejectedBy: req.user._id
+          status: 'out-of-service',
+          'approvalDetails.rejectionReason': reason,
+          'approvalDetails.rejectedAt': new Date(),
+          'approvalDetails.rejectedBy': req.user._id,
+          'approvalDetails.needsApproval': false
         };
         break;
       case 'suspend':
         updateData = {
-          status: 'inactive',
-          isAvailable: false,
-          suspensionReason: reason,
-          suspendedAt: new Date(),
-          suspendedBy: req.user._id
+          status: 'out-of-service',
+          'approvalDetails.suspensionReason': reason,
+          'approvalDetails.suspendedAt': new Date(),
+          'approvalDetails.suspendedBy': req.user._id
         };
         break;
       case 'activate':
         updateData = {
-          status: 'approved',
-          isAvailable: true,
-          suspensionReason: null,
-          suspendedAt: null,
-          suspendedBy: null
+          status: 'available',
+          'approvalDetails.suspensionReason': null,
+          'approvalDetails.suspendedAt': null,
+          'approvalDetails.suspendedBy': null
         };
         break;
       case 'maintenance':
         updateData = {
-          status: 'inactive',
-          isAvailable: false,
-          maintenanceReason: reason,
-          maintenanceStartedAt: new Date(),
-          maintenanceStartedBy: req.user._id
+          status: 'maintenance',
+          'approvalDetails.maintenanceReason': reason,
+          'approvalDetails.maintenanceStartedAt': new Date(),
+          'approvalDetails.maintenanceStartedBy': req.user._id
         };
         break;
       default:

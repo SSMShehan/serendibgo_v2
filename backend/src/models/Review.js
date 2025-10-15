@@ -9,7 +9,7 @@ const reviewSchema = new mongoose.Schema({
   tour: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tour',
-    required: [true, 'Tour is required']
+    required: false // Tour is optional for direct guide bookings
   },
   guide: {
     type: mongoose.Schema.Types.ObjectId,
@@ -59,7 +59,7 @@ reviewSchema.index({ user: 1 });
 reviewSchema.index({ rating: 1 });
 reviewSchema.index({ createdAt: -1 });
 
-// Ensure one review per user per tour
-reviewSchema.index({ user: 1, tour: 1 }, { unique: true });
+// Ensure one review per user per guide per booking
+reviewSchema.index({ user: 1, guide: 1, booking: 1 }, { unique: true });
 
 module.exports = mongoose.model('Review', reviewSchema);

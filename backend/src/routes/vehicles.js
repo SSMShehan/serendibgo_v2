@@ -20,8 +20,9 @@ const {
 } = require('../controllers/vehicles/vehicleController');
 const { protect, authorize } = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/errorHandler');
+const { vehicleImageUpload } = require('../utils/fileUpload');
 
-// Configure multer for file uploads
+// Configure multer for file uploads (memory storage for backward compatibility)
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
@@ -69,7 +70,7 @@ router.get('/driver/:driverId', getDriverVehicles);
 router.post('/:id/images', [
   protect,
   authorize('driver', 'staff', 'admin'),
-  upload.array('images', 10)
+  vehicleImageUpload.array('images', 10)
 ], uploadVehicleImages);
 
 router.delete('/:id/images/:imageId', [

@@ -888,34 +888,41 @@ const DriverVehicleManagement = () => {
                   <div>
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Images</h4>
                     <div className="space-y-3">
+                      {console.log('Vehicle images data:', reviewingVehicle.images)}
                       {reviewingVehicle.images && reviewingVehicle.images.length > 0 ? (
-                        reviewingVehicle.images.map((imageUrl, index) => (
-                          <div key={index} className="relative">
-                            <img
-                              src={imageUrl}
-                              alt={`Vehicle image ${index + 1}`}
-                              className="w-full h-48 object-cover rounded-lg"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <div className="hidden w-full h-48 bg-gray-100 rounded-lg items-center justify-center">
-                              <div className="text-center">
-                                <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                <p className="text-gray-500 text-sm">Image not available</p>
+                        reviewingVehicle.images.map((image, index) => {
+                          // Handle both string URLs and image objects
+                          const imageUrl = typeof image === 'string' ? image : image.url;
+                          const imageCaption = typeof image === 'object' ? image.caption : `Vehicle image ${index + 1}`;
+                          
+                          return (
+                            <div key={index} className="relative">
+                              <img
+                                src={imageUrl}
+                                alt={imageCaption}
+                                className="w-full h-48 object-cover rounded-lg"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div className="hidden w-full h-48 bg-gray-100 rounded-lg items-center justify-center">
+                                <div className="text-center">
+                                  <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                  <p className="text-gray-500 text-sm">Image not available</p>
+                                </div>
                               </div>
+                              <a
+                                href={imageUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs hover:bg-opacity-70"
+                              >
+                                View Full Size
+                              </a>
                             </div>
-                            <a
-                              href={imageUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs hover:bg-opacity-70"
-                            >
-                              View Full Size
-                            </a>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="text-center py-8 bg-gray-50 rounded-lg">
                           <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
