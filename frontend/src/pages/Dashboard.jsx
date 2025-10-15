@@ -44,17 +44,25 @@ const Dashboard = () => {
   }, [user])
 
   const fetchDashboardData = async () => {
+    let bookingsResponse, toursResponse, hotelsResponse, vehiclesResponse
+    
     try {
       setLoading(true)
       setError(null)
       
       // Fetch all dashboard data in parallel
-      const [bookingsResponse, toursResponse, hotelsResponse, vehiclesResponse] = await Promise.all([
+      const responses = await Promise.all([
         api.get('/bookings/user'),
         api.get('/tours?isFeatured=true&limit=3'),
         api.get('/hotels?featured=true&limit=3'),
         api.get('/vehicles?featured=true&limit=3')
       ])
+      
+      // Destructure the responses
+      bookingsResponse = responses[0]
+      toursResponse = responses[1]
+      hotelsResponse = responses[2]
+      vehiclesResponse = responses[3]
 
       // Debug API responses
       console.log('API Responses Debug:', {
