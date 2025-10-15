@@ -40,11 +40,12 @@ import Profile from './pages/Profile'
 import Booking from './pages/Booking'
 import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
+import Notifications from './pages/Notifications'
+import Contact from './pages/Contact'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
 import AdminTours from './pages/admin/AdminTours'
-import AdminUsers from './pages/admin/AdminUsers'
 import AdminBookings from './pages/admin/AdminBookings'
 import AdminRefundManagement from './pages/admin/AdminRefundManagement'
 
@@ -256,6 +257,16 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
+                {/* Notifications */}
+                <Route path="notifications" element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Contact/Support */}
+                <Route path="contact" element={<Contact />} />
+                
                 {/* Booking Flow */}
                 <Route path="booking/:tourId" element={
                   <ProtectedRoute>
@@ -304,11 +315,6 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
-                <Route path="admin/users" element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminUsers />
-                  </ProtectedRoute>
-                } />
                 
                 <Route path="admin/bookings" element={
                   <ProtectedRoute allowedRoles={['admin', 'staff']}>

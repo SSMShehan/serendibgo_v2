@@ -1,8 +1,15 @@
 // Staff Booking Management Controller
 const { asyncHandler } = require('../../middleware/errorHandler');
+const mongoose = require('mongoose');
 const Booking = require('../../models/Booking');
+const HotelBooking = require('../../models/hotels/HotelBooking');
+const VehicleBooking = require('../../models/vehicles/VehicleBooking');
+const VehicleBookingRequest = require('../../models/vehicles/VehicleBookingRequest');
 const User = require('../../models/User');
 const Tour = require('../../models/Tour');
+const Hotel = require('../../models/hotels/Hotel');
+const Room = require('../../models/hotels/Room');
+const Vehicle = require('../../models/Vehicle');
 const { staffAuth, requirePermission, logActivity } = require('../../middleware/staffAuth');
 
 // @desc    Get all bookings with filters
@@ -108,39 +115,252 @@ const getAllBookings = asyncHandler(async (req, res) => {
     const sort = {};
     sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
-    // Get bookings with pagination
-    const bookings = await Booking.find(filter)
-      .populate('user', 'firstName lastName email phone')
-      .populate('tour', 'title duration price location')
-      .populate('guide', 'firstName lastName email phone')
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit));
+    // Build filters for different booking types
+    const buildBookingFilter = (baseFilter, bookingType) => {
+      let bookingFilter = { ...baseFilter };
+      
+      // Apply type-specific filters
+      if (type && type !== 'all') {
+        if (type === 'tour') {
+          bookingFilter.tour = { $exists: true };
+        } else if (type === 'guide') {
+          bookingFilter.guide = { $exists: true };
+          bookingFilter.tour = { $exists: false };
+        } else if (type === 'hotel') {
+          // Hotel bookings will be handled separately
+          return null;
+        } else if (type === 'vehicle') {
+          // Vehicle bookings will be handled separately
+          return null;
+        }
+      }
+      
+      return bookingFilter;
+    };
+
+    // Build hotel booking filter
+    const buildHotelFilter = async (baseFilter) => {
+      let hotelFilter = {};
+      
+      // Apply status filter
+      if (status && status !== 'all') {
+        hotelFilter.bookingStatus = status;
+      }
+      
+      // Apply date range filter
+      if (dateFrom || dateTo) {
+        hotelFilter.createdAt = {};
+        if (dateFrom) hotelFilter.createdAt.$gte = new Date(dateFrom);
+        if (dateTo) hotelFilter.createdAt.$lte = new Date(dateTo);
+      }
+      
+      // Apply search filter
+      if (search) {
+        const users = await User.find({
+          $or: [
+            { firstName: { $regex: search, $options: 'i' } },
+            { lastName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } }
+          ]
+        }).select('_id');
+        
+        const userIds = users.map(user => user._id);
+        hotelFilter.user = { $in: userIds };
+      }
+      
+      return hotelFilter;
+    };
+
+    // Build vehicle booking filter
+    const buildVehicleFilter = async (baseFilter) => {
+      let vehicleFilter = {};
+      
+      // Apply status filter
+      if (status && status !== 'all') {
+        vehicleFilter.bookingStatus = status;
+      }
+      
+      // Apply date range filter
+      if (dateFrom || dateTo) {
+        vehicleFilter.createdAt = {};
+        if (dateFrom) vehicleFilter.createdAt.$gte = new Date(dateFrom);
+        if (dateTo) vehicleFilter.createdAt.$lte = new Date(dateTo);
+      }
+      
+      // Apply search filter
+      if (search) {
+        const users = await User.find({
+          $or: [
+            { firstName: { $regex: search, $options: 'i' } },
+            { lastName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } }
+          ]
+        }).select('_id');
+        
+        const userIds = users.map(user => user._id);
+        vehicleFilter.user = { $in: userIds };
+      }
+      
+      return vehicleFilter;
+    };
+
+    // Initialize arrays for different booking types
+    let tourBookings = [];
+    let hotelBookings = [];
+    let vehicleBookings = [];
     
-    console.log('📊 Found bookings:', bookings.length);
-    console.log('🔍 Filter used:', JSON.stringify(filter, null, 2));
+    // Only fetch bookings based on type filter
+    if (!type || type === 'all' || type === 'tour' || type === 'guide') {
+      // Get tour/guide bookings from multiple collections with proper filtering
+      const tourGuideFilter = buildBookingFilter(filter, type);
+      const generalBookings = tourGuideFilter ? await Booking.find(tourGuideFilter)
+        .populate('user', 'firstName lastName email phone')
+        .populate('tour', 'title duration price location')
+        .populate('guide', 'firstName lastName email phone')
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit)) : [];
+      
+      // Get tour bookings from tourbookings collection with filtering
+      const tourBookingsFromCollection = await mongoose.connection.db.collection('tourbookings')
+        .find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .toArray();
+      
+      // Get guide bookings from guidebookings collection with filtering
+      const guideBookingsFromCollection = await mongoose.connection.db.collection('guidebookings')
+        .find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .toArray();
+      
+      // Combine all tour/guide bookings
+      tourBookings = [...generalBookings, ...tourBookingsFromCollection, ...guideBookingsFromCollection];
+    }
+    
+    // Only fetch hotel bookings if type filter allows it
+    if (!type || type === 'all' || type === 'hotel') {
+      const hotelFilter = await buildHotelFilter(filter);
+      hotelBookings = await HotelBooking.find(hotelFilter)
+        .populate('user', 'firstName lastName email phone')
+        .populate('hotel', 'name location')
+        .populate('room', 'roomNumber roomType')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    }
+    
+    // Only fetch vehicle bookings if type filter allows it
+    if (!type || type === 'all' || type === 'vehicle') {
+      const vehicleFilter = await buildVehicleFilter(filter);
+      vehicleBookings = await VehicleBooking.find(vehicleFilter)
+        .populate('user', 'firstName lastName email phone')
+        .populate('vehicle', 'make model type')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+    }
+    
+    // Convert hotel bookings to match tour booking format
+    const formattedHotelBookings = hotelBookings.map(hotelBooking => ({
+      _id: hotelBooking._id,
+      type: 'hotel',
+      user: hotelBooking.user,
+      hotel: hotelBooking.hotel,
+      room: hotelBooking.room,
+      startDate: hotelBooking.checkInDate,
+      endDate: hotelBooking.checkOutDate,
+      groupSize: hotelBooking.guests.adults + hotelBooking.guests.children,
+      totalAmount: hotelBooking.pricing.totalPrice,
+      status: hotelBooking.bookingStatus,
+      paymentStatus: hotelBooking.paymentStatus,
+      specialRequests: hotelBooking.specialRequests,
+      createdAt: hotelBooking.createdAt,
+      updatedAt: hotelBooking.updatedAt,
+      bookingReference: hotelBooking.bookingReference
+    }));
+    
+    // Convert vehicle bookings to match tour booking format
+    const formattedVehicleBookings = vehicleBookings.map(vehicleBooking => ({
+      _id: vehicleBooking._id,
+      type: 'vehicle',
+      user: vehicleBooking.user,
+      vehicle: vehicleBooking.vehicle,
+      startDate: vehicleBooking.tripDetails.startDate,
+      endDate: vehicleBooking.tripDetails.endDate,
+      groupSize: vehicleBooking.passengers.adults + vehicleBooking.passengers.children,
+      totalAmount: vehicleBooking.pricing.totalPrice,
+      status: vehicleBooking.bookingStatus,
+      paymentStatus: vehicleBooking.paymentStatus,
+      specialRequests: vehicleBooking.specialRequests,
+      createdAt: vehicleBooking.createdAt,
+      updatedAt: vehicleBooking.updatedAt,
+      bookingReference: vehicleBooking.bookingReference,
+      pickupLocation: vehicleBooking.tripDetails.pickupLocation,
+      dropoffLocation: vehicleBooking.tripDetails.dropoffLocation
+    }));
+    
+    // Combine all types of bookings
+    const allBookings = [...tourBookings, ...formattedHotelBookings, ...formattedVehicleBookings];
+    
+    console.log('📊 Found tour bookings:', tourBookings.length);
+    console.log('📊 Found hotel bookings:', hotelBookings.length);
+    console.log('📊 Found vehicle bookings:', vehicleBookings.length);
+    console.log('📊 Total bookings:', allBookings.length);
     
     // Get total count for pagination
-    const total = await Booking.countDocuments(filter);
+    const tourCount = await Booking.countDocuments(filter) + 
+                      await mongoose.connection.db.collection('tourbookings').countDocuments() +
+                      await mongoose.connection.db.collection('guidebookings').countDocuments();
+    const hotelCount = await HotelBooking.countDocuments();
+    const vehicleCount = await VehicleBooking.countDocuments();
+    const total = tourCount + hotelCount + vehicleCount;
     
     console.log('📊 Total bookings in database:', total);
     
     // Get booking statistics
     const stats = {
-      total: await Booking.countDocuments(),
-      pending: await Booking.countDocuments({ status: 'pending' }),
-      confirmed: await Booking.countDocuments({ status: 'confirmed' }),
-      completed: await Booking.countDocuments({ status: 'completed' }),
-      cancelled: await Booking.countDocuments({ status: 'cancelled' }),
+      total: await Booking.countDocuments() + 
+             await HotelBooking.countDocuments() + 
+             await VehicleBooking.countDocuments() +
+             await mongoose.connection.db.collection('tourbookings').countDocuments() +
+             await mongoose.connection.db.collection('guidebookings').countDocuments(),
+      pending: await Booking.countDocuments({ status: 'pending' }) + 
+               await HotelBooking.countDocuments({ bookingStatus: 'pending' }) + 
+               await VehicleBooking.countDocuments({ bookingStatus: 'pending' }),
+      confirmed: await Booking.countDocuments({ status: 'confirmed' }) + 
+                 await HotelBooking.countDocuments({ bookingStatus: 'confirmed' }) + 
+                 await VehicleBooking.countDocuments({ bookingStatus: 'confirmed' }),
+      completed: await Booking.countDocuments({ status: 'completed' }) + 
+                 await HotelBooking.countDocuments({ bookingStatus: 'completed' }) + 
+                 await VehicleBooking.countDocuments({ bookingStatus: 'completed' }),
+      cancelled: await Booking.countDocuments({ status: 'cancelled' }) + 
+                 await HotelBooking.countDocuments({ bookingStatus: 'cancelled' }) + 
+                 await VehicleBooking.countDocuments({ bookingStatus: 'cancelled' }),
       guideBookings: await Booking.countDocuments({ 
         guide: { $exists: true }, 
         tour: { $exists: false } 
-      }),
+      }) + await mongoose.connection.db.collection('guidebookings').countDocuments(),
       tourBookings: await Booking.countDocuments({ 
         tour: { $exists: true }, 
         guide: { $exists: true } 
-      }),
+      }) + await mongoose.connection.db.collection('tourbookings').countDocuments(),
+      hotelBookings: await HotelBooking.countDocuments(),
+      vehicleBookings: await VehicleBooking.countDocuments(),
       today: await Booking.countDocuments({
+        createdAt: {
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lt: new Date(new Date().setHours(23, 59, 59, 999))
+        }
+      }) + await HotelBooking.countDocuments({
+        createdAt: {
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lt: new Date(new Date().setHours(23, 59, 59, 999))
+        }
+      }) + await VehicleBooking.countDocuments({
         createdAt: {
           $gte: new Date(new Date().setHours(0, 0, 0, 0)),
           $lt: new Date(new Date().setHours(23, 59, 59, 999))
@@ -150,8 +370,24 @@ const getAllBookings = asyncHandler(async (req, res) => {
         createdAt: {
           $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
         }
+      }) + await HotelBooking.countDocuments({
+        createdAt: {
+          $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        }
+      }) + await VehicleBooking.countDocuments({
+        createdAt: {
+          $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        }
       }),
       thisMonth: await Booking.countDocuments({
+        createdAt: {
+          $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        }
+      }) + await HotelBooking.countDocuments({
+        createdAt: {
+          $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        }
+      }) + await VehicleBooking.countDocuments({
         createdAt: {
           $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
         }
@@ -161,7 +397,7 @@ const getAllBookings = asyncHandler(async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        bookings,
+        bookings: allBookings,
         stats,
         pagination: {
           current: parseInt(page),

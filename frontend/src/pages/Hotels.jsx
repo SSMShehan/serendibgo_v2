@@ -27,11 +27,20 @@ const Hotels = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div 
+      className="min-h-screen py-8"
+      style={{
+        backgroundImage: 'url(/glassmorphism-bg-5.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40"></div>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Hotels & Accommodations</h1>
-          <p className="mt-2 text-gray-600">Find the perfect place to stay during your Sri Lankan adventure</p>
+          <h1 className="text-3xl font-bold text-white">Hotels & Accommodations</h1>
+          <p className="mt-2 text-white/90">Find the perfect place to stay during your Sri Lankan adventure</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
