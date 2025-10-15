@@ -1,385 +1,191 @@
 import React, { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
-import { useNotification } from '../../context/NotificationContext'
+import { Link, useLocation } from 'react-router-dom'
 import { 
-  Menu, 
-  X, 
-  User, 
-  LogOut, 
-  Settings, 
-  Bell,
-  Search,
-  MapPin,
-  Calendar
+  Menu,
+  X,
+  User
 } from 'lucide-react'
 
 const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const { user, isAuthenticated, logout } = useAuth()
-  const { unreadCount } = useNotification()
-  const navigate = useNavigate()
   const location = useLocation()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/')
-    setIsProfileOpen(false)
-  }
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      navigate(`/tours?search=${encodeURIComponent(searchQuery)}`)
-      setSearchQuery('')
-    }
-  }
-
-  const getDashboardLink = () => {
-    if (!user) return '/dashboard'
-    
-    switch (user.role) {
-      case 'admin':
-        return '/admin'
-      case 'hotel_owner':
-        return '/hotel-owner/dashboard'
-      case 'guide':
-        return '/guide/dashboard'
-      case 'driver':
-        return '/driver/dashboard'
-      case 'staff':
-        return '/staff'
-      default:
-        return '/dashboard'
-    }
-  }
-
-  const isActiveLink = (path) => {
+  const isActive = (path) => {
     return location.pathname === path
   }
 
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo - Left */}
-          <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center space-x-2 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
-                <MapPin className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">SerendibGo</span>
-            </Link>
-          </div>
+  const isHomePage = location.pathname === '/'
+  const navClassName = "bg-white/50 backdrop-blur-sm absolute top-0 left-0 right-0 z-50"
+  
+  const textColor = 'text-[#272C2F]'
+  const hoverColor = 'hover:text-[#E59B2C]'
 
-          {/* Navigation Links - Center */}
-          <nav className="hidden lg:flex items-center space-x-1">
-            <Link 
-              to="/" 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActiveLink('/') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Home
-            </Link>
-            <Link 
-              to="/tours" 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActiveLink('/tours') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Tours
-            </Link>
-            <Link 
-              to="/guides" 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActiveLink('/guides') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Guides
-            </Link>
-            <Link 
-              to="/hotels" 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActiveLink('/hotels') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Hotels
-            </Link>
-            <Link 
-              to="/vehicles" 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActiveLink('/vehicles') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Vehicles
-            </Link>
-            <Link 
-              to="/custom-trip" 
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActiveLink('/custom-trip') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                  : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              Custom Trip
-            </Link>
-            {isAuthenticated && (
+  return (
+    <>
+      {/* Main Navigation */}
+      <nav className={navClassName}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
+            {/* Left Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
               <Link 
-                to="/my-bookings" 
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  isActiveLink('/my-bookings') 
-                    ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500 shadow-sm' 
-                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
+                to="/" 
+                className={`font-semibold transition-colors ${
+                  isActive('/') ? textColor : `${textColor} ${hoverColor}`
                 }`}
               >
-                My Bookings
+                HOME
               </Link>
-            )}
-          </nav>
+              <Link 
+                to="/tours" 
+                className={`font-semibold transition-colors ${
+                  isActive('/tours') ? textColor : `${textColor} ${hoverColor}`
+                }`}
+              >
+                TOURS
+              </Link>
+              <Link 
+                to="/guides" 
+                className={`font-semibold transition-colors ${
+                  isActive('/guides') ? textColor : `${textColor} ${hoverColor}`
+                }`}
+              >
+                GUIDES
+              </Link>
+              <Link 
+                to="/hotels" 
+                className={`font-semibold transition-colors ${
+                  isActive('/hotels') ? textColor : `${textColor} ${hoverColor}`
+                }`}
+              >
+                HOTELS
+              </Link>
+            </div>
 
-          {/* Right Side - Auth & Actions */}
-          <div className="flex items-center space-x-2">
-            {isAuthenticated ? (
-              <>
-                {/* Notifications */}
-                <div className="relative">
-                  <button className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200 rounded-lg hover:bg-gray-100">
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
+            {/* Center Brand Name */}
+            <div className="text-center">
+              <span className={`font-bold text-3xl drop-shadow-lg ${textColor}`} style={{ fontFamily: 'Georgia, serif' }}>SERENDIB</span>
+              <span className="font-bold text-3xl ml-2 drop-shadow-lg text-[#E59B2C]" style={{ fontFamily: 'Georgia, serif' }}>GO</span>
+            </div>
 
-                {/* Profile Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors duration-200 rounded-lg hover:bg-gray-100 p-2"
-                  >
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="hidden xl:block text-sm font-medium">{user?.firstName}</span>
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {isProfileOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                      <Link
-                        to="/profile"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                        onClick={() => setIsProfileOpen(false)}
-                      >
-                        <User className="w-4 h-4 mr-3" />
-                        Profile
-                      </Link>
-                      <Link
-                        to={getDashboardLink()}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-                        onClick={() => setIsProfileOpen(false)}
-                      >
-                        <Settings className="w-4 h-4 mr-3" />
-                        Dashboard
-                      </Link>
-                      <hr className="my-1 border-gray-200" />
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-red-600 transition-colors duration-200"
-                      >
-                        <LogOut className="w-4 h-4 mr-3" />
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
+            {/* Right Navigation */}
+            <div className="hidden md:flex items-center space-x-8">
+              <Link 
+                to="/vehicles" 
+                className={`font-semibold transition-colors ${
+                  isActive('/vehicles') ? textColor : `${textColor} ${hoverColor}`
+                }`}
+              >
+                VEHICLES
+              </Link>
+              <Link 
+                to="/custom-trip" 
+                className={`font-semibold transition-colors ${
+                  isActive('/custom-trip') ? textColor : `${textColor} ${hoverColor}`
+                }`}
+              >
+                CUSTOM TRIP
+              </Link>
+              <Link 
+                to="/my-bookings" 
+                className={`font-semibold transition-colors ${
+                  isActive('/my-bookings') ? textColor : `${textColor} ${hoverColor}`
+                }`}
+              >
+                MY BOOKINGS
+              </Link>
               <div className="flex items-center space-x-2">
-                <Link
-                  to="/login"
-                  className="text-gray-700 hover:text-blue-600 transition-colors duration-200 font-medium px-3 py-2 rounded-lg hover:bg-blue-50"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
-
-            {/* Book Now CTA Button */}
-            <Link
-              to="/custom-trip"
-              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              Book Now
-            </Link>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200 rounded-lg hover:bg-gray-100"
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 py-4 bg-white">
-            <div className="space-y-2">
-              {/* Mobile Search */}
-              <form onSubmit={handleSearch} className="px-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search tours..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
-                  />
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                </div>
-              </form>
-
-              {/* Mobile Navigation Links */}
-              <div className="px-4 space-y-1">
-                <Link
-                  to="/"
-                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActiveLink('/') 
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Home
-                </Link>
-                <Link
-                  to="/tours"
-                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActiveLink('/tours') 
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Tours
-                </Link>
-                <Link
-                  to="/guides"
-                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActiveLink('/guides') 
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Guides
-                </Link>
-                <Link
-                  to="/hotels"
-                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActiveLink('/hotels') 
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Hotels
-                </Link>
-                <Link
-                  to="/vehicles"
-                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActiveLink('/vehicles') 
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Vehicles
-                </Link>
-                <Link
-                  to="/custom-trip"
-                  className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                    isActiveLink('/custom-trip') 
-                      ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Custom Trip
-                </Link>
-                {isAuthenticated && (
-                  <Link
-                    to="/my-bookings"
-                    className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                      isActiveLink('/my-bookings') 
-                        ? 'text-white bg-gradient-to-r from-blue-600 to-cyan-500' 
-                        : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-                    }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Bookings
-                  </Link>
-                )}
-              </div>
-
-              {/* Mobile Auth Links */}
-              {!isAuthenticated && (
-                <div className="px-4 pt-3 border-t border-gray-200 space-y-2">
-                  <Link
-                    to="/login"
-                    className="block px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="block px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg text-center font-medium hover:from-blue-700 hover:to-cyan-600 transition-all duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              )}
-
-              {/* Mobile Book Now Button */}
-              <div className="px-4 pt-3 border-t border-gray-200">
-                <Link
-                  to="/custom-trip"
-                  className="block px-3 py-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-lg text-center font-semibold hover:from-blue-700 hover:to-cyan-600 transition-all duration-200"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Book Now
-                </Link>
+                <User className={`w-5 h-5 ${textColor}`} />
+                <span className={`${textColor} font-semibold`}>John Doe</span>
               </div>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button 
+              className={`md:hidden p-2 ${textColor}`}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
-        )}
-      </div>
-    </header>
+
+          {/* Mobile Menu */}
+          {isMenuOpen && (
+            <div className="md:hidden bg-white/50 backdrop-blur-sm border-t border-gray-200 py-4 rounded-b-lg">
+              <div className="flex flex-col space-y-4">
+                <Link 
+                  to="/" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  HOME
+                </Link>
+                <Link 
+                  to="/tours" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/tours') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  TOURS
+                </Link>
+                <Link 
+                  to="/guides" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/guides') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  GUIDES
+                </Link>
+                <Link 
+                  to="/hotels" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/hotels') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  HOTELS
+                </Link>
+                <Link 
+                  to="/vehicles" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/vehicles') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  VEHICLES
+                </Link>
+                <Link 
+                  to="/custom-trip" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/custom-trip') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  CUSTOM TRIP
+                </Link>
+                <Link 
+                  to="/my-bookings" 
+                  className={`font-semibold transition-colors px-4 ${
+                    isActive('/my-bookings') ? textColor : `${textColor} ${hoverColor}`
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  MY BOOKINGS
+                </Link>
+                <div className="flex items-center space-x-2 px-4">
+                  <User className={`w-5 h-5 ${textColor}`} />
+                  <span className={`${textColor} font-semibold`}>John Doe</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
+    </>
   )
 }
 
