@@ -10,18 +10,17 @@ const paymentService = {
   // Create payment intent (for Stripe)
   createPaymentIntent: async (amount, currency = 'LKR', metadata = {}) => {
     const response = await api.post('/payments/create-intent', {
+      bookingId: metadata.bookingId,
       amount,
-      currency,
-      metadata
+      currency
     });
     return response.data;
   },
 
   // Confirm payment
-  confirmPayment: async (paymentIntentId, paymentMethodId) => {
+  confirmPayment: async (paymentIntentId) => {
     const response = await api.post('/payments/confirm', {
-      paymentIntentId,
-      paymentMethodId
+      paymentIntentId
     });
     return response.data;
   },

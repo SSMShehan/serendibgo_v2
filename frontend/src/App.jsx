@@ -30,6 +30,7 @@ import GuideEarnings from './pages/Guide/GuideEarnings'
 import GuideAnalytics from './pages/Guide/GuideAnalytics'
 import Hotels from './pages/Hotels'
 import Payment from './pages/Payment'
+import PaymentSuccess from './pages/PaymentSuccess'
 import Vehicles from './pages/Vehicles'
 import MyBookings from './pages/MyBookings'
 import Login from './pages/Login'
@@ -45,6 +46,7 @@ import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
 import AdminTours from './pages/admin/AdminTours'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminBookings from './pages/admin/AdminBookings'
+import AdminRefundManagement from './pages/admin/AdminRefundManagement'
 
 // Staff Pages
 import StaffDashboard from './pages/Staff/StaffDashboard'
@@ -274,6 +276,12 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
+                <Route path="payment-success" element={
+                  <ProtectedRoute>
+                    <PaymentSuccess />
+                  </ProtectedRoute>
+                } />
+                
                 {/* Custom Trip */}
                 <Route path="custom-trip" element={<CustomTrip />} />
                 
@@ -299,6 +307,12 @@ function App() {
                 <Route path="admin/bookings" element={
                   <ProtectedRoute allowedRoles={['admin', 'staff']}>
                     <AdminBookings />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="admin/refunds" element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminRefundManagement />
                   </ProtectedRoute>
                 } />
                 

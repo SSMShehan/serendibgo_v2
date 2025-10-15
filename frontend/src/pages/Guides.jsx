@@ -147,7 +147,28 @@ const Guides = () => {
       const response = await guideService.createGuestGuideBooking(bookingDataToSubmit)
       
       if (response.success) {
-        alert('Guide booking submitted successfully! We will contact you soon to confirm.')
+        // Calculate total amount (base price per person per day)
+        const basePricePerPersonPerDay = 50; // $50 per person per day
+        const daysDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+        const totalAmount = basePricePerPersonPerDay * parseInt(bookingData.groupSize) * daysDiff;
+        
+        // Navigate to payment page
+        navigate('/payment', {
+          state: {
+            bookingId: response.data._id,
+            bookingType: 'guide',
+            amount: totalAmount,
+            currency: 'USD',
+            guideName: selectedGuide.firstName + ' ' + selectedGuide.lastName,
+            guideEmail: selectedGuide.email,
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+            groupSize: bookingData.groupSize,
+            duration: bookingData.duration,
+            bookingReference: response.data.bookingReference
+          }
+        });
+        
         setShowBookingModal(false)
         setBookingData({
           date: '',

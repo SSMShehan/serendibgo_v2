@@ -148,9 +148,9 @@ const MyBookings = () => {
     }
   }
 
-  const handleConfirmCustomTrip = async (tripId) => {
+  const handleConfirmCustomTrip = async (trip) => {
     try {
-      const response = await fetch(`/api/custom-trips/${tripId}/confirm`, {
+      const response = await fetch(`/api/custom-trips/${trip.id}/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,15 +161,30 @@ const MyBookings = () => {
       const data = await response.json()
       
       if (data.success) {
-        // Refresh bookings to get updated data
-        await fetchBookings()
-        alert('Custom trip confirmed successfully!')
+        // Navigate to payment page
+        navigate('/payment', {
+          state: {
+            bookingId: data.data.booking._id,
+            bookingType: 'custom-trip',
+            amount: trip.totalAmount,
+            currency: 'LKR',
+            tripName: trip.destination,
+            tripDescription: `Custom trip to ${trip.destination}`,
+            startDate: trip.startDate,
+            endDate: trip.endDate,
+            groupSize: trip.groupSize,
+            guideName: trip.assignedGuide?.name || 'TBD',
+            interests: trip.interests?.join(', ') || '',
+            accommodation: trip.accommodation || '',
+            bookingReference: data.data.booking.bookingReference
+          }
+        })
       } else {
-        alert(data.message || 'Failed to confirm custom trip')
+        alert(data.message || 'Failed to create booking for custom trip')
       }
     } catch (error) {
-      console.error('Error confirming custom trip:', error)
-      alert('An error occurred while confirming the custom trip')
+      console.error('Error creating custom trip booking:', error)
+      alert('An error occurred while creating the booking')
     }
   }
 
@@ -494,7 +509,7 @@ const MyBookings = () => {
                           </button>
                           {trip.status === 'approved' && (
                             <button 
-                              onClick={() => handleConfirmCustomTrip(trip.id)}
+                              onClick={() => handleConfirmCustomTrip(trip)}
                               className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
@@ -1411,7 +1426,7 @@ const MyBookings = () => {
                   <button
                     onClick={() => {
                       closeDetailsModal()
-                      handleConfirmCustomTrip(selectedTrip.id)
+                      handleConfirmCustomTrip(selectedTrip)
                     }}
                     className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                   >

@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { X, Calendar, Users, DollarSign, Clock, User, MapPin, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 
 const BookingModal = ({ tour, isOpen, onClose, onBookingSuccess }) => {
   const { user, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
@@ -135,8 +137,25 @@ const BookingModal = ({ tour, isOpen, onClose, onBookingSuccess }) => {
       const response = await api.post('/bookings', bookingData)
       
       if (response.data.success) {
-        toast.success('Booking created successfully!')
-        onBookingSuccess?.(response.data.data)
+        const booking = response.data.data
+        const totalAmount = calculateTotal()
+        
+        // Navigate to payment page
+        navigate('/payment', {
+          state: {
+            bookingId: booking._id,
+            bookingType: 'tour',
+            amount: totalAmount,
+            currency: 'USD',
+            tourName: tour.title,
+            tourDescription: tour.description,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            groupSize: formData.groupSize,
+            bookingReference: booking.bookingReference
+          }
+        })
+        
         onClose()
         
         // Reset form

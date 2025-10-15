@@ -1,10 +1,22 @@
 const express = require('express');
 const router = express.Router();
+const { protect } = require('../middleware/auth');
+const {
+  createPaymentIntent,
+  confirmPayment,
+  handleWebhook,
+  getPaymentStatus,
+  processRefund
+} = require('../controllers/paymentController');
 
-// Placeholder routes - will be implemented in next phase
-router.get('/', (req, res) => {
-  res.json({ message: 'Payments route - Coming soon' });
-});
+// Webhook endpoint (no auth required - Stripe webhook)
+router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+
+// Protected routes
+router.post('/create-intent', protect, createPaymentIntent);
+router.post('/confirm', protect, confirmPayment);
+router.get('/status/:bookingId', protect, getPaymentStatus);
+router.post('/refund/:bookingId', protect, processRefund);
 
 module.exports = router;
 
