@@ -52,10 +52,6 @@ import AdminRefundManagement from './pages/admin/AdminRefundManagement'
 import StaffDashboard from './pages/Staff/StaffDashboard'
 import CustomTripApprovalForm from './pages/Staff/CustomTripApprovalForm'
 
-// Staff Pages
-import StaffDashboard from './pages/Staff/StaffDashboard'
-import CustomTripApprovalForm from './pages/Staff/CustomTripApprovalForm'
-
 // Hotel Pages
 import HotelSearch from './pages/hotels/HotelSearch'
 import HotelDetails from './pages/hotels/HotelDetails'
@@ -274,11 +270,17 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
-                <Route path="payment/:bookingId" element={
-                  <ProtectedRoute>
-                    <Payment />
-                  </ProtectedRoute>
-                } />
+                 <Route path="payment" element={
+                   <ProtectedRoute>
+                     <Payment />
+                   </ProtectedRoute>
+                 } />
+                 
+                 <Route path="payment/:bookingId" element={
+                   <ProtectedRoute>
+                     <Payment />
+                   </ProtectedRoute>
+                 } />
                 
                 <Route path="payment-success" element={
                   <ProtectedRoute>

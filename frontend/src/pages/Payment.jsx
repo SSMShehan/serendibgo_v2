@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { StripeProvider } from '../context/StripeContext'
 import PaymentForm from '../components/PaymentForm'
 import { toast } from 'react-hot-toast'
+import paymentService from '../services/payments/paymentService'
 import { 
   CreditCard, 
   CheckCircle, 
@@ -22,20 +23,96 @@ import {
 const Payment = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const [paymentData, setPaymentData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [clientSecret, setClientSecret] = useState(null)
+  const [initializing, setInitializing] = useState(true)
+  const [paymentIntentCreated, setPaymentIntentCreated] = useState(false)
   
   useEffect(() => {
     // Get booking data from navigation state
-    if (location.state) {
-      setPaymentData(location.state)
-      console.log('Payment page received booking data:', location.state)
-    } else {
+    if (location.state && !paymentIntentCreated) {
+      const initialPaymentData = {
+        ...location.state,
+        isGuestPayment: !isAuthenticated || !user
+      }
+      setPaymentData(initialPaymentData)
+      console.log('Payment page received booking data:', initialPaymentData)
+      createPaymentIntent(initialPaymentData)
+    } else if (!location.state) {
       toast.error('No booking data found')
       navigate('/guides')
     }
-  }, [location.state, navigate])
+  }, [location.state, navigate, paymentIntentCreated, isAuthenticated, user])
+
+  const createPaymentIntent = async (bookingData) => {
+    try {
+      setInitializing(true)
+      
+      // Debug authentication state
+      console.log('Auth Debug:', {
+        isAuthenticated,
+        user: user ? `${user.firstName} ${user.lastName}` : 'No user',
+        hasToken: !!localStorage.getItem('token')
+      })
+      
+      let response;
+      
+      if (isAuthenticated && user) {
+        try {
+          // Use authenticated payment endpoint
+          console.log('Using authenticated payment endpoint')
+          response = await paymentService.createPaymentIntent(
+            bookingData.amount,
+            bookingData.currency,
+            { bookingId: bookingData.bookingId }
+          )
+        } catch (authError) {
+          console.warn('Authenticated payment failed, falling back to guest payment:', authError.response?.status)
+          
+          // If authenticated payment fails (403, 401), fall back to guest payment
+          if (authError.response?.status === 403 || authError.response?.status === 401) {
+            console.log('Falling back to guest payment endpoint due to auth failure')
+            response = await paymentService.createGuestPaymentIntent(
+              bookingData.amount,
+              bookingData.currency,
+              { 
+                bookingId: bookingData.bookingId,
+                customerEmail: user?.email || bookingData.customerEmail || 'guest@example.com',
+                customerName: user ? `${user.firstName} ${user.lastName}` : bookingData.customerName || 'Guest User'
+              }
+            )
+            // Mark this as a guest payment for the PaymentForm
+            setPaymentData(prev => ({ ...prev, isGuestPayment: true }))
+          } else {
+            throw authError
+          }
+        }
+      } else {
+        // Use guest payment endpoint
+        console.log('Using guest payment endpoint')
+        response = await paymentService.createGuestPaymentIntent(
+          bookingData.amount,
+          bookingData.currency,
+          { 
+            bookingId: bookingData.bookingId,
+            customerEmail: bookingData.customerEmail || 'guest@example.com',
+            customerName: bookingData.customerName || 'Guest User'
+          }
+        )
+      }
+      
+      setClientSecret(response.data.clientSecret)
+      setPaymentIntentCreated(true)
+      console.log('Payment intent created:', response.data.clientSecret)
+    } catch (error) {
+      console.error('Error creating payment intent:', error)
+      toast.error('Failed to initialize payment. Please try again.')
+    } finally {
+      setInitializing(false)
+    }
+  }
 
   const handlePaymentSuccess = (paymentIntent) => {
     console.log('Payment successful:', paymentIntent)
@@ -53,7 +130,34 @@ const Payment = () => {
     toast.error('Payment failed. Please try again.')
   }
 
+  const handleRetryPayment = async () => {
+    if (paymentData) {
+      setPaymentIntentCreated(false)
+      setClientSecret(null)
+      await createPaymentIntent(paymentData)
+    }
+  }
+
+  const handleAuthFailure = () => {
+    console.log('Authentication failed, clearing token and redirecting to login')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    toast.error('Your session has expired. Please log in again.')
+    navigate('/login')
+  }
+
   if (!paymentData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Loading payment details...</h2>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading while checking authentication
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -250,18 +354,33 @@ const Payment = () => {
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <User className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="text-sm">{user?.firstName} {user?.lastName}</span>
+                    <span className="text-sm">
+                      {isAuthenticated && user 
+                        ? `${user.firstName} ${user.lastName}` 
+                        : paymentData.customerName || 'Guest User'
+                      }
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <Mail className="w-4 h-4 text-gray-400 mr-2" />
-                    <span className="text-sm">{user?.email}</span>
+                    <span className="text-sm">
+                      {isAuthenticated && user 
+                        ? user.email 
+                        : paymentData.customerEmail || 'guest@example.com'
+                      }
+                    </span>
                   </div>
-                  {user?.phone && (
+                  {(isAuthenticated && user?.phone) || paymentData.customerPhone ? (
                     <div className="flex items-center">
                       <Phone className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="text-sm">{user.phone}</span>
+                      <span className="text-sm">
+                        {isAuthenticated && user 
+                          ? user.phone 
+                          : paymentData.customerPhone
+                        }
+                      </span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
               
@@ -298,20 +417,58 @@ const Payment = () => {
             </div>
           </div>
 
-          {/* Payment Form */}
-          <StripeProvider>
-            <PaymentForm
-              bookingData={{
-                bookingId: paymentData.bookingId,
-                amount: Math.round(paymentData.amount * 1.15), // Include taxes
-                currency: paymentData.currency,
-                customerName: user?.firstName ? `${user.firstName} ${user.lastName}` : 'Customer',
-                customerEmail: user?.email || ''
-              }}
-              onPaymentSuccess={handlePaymentSuccess}
-              onPaymentError={handlePaymentError}
-            />
-          </StripeProvider>
+              {/* Payment Form */}
+              {initializing ? (
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Initializing payment...</span>
+                  </div>
+                </div>
+              ) : clientSecret ? (
+                <StripeProvider clientSecret={clientSecret}>
+                  <PaymentForm
+                    bookingData={{
+                      bookingId: paymentData.bookingId,
+                      amount: Math.round(paymentData.amount * 1.15), // Include taxes
+                    currency: paymentData.currency,
+                    customerName: isAuthenticated && user 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : paymentData.customerName || 'Guest User',
+                    customerEmail: isAuthenticated && user 
+                      ? user.email 
+                      : paymentData.customerEmail || 'guest@example.com',
+                    clientSecret: clientSecret,
+                    isGuestPayment: paymentData.isGuestPayment || !isAuthenticated || !user
+                    }}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentError={handlePaymentError}
+                    onRetry={handleRetryPayment}
+                  />
+                </StripeProvider>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="text-center text-red-600">
+                    <p>Failed to initialize payment. Please try again.</p>
+                    <div className="mt-4 space-x-2">
+                      <button 
+                        onClick={handleRetryPayment} 
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Retry Payment
+                      </button>
+                      {isAuthenticated && (
+                        <button 
+                          onClick={handleAuthFailure} 
+                          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                          Clear Session & Login
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
         </div>
       </div>
     </div>

@@ -3,11 +3,93 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const CustomTrip = require('../models/CustomTrip');
 const asyncHandler = require('express-async-handler');
+
+// Debug Stripe key
+console.log('Stripe Secret Key:', process.env.STRIPE_SECRET_KEY ? 'SET' : 'NOT SET');
 const { 
   sendPaymentConfirmationEmail, 
   sendPaymentFailureEmail, 
   sendRefundConfirmationEmail 
 } = require('../services/paymentEmailService');
+
+// @desc    Create payment intent for guest booking
+// @route   POST /api/payments/create-guest-intent
+// @access  Public
+const createGuestPaymentIntent = asyncHandler(async (req, res) => {
+  try {
+    const { bookingId, amount, currency = 'LKR', customerEmail, customerName } = req.body;
+
+    // Validate required fields
+    if (!bookingId || !amount || !customerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking ID, amount, and customer email are required'
+      });
+    }
+
+    // Find the booking
+    const booking = await Booking.findById(bookingId).populate('guide');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Check if booking is already paid
+    if (booking.paymentStatus === 'paid' || booking.paymentStatus === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking is already paid'
+      });
+    }
+
+    // Convert amount to cents (Stripe expects amounts in smallest currency unit)
+    const amountInCents = Math.round(amount * 100);
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: currency.toLowerCase(),
+      metadata: {
+        bookingId: bookingId,
+        customerEmail: customerEmail,
+        customerName: customerName || 'Guest',
+        bookingReference: booking.bookingReference
+      },
+      description: `Payment for booking ${booking.bookingReference}`,
+      receipt_email: customerEmail
+    });
+
+    // Update booking with payment intent ID
+    booking.paymentIntentId = paymentIntent.id;
+    await booking.save();
+
+    console.log('✅ Guest payment intent created and stored:', {
+      paymentIntentId: paymentIntent.id,
+      bookingId: booking._id,
+      bookingReference: booking.bookingReference
+    });
+
+    res.json({
+      success: true,
+      data: {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: amount,
+        currency: currency
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating guest payment intent:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create payment intent',
+      error: error.message
+    });
+  }
+});
 
 // @desc    Create payment intent for booking
 // @route   POST /api/payments/create-intent
@@ -96,6 +178,8 @@ const confirmPayment = asyncHandler(async (req, res) => {
   try {
     const { paymentIntentId } = req.body;
 
+    console.log('🔍 Confirming payment:', { paymentIntentId });
+
     if (!paymentIntentId) {
       return res.status(400).json({
         success: false,
@@ -105,6 +189,7 @@ const confirmPayment = asyncHandler(async (req, res) => {
 
     // Retrieve payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log('💳 Stripe payment intent status:', paymentIntent.status);
 
     if (paymentIntent.status !== 'succeeded') {
       return res.status(400).json({
@@ -115,6 +200,8 @@ const confirmPayment = asyncHandler(async (req, res) => {
 
     // Find booking by payment intent ID
     const booking = await Booking.findOne({ paymentIntentId }).populate('user guide');
+    console.log('📋 Found booking:', booking ? booking._id : 'NOT FOUND');
+    
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -128,6 +215,13 @@ const confirmPayment = asyncHandler(async (req, res) => {
     booking.paymentDate = new Date();
     booking.status = 'confirmed';
     await booking.save();
+
+    console.log('✅ Booking updated successfully:', {
+      bookingId: booking._id,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      amountPaid: booking.amountPaid
+    });
 
     // If this is a custom trip booking, update the custom trip status
     if (booking.customTrip) {
@@ -168,6 +262,101 @@ const confirmPayment = asyncHandler(async (req, res) => {
 
   } catch (error) {
     console.error('Error confirming payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to confirm payment',
+      error: error.message
+    });
+  }
+});
+
+// @desc    Confirm guest payment and update booking status
+// @route   POST /api/payments/confirm-guest
+// @access  Public
+const confirmGuestPayment = asyncHandler(async (req, res) => {
+  try {
+    const { paymentIntentId } = req.body;
+
+    console.log('🔍 Confirming guest payment:', { paymentIntentId });
+
+    if (!paymentIntentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment intent ID is required'
+      });
+    }
+
+    // Retrieve payment intent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log('💳 Stripe guest payment intent status:', paymentIntent.status);
+
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment not successful'
+      });
+    }
+
+    // Find booking by payment intent ID
+    const booking = await Booking.findOne({ paymentIntentId }).populate('user guide');
+    console.log('📋 Found guest booking:', booking ? booking._id : 'NOT FOUND');
+    
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Update booking with payment details
+    booking.paymentStatus = 'paid';
+    booking.amountPaid = paymentIntent.amount / 100; // Convert from cents
+    booking.paymentDate = new Date();
+    booking.status = 'confirmed';
+    await booking.save();
+
+    console.log('✅ Guest booking updated successfully:', {
+      bookingId: booking._id,
+      status: booking.status,
+      paymentStatus: booking.paymentStatus,
+      amountPaid: booking.amountPaid
+    });
+
+    // If this is a custom trip booking, update the custom trip status
+    if (booking.customTrip) {
+      try {
+        const customTrip = await CustomTrip.findById(booking.customTrip);
+        if (customTrip) {
+          customTrip.status = 'confirmed';
+          customTrip.paymentStatus = 'paid';
+          await customTrip.save();
+          console.log('Custom trip status updated:', customTrip._id);
+        }
+      } catch (customTripError) {
+        console.error('Failed to update custom trip status:', customTripError);
+      }
+    }
+
+    // Send payment confirmation email
+    try {
+      await sendPaymentConfirmationEmail(booking, booking.user);
+    } catch (emailError) {
+      console.error('Failed to send payment confirmation email:', emailError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment confirmed successfully',
+      data: {
+        bookingId: booking._id,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        amountPaid: booking.amountPaid
+      }
+    });
+
+  } catch (error) {
+    console.error('Error confirming guest payment:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to confirm payment',
@@ -373,7 +562,9 @@ const processRefund = asyncHandler(async (req, res) => {
 
 module.exports = {
   createPaymentIntent,
+  createGuestPaymentIntent,
   confirmPayment,
+  confirmGuestPayment,
   handleWebhook,
   getPaymentStatus,
   processRefund

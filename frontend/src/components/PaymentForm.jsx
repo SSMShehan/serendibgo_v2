@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import { CreditCard, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import paymentService from '../services/payments/paymentService';
 
-const PaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError }) => {
+const PaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError, onRetry }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,7 @@ const PaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || !bookingData.clientSecret) {
       return;
     }
 
@@ -21,16 +21,12 @@ const PaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError }) => {
     setError(null);
 
     try {
-      // Create payment intent
-      const { data } = await paymentService.createPaymentIntent(
-        bookingData.amount,
-        bookingData.currency,
-        { bookingId: bookingData.bookingId }
-      );
-
-      // Confirm payment with Stripe
+      // Check if payment intent is still in a valid state
+      console.log('Attempting to confirm payment with clientSecret:', bookingData.clientSecret);
+      
+      // Confirm payment with Stripe using the existing clientSecret
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        data.clientSecret,
+        bookingData.clientSecret,
         {
           payment_method: {
             card: elements.getElement(CardElement),
@@ -44,15 +40,51 @@ const PaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError }) => {
 
       if (stripeError) {
         console.error('Stripe error:', stripeError);
-        setError(stripeError.message);
-        toast.error(`Payment failed: ${stripeError.message}`);
+        
+        // If payment intent is in unexpected state, suggest retry
+        if (stripeError.code === 'payment_intent_unexpected_state') {
+          setError('Payment session expired. Please refresh the page and try again.');
+          toast.error('Payment session expired. Please refresh the page and try again.');
+        } else {
+          setError(stripeError.message);
+          toast.error(`Payment failed: ${stripeError.message}`);
+        }
         onPaymentError?.(stripeError);
       } else if (paymentIntent.status === 'succeeded') {
         // Confirm payment on backend
-        await paymentService.confirmPayment(paymentIntent.id);
-        
-        toast.success('Payment successful!');
-        onPaymentSuccess?.(paymentIntent);
+        try {
+          console.log('Payment succeeded, confirming payment...', {
+            paymentIntentId: paymentIntent.id,
+            isGuestPayment: bookingData.isGuestPayment,
+            bookingId: bookingData.bookingId
+          });
+          
+          // Use the isGuestPayment flag to determine which endpoint to use
+          if (bookingData.isGuestPayment) {
+            console.log('Confirming guest payment:', paymentIntent.id);
+            await paymentService.confirmGuestPayment(paymentIntent.id);
+          } else {
+            console.log('Confirming authenticated payment:', paymentIntent.id);
+            await paymentService.confirmPayment(paymentIntent.id);
+          }
+          
+          console.log('Payment confirmation successful!');
+          toast.success('Payment successful!');
+          onPaymentSuccess?.(paymentIntent);
+        } catch (confirmError) {
+          console.error('Payment confirmation error:', confirmError);
+          console.error('Confirmation error details:', {
+            status: confirmError.response?.status,
+            data: confirmError.response?.data,
+            message: confirmError.message
+          });
+          toast.error('Payment succeeded but confirmation failed. Please contact support.');
+          onPaymentError?.(confirmError);
+        }
+      } else {
+        setError('Payment was not successful');
+        toast.error('Payment was not successful');
+        onPaymentError?.(new Error('Payment not succeeded'));
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -100,15 +132,25 @@ const PaymentForm = ({ bookingData, onPaymentSuccess, onPaymentError }) => {
         {error && (
           <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-md">
             <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-            <span className="text-red-700 text-sm">{error}</span>
+            <div className="flex-1">
+              <span className="text-red-700 text-sm">{error}</span>
+              {error.includes('Payment session expired') && onRetry && (
+                <button 
+                  onClick={onRetry}
+                  className="ml-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                >
+                  Create New Payment Session
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         <button
           type="submit"
-          disabled={!stripe || loading}
+          disabled={!stripe || loading || !bookingData.clientSecret}
           className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center ${
-            loading || !stripe
+            loading || !stripe || !bookingData.clientSecret
               ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}

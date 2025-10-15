@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon, Bed, AlertCircle, MessageSquare } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { bookingAPI } from '../services/hotels/hotelService'
@@ -9,6 +9,8 @@ import ReviewForm from '../components/reviews/ReviewForm'
 
 const MyBookings = () => {
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
   const [customTrips, setCustomTrips] = useState([])
   const [vehicleBookings, setVehicleBookings] = useState([])
@@ -26,6 +28,16 @@ const MyBookings = () => {
       fetchBookings()
     }
   }, [user])
+
+  // Handle navigation state from payment page
+  useEffect(() => {
+    const locationState = location.state
+    if (locationState?.message) {
+      toast.success(locationState.message)
+      // Clear the state to prevent showing the message again
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.state, navigate, location.pathname])
 
   const fetchBookings = async () => {
     try {
@@ -70,9 +82,9 @@ const MyBookings = () => {
             const customTrips = customData.data.bookings.filter(booking => booking.type === 'custom')
             setCustomTrips(customTrips)
             
-            // Filter guide bookings (bookings with guide field but no tour/customTrip)
+            // Filter guide bookings (bookings with type 'guide')
             const guideBookings = customData.data.bookings.filter(booking => 
-              booking.guide && !booking.tour && !booking.customTrip
+              booking.type === 'guide'
             )
             setGuideBookings(guideBookings)
             console.log('Guide bookings:', guideBookings)
@@ -282,6 +294,7 @@ const MyBookings = () => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
+                key="bookings-tab"
                 onClick={() => setActiveTab('bookings')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'bookings'
@@ -293,6 +306,7 @@ const MyBookings = () => {
                 Regular Tours ({bookings.length})
               </button>
               <button
+                key="custom-tab"
                 onClick={() => setActiveTab('custom')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'custom'
@@ -304,6 +318,7 @@ const MyBookings = () => {
                 Custom Trips ({customTrips.length})
               </button>
               <button
+                key="vehicles-tab"
                 onClick={() => setActiveTab('vehicles')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'vehicles'
@@ -315,6 +330,7 @@ const MyBookings = () => {
                 Vehicle Rentals ({vehicleBookings.length})
               </button>
               <button
+                key="guides-tab"
                 onClick={() => setActiveTab('guides')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'guides'
