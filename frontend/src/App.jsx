@@ -5,6 +5,7 @@ import { TourProvider } from './context/TourContext'
 import { HotelProvider } from './context/hotels/HotelContext'
 import { VehicleProvider } from './context/vehicles/VehicleContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { ChatbotProvider } from './context/ChatbotContext'
 
 // Layout Components
 import Layout from './components/layout/Layout'
@@ -98,7 +99,8 @@ function App() {
         <HotelProvider>
           <VehicleProvider>
             <NotificationProvider>
-              <div className="min-h-screen bg-base-100" data-theme="serendibgo">
+              <ChatbotProvider>
+                <div className="min-h-screen bg-base-100" data-theme="serendibgo">
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
@@ -471,6 +473,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
+            </ChatbotProvider>
             </NotificationProvider>
           </VehicleProvider>
         </HotelProvider>

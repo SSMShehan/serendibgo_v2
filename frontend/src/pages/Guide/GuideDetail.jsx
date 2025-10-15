@@ -108,20 +108,33 @@ const GuideDetail = () => {
 
   const fetchUserBookings = async () => {
     try {
-      // This would typically fetch user's completed bookings with this guide
-      // For now, we'll use mock data or implement based on your booking service
-      const mockBookings = [
-        {
-          _id: 'booking1',
-          tour: { _id: 'tour1', title: 'Sigiriya Rock Fortress Tour' },
-          status: 'completed',
-          startDate: '2024-01-15',
-          endDate: '2024-01-15'
+      // Fetch user's bookings with this specific guide
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('/api/bookings/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      ];
-      setUserBookings(mockBookings);
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Filter bookings for this specific guide that are completed
+          const guideBookings = data.data.bookings.filter(booking => 
+            booking.guide && 
+            (booking.guide._id === id || booking.guide === id) &&
+            booking.status === 'completed'
+          );
+          setUserBookings(guideBookings);
+        }
+      }
     } catch (err) {
       console.error('Error fetching user bookings:', err);
+      // Fallback to empty array if fetch fails
+      setUserBookings([]);
     }
   }
 
@@ -142,7 +155,7 @@ const GuideDetail = () => {
     // Check if user has completed bookings with this guide
     return userBookings.some(booking => 
       booking.status === 'completed' && 
-      booking.guide === id
+      (booking.guide === id || booking.guide?._id === id)
     );
   }
 
@@ -588,8 +601,8 @@ const GuideDetail = () => {
                 <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 my-4">
                   <ReviewForm
                     guideId={guide.id}
-                    tourId={userBookings[0]?.tour?._id || 'tour1'} // Use first available tour
-                    bookingId={userBookings[0]?._id || 'booking1'} // Use first available booking
+                    tourId={userBookings[0]?.tour?._id || 'guide-service'} // Use guide service as tour for direct guide bookings
+                    bookingId={userBookings[0]?._id} // Use first available booking
                     onReviewSubmitted={handleReviewSubmitted}
                     onCancel={() => setShowReviewForm(false)}
                   />
