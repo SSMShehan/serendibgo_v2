@@ -181,6 +181,16 @@ const MyBookings = () => {
     setShowDetailsModal(true)
   }
 
+  const handleViewGuideDetails = (booking) => {
+    console.log('=== GUIDE BOOKING DETAILS DEBUG ===')
+    console.log('Guide booking data:', booking)
+    console.log('Guide details:', booking.guide)
+    console.log('Booking dates:', booking.startDate, booking.endDate)
+    console.log('Payment status:', booking.paymentStatus)
+    setSelectedTrip(booking)
+    setShowDetailsModal(true)
+  }
+
   const closeDetailsModal = () => {
     setShowDetailsModal(false)
     setSelectedTrip(null)
@@ -557,7 +567,11 @@ const MyBookings = () => {
                           </div>
                         </div>
                         <div className="mt-4 flex justify-end space-x-3">
-                          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                          <button 
+                            onClick={() => handleViewVehicleDetails(booking)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </button>
                           {booking.bookingStatus === 'pending' && (
@@ -651,7 +665,11 @@ const MyBookings = () => {
                           </div>
                         </div>
                         <div className="mt-4 flex justify-end space-x-3">
-                          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                          <button 
+                            onClick={() => handleViewGuideDetails(booking)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </button>
                           {booking.status === 'pending' && (
@@ -684,9 +702,22 @@ const MyBookings = () => {
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <Sparkles className="h-6 w-6 text-primary mr-2" />
+                  {selectedTrip.vehicle ? (
+                    <Car className="h-6 w-6 text-primary mr-2" />
+                  ) : selectedTrip.guide ? (
+                    <User className="h-6 w-6 text-primary mr-2" />
+                  ) : (
+                    <Sparkles className="h-6 w-6 text-primary mr-2" />
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {selectedTrip.status === 'pending' ? 'Trip Request Details' : 'Approved Trip Details'}
+                    {selectedTrip.vehicle 
+                      ? 'Vehicle Booking Details' 
+                      : selectedTrip.guide
+                      ? 'Guide Booking Details'
+                      : selectedTrip.status === 'pending' 
+                        ? 'Trip Request Details' 
+                        : 'Approved Trip Details'
+                    }
                   </h3>
                 </div>
                 <button
@@ -699,15 +730,332 @@ const MyBookings = () => {
 
               {/* Status Badge */}
               <div className="mb-4">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedTrip.status)}`}>
-                  {getStatusIcon(selectedTrip.status)}
-                  <span className="ml-2">{selectedTrip.status.charAt(0).toUpperCase() + selectedTrip.status.slice(1)}</span>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedTrip.bookingStatus || selectedTrip.status)}`}>
+                  {getStatusIcon(selectedTrip.bookingStatus || selectedTrip.status)}
+                  <span className="ml-2">{(selectedTrip.bookingStatus || selectedTrip.status).charAt(0).toUpperCase() + (selectedTrip.bookingStatus || selectedTrip.status).slice(1)}</span>
                 </span>
               </div>
 
               {/* Trip Details Content */}
               <div className="space-y-4">
-                {selectedTrip.status === 'pending' ? (
+                {selectedTrip.vehicle ? (
+                  /* Vehicle Booking Details */
+                  <div className="space-y-6">
+                    {/* Vehicle Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Vehicle Information</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <Car className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Vehicle:</strong> {selectedTrip.vehicle?.name || `${selectedTrip.vehicle?.make} ${selectedTrip.vehicle?.model}`}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Capacity:</strong> {selectedTrip.vehicle?.capacity?.passengers || 'N/A'} passengers</span>
+                          </div>
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Type:</strong> {selectedTrip.vehicle?.vehicleType || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Fuel Type:</strong> {selectedTrip.vehicle?.fuelType || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Booking Information</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Start Date:</strong> {formatDate(selectedTrip.tripDetails?.startDate)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>End Date:</strong> {formatDate(selectedTrip.tripDetails?.endDate)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Pickup Location:</strong> {selectedTrip.tripDetails?.pickupLocation?.city || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Passengers:</strong> {(selectedTrip.passengers?.adults || 0) + (selectedTrip.passengers?.children || 0) + (selectedTrip.passengers?.infants || 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing Information */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Pricing Details</h4>
+                      <div className="space-y-2 text-sm text-blue-800">
+                        <div className="flex justify-between">
+                          <span><strong>Daily Rate:</strong></span>
+                          <span>{selectedTrip.pricing?.currency || 'LKR'} {selectedTrip.pricing?.dailyRate?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span><strong>Duration:</strong></span>
+                          <span>{selectedTrip.pricing?.duration || 'N/A'} days</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span><strong>Subtotal:</strong></span>
+                          <span>{selectedTrip.pricing?.currency || 'LKR'} {selectedTrip.pricing?.subtotal?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        {selectedTrip.pricing?.additionalServices && selectedTrip.pricing.additionalServices.length > 0 && (
+                          <div>
+                            <strong>Additional Services:</strong>
+                            <ul className="ml-4 mt-1">
+                              {selectedTrip.pricing.additionalServices.map((service, idx) => (
+                                <li key={idx} className="flex justify-between">
+                                  <span>{service.name}</span>
+                                  <span>{selectedTrip.pricing?.currency || 'LKR'} {service.price?.toLocaleString()}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t border-blue-300 pt-2 font-semibold">
+                          <span><strong>Total Price:</strong></span>
+                          <span>{selectedTrip.pricing?.currency || 'LKR'} {selectedTrip.pricing?.totalPrice?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional Information */}
+                    {(selectedTrip.tripDetails?.specialRequests || selectedTrip.tripDetails?.notes) && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Additional Information</h4>
+                        <div className="space-y-2 text-sm">
+                          {selectedTrip.tripDetails?.specialRequests && (
+                            <div><strong>Special Requests:</strong> {selectedTrip.tripDetails.specialRequests}</div>
+                          )}
+                          {selectedTrip.tripDetails?.notes && (
+                            <div><strong>Notes:</strong> {selectedTrip.tripDetails.notes}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Booking Reference */}
+                    {selectedTrip.bookingReference && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <CreditCard className="h-5 w-5 text-gray-600 mr-2" />
+                          <div>
+                            <h4 className="font-semibold text-gray-900">Booking Reference</h4>
+                            <p className="text-sm text-gray-600 mt-1">{selectedTrip.bookingReference}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Status Information */}
+                    <div className={`border rounded-lg p-4 ${
+                      selectedTrip.bookingStatus === 'confirmed' 
+                        ? 'bg-green-50 border-green-200' 
+                        : selectedTrip.bookingStatus === 'pending'
+                        ? 'bg-yellow-50 border-yellow-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex">
+                        {selectedTrip.bookingStatus === 'confirmed' ? (
+                          <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+                        ) : selectedTrip.bookingStatus === 'pending' ? (
+                          <Clock className="h-5 w-5 text-yellow-400 mr-2" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-gray-400 mr-2" />
+                        )}
+                        <div>
+                          <h4 className={`text-sm font-medium ${
+                            selectedTrip.bookingStatus === 'confirmed' 
+                              ? 'text-green-800' 
+                              : selectedTrip.bookingStatus === 'pending'
+                              ? 'text-yellow-800'
+                              : 'text-gray-800'
+                          }`}>
+                            {selectedTrip.bookingStatus === 'confirmed' 
+                              ? 'Booking Confirmed' 
+                              : selectedTrip.bookingStatus === 'pending'
+                              ? 'Booking Pending'
+                              : 'Booking Status'
+                            }
+                          </h4>
+                          <p className={`text-sm mt-1 ${
+                            selectedTrip.bookingStatus === 'confirmed' 
+                              ? 'text-green-700' 
+                              : selectedTrip.bookingStatus === 'pending'
+                              ? 'text-yellow-700'
+                              : 'text-gray-700'
+                          }`}>
+                            {selectedTrip.bookingStatus === 'confirmed' 
+                              ? 'Your vehicle booking has been confirmed. You will receive a confirmation email shortly.' 
+                              : selectedTrip.bookingStatus === 'pending'
+                              ? 'Your vehicle booking is being processed. We will contact you within 24 hours.'
+                              : 'Please contact support for more information about your booking.'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedTrip.guide ? (
+                  /* Guide Booking Details */
+                  <div className="space-y-6">
+                    {/* Guide Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Guide Information</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Name:</strong> {selectedTrip.guide?.firstName} {selectedTrip.guide?.lastName}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Phone:</strong> {selectedTrip.guide?.phone || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Email:</strong> {selectedTrip.guide?.email || 'N/A'}</span>
+                          </div>
+                          {selectedTrip.guide?.specializations && selectedTrip.guide.specializations.length > 0 && (
+                            <div className="flex items-center">
+                              <Star className="h-4 w-4 mr-2 text-gray-500" />
+                              <span><strong>Specializations:</strong> {selectedTrip.guide.specializations.join(', ')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Booking Information</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Start Date:</strong> {formatDate(selectedTrip.startDate)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>End Date:</strong> {formatDate(selectedTrip.endDate)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Duration:</strong> {selectedTrip.duration?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 mr-2 text-gray-500" />
+                            <span><strong>Group Size:</strong> {selectedTrip.groupSize} {selectedTrip.groupSize === 1 ? 'person' : 'people'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing Information */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2">Pricing Details</h4>
+                      <div className="space-y-2 text-sm text-blue-800">
+                        <div className="flex justify-between">
+                          <span><strong>Total Amount:</strong></span>
+                          <span>LKR {selectedTrip.totalAmount?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span><strong>Payment Status:</strong></span>
+                          <span className={`font-medium ${
+                            selectedTrip.paymentStatus === 'paid' ? 'text-green-600' : 
+                            selectedTrip.paymentStatus === 'pending' ? 'text-yellow-600' : 
+                            'text-red-600'
+                          }`}>
+                            {selectedTrip.paymentStatus?.charAt(0).toUpperCase() + selectedTrip.paymentStatus?.slice(1) || 'N/A'}
+                          </span>
+                        </div>
+                        {selectedTrip.paymentStatus === 'pending' && (
+                          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
+                            <p className="text-xs text-yellow-800">
+                              <strong>Note:</strong> Payment is pending. Complete your payment to confirm your guide booking.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Special Requests */}
+                    {selectedTrip.specialRequests && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Special Requests</h4>
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                          <p className="text-sm text-gray-700">{selectedTrip.specialRequests}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Guide Contact Information */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <Phone className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-green-900">Contact Your Guide</h4>
+                          <div className="mt-2 space-y-1 text-sm text-green-800">
+                            <p><strong>Phone:</strong> {selectedTrip.guide?.phone || 'Contact information not available'}</p>
+                            <p><strong>Email:</strong> {selectedTrip.guide?.email || 'Contact information not available'}</p>
+                            {selectedTrip.guide?.languages && selectedTrip.guide.languages.length > 0 && (
+                              <p><strong>Languages:</strong> {selectedTrip.guide.languages.join(', ')}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Information */}
+                    <div className={`border rounded-lg p-4 ${
+                      selectedTrip.status === 'confirmed' 
+                        ? 'bg-green-50 border-green-200' 
+                        : selectedTrip.status === 'pending'
+                        ? 'bg-yellow-50 border-yellow-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex">
+                        {selectedTrip.status === 'confirmed' ? (
+                          <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+                        ) : selectedTrip.status === 'pending' ? (
+                          <Clock className="h-5 w-5 text-yellow-400 mr-2" />
+                        ) : (
+                          <AlertCircle className="h-5 w-5 text-gray-400 mr-2" />
+                        )}
+                        <div>
+                          <h4 className={`text-sm font-medium ${
+                            selectedTrip.status === 'confirmed' 
+                              ? 'text-green-800' 
+                              : selectedTrip.status === 'pending'
+                              ? 'text-yellow-800'
+                              : 'text-gray-800'
+                          }`}>
+                            {selectedTrip.status === 'confirmed' 
+                              ? 'Booking Confirmed' 
+                              : selectedTrip.status === 'pending'
+                              ? 'Booking Pending'
+                              : 'Booking Status'
+                            }
+                          </h4>
+                          <p className={`text-sm mt-1 ${
+                            selectedTrip.status === 'confirmed' 
+                              ? 'text-green-700' 
+                              : selectedTrip.status === 'pending'
+                              ? 'text-yellow-700'
+                              : 'text-gray-700'
+                          }`}>
+                            {selectedTrip.status === 'confirmed' 
+                              ? 'Your guide booking has been confirmed. Your guide will contact you soon.' 
+                              : selectedTrip.status === 'pending'
+                              ? 'Your guide booking is being processed. We will contact you within 24 hours.'
+                              : 'Please contact support for more information about your booking.'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedTrip.status === 'pending' ? (
                   /* Pending Trip - Show Customer Request Details */
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
