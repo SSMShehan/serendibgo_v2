@@ -151,3 +151,147 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Chatbot Button - Force Visibility with Gentle Pulsing */
+.chatbot-button {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 9999 !important;
+  animation: chatbotPulse 2s ease-in-out infinite !important;
+  background-color: #3b82f6 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.6) !important;
+  width: 56px !important;
+  height: 56px !important;
+}
+
+.chatbot-button:hover {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scale(1.1) !important;
+  animation: none !important;
+}
+
+/* Blinking/Pulsing Animation */
+@keyframes chatbotPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+/* Alternative blinking effect */
+@keyframes chatbotBlink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.7;
+  }
+}
+
+/* Super visible blinking effect */
+@keyframes chatbotSuperBlink {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    background-color: #3b82f6;
+  }
+  25% {
+    opacity: 0.8;
+    transform: scale(1.1);
+    background-color: #ef4444;
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+    background-color: #3b82f6;
+  }
+  75% {
+    opacity: 0.8;
+    transform: scale(1.1);
+    background-color: #10b981;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    background-color: #3b82f6;
+  }
+}
+
+/* Emergency visibility class */
+.chatbot-emergency {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 99999 !important;
+  animation: chatbotSuperBlink 1.5s ease-in-out infinite !important;
+  background-color: #3b82f6 !important;
+  border: 4px solid #ffffff !important;
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.8) !important;
+  width: 80px !important;
+  height: 80px !important;
+}
+
+/* Chatbot Header - Force Visibility */
+.chatbot-header {
+  background-color: #2563eb !important;
+  color: white !important;
+  padding: 16px !important;
+  border-radius: 12px 12px 0 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 60px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.chatbot-header * {
+  color: white !important;
+}
+
+.chatbot-header button {
+  color: white !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.chatbot-header button:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+/* User Message Visibility */
+.user-message {
+  background-color: #2563eb !important;
+  color: white !important;
+  border-color: #1d4ed8 !important;
+}
+
+.user-message * {
+  color: white !important;
+}
+
+.user-message .text-white {
+  color: white !important;
+}
+
+.user-message .text-white\/80 {
+  color: rgba(255, 255, 255, 0.8) !important;
+}

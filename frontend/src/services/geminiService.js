@@ -91,6 +91,39 @@ Format responses:
       contextPrompt += ` User not logged in.`
     }
 
+    // Add real site data if available
+    if (userContext.siteData) {
+      const { tours, hotels, vehicles, totalTours, totalHotels, totalVehicles } = userContext.siteData
+      
+      contextPrompt += `\n\n## Current Site Data:\n`
+      contextPrompt += `- Available Tours: ${totalTours}\n`
+      contextPrompt += `- Available Hotels: ${totalHotels}\n`
+      contextPrompt += `- Available Vehicles: ${totalVehicles}\n`
+      
+      if (tours.length > 0) {
+        contextPrompt += `\nFeatured Tours:\n`
+        tours.forEach(tour => {
+          contextPrompt += `- ${tour.title}: ${tour.description?.substring(0, 100)}... (Price: ${tour.price || 'Contact for pricing'})\n`
+        })
+      }
+      
+      if (hotels.length > 0) {
+        contextPrompt += `\nFeatured Hotels:\n`
+        hotels.forEach(hotel => {
+          contextPrompt += `- ${hotel.name}: ${hotel.description?.substring(0, 100)}... (Location: ${hotel.location?.city || 'Sri Lanka'})\n`
+        })
+      }
+      
+      if (vehicles.length > 0) {
+        contextPrompt += `\nFeatured Vehicles:\n`
+        vehicles.forEach(vehicle => {
+          contextPrompt += `- ${vehicle.name || `${vehicle.make} ${vehicle.model}`}: ${vehicle.description?.substring(0, 100)}... (Type: ${vehicle.vehicleType})\n`
+        })
+      }
+      
+      contextPrompt += `\nYou can recommend specific tours, hotels, and vehicles from this data. Always mention that users can book through the website.`
+    }
+
     // Format conversation history for Gemini (exclude initial bot message, limit to last 3 messages)
     const recentHistory = conversationHistory
       .filter(msg => msg.id !== 1) // Exclude the initial welcome message
