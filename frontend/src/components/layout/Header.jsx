@@ -1,14 +1,97 @@
-import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import React, { useState, useEffect, useRef } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   Menu,
   X,
-  User
+  User,
+  LogOut,
+  ChevronDown,
+  Settings,
+  Headphones,
+  Bell,
+  Eye,
+  LogIn
 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const Header = () => {
   const location = useLocation()
+  const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
+  const { user, logout, isAuthenticated } = useAuth()
+  const dropdownRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/')
+      setIsProfileDropdownOpen(false)
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
+
+  const handleProfileSettings = () => {
+    // Navigate based on user role
+    if (user?.role === 'guide') {
+      navigate('/guide/settings')
+    } else if (user?.role === 'admin') {
+      navigate('/admin/settings')
+    } else if (user?.role === 'staff') {
+      navigate('/staff')
+    } else {
+      navigate('/profile')
+    }
+    setIsProfileDropdownOpen(false)
+  }
+
+  const handleSupport = () => {
+    // Navigate based on user role
+    if (user?.role === 'guide') {
+      navigate('/guide-support')
+    } else {
+      // For regular users, navigate to a general support page or contact page
+      navigate('/contact')
+    }
+    setIsProfileDropdownOpen(false)
+  }
+
+  const handleNotifications = () => {
+    // Navigate based on user role
+    if (user?.role === 'guide') {
+      navigate('/guide-notifications')
+    } else {
+      // For regular users, navigate to a general notifications page
+      navigate('/notifications')
+    }
+    setIsProfileDropdownOpen(false)
+  }
+
+  const handleViewPublicProfile = () => {
+    // Navigate to public profile view
+    if (user?.role === 'guide') {
+      navigate(`/guides/${user.id}`)
+    } else {
+      // For regular users, show their public profile or a placeholder
+      navigate('/profile')
+    }
+    setIsProfileDropdownOpen(false)
+  }
 
   const isActive = (path) => {
     return location.pathname === path
@@ -94,10 +177,97 @@ const Header = () => {
               >
                 MY BOOKINGS
               </Link>
-              <div className="flex items-center space-x-2">
-                <User className={`w-5 h-5 ${textColor}`} />
-                <span className={`${textColor} font-semibold`}>John Doe</span>
-              </div>
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4" ref={dropdownRef}>
+                  <div className="flex items-center space-x-2">
+                    <User className={`w-5 h-5 ${textColor}`} />
+                    <span className={`${textColor} font-semibold`}>
+                      {user?.name || user?.firstName || 'User'}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                      className={`flex items-center space-x-1 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors ${textColor}`}
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {isProfileDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                        {/* User Info Section */}
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <div className="font-semibold text-gray-900">
+                            {user?.firstName && user?.lastName 
+                              ? `${user.firstName} ${user.lastName}` 
+                              : user?.name || 'User'}
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            {user?.email || 'user@example.com'}
+                          </div>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <div className="py-2">
+                          <button
+                            onClick={handleViewPublicProfile}
+                            className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Eye className="w-4 h-4 text-gray-500" />
+                            <span>View Public Profile</span>
+                          </button>
+                          
+                          <button
+                            onClick={handleProfileSettings}
+                            className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Settings className="w-4 h-4 text-gray-500" />
+                            <span>Profile Settings</span>
+                          </button>
+                          
+                          <button
+                            onClick={handleSupport}
+                            className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Headphones className="w-4 h-4 text-gray-500" />
+                            <span>Support</span>
+                          </button>
+                          
+                          <button
+                            onClick={handleNotifications}
+                            className="w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Bell className="w-4 h-4 text-gray-500" />
+                            <span>Notifications</span>
+                          </button>
+                        </div>
+                        
+                        {/* Logout Section */}
+                        <div className="border-t border-gray-100 pt-2">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center space-x-3 px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4 text-red-500" />
+                            <span>Logout</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <Link
+                    to="/login"
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors ${textColor}`}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span className="font-medium">LOGIN</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -176,10 +346,73 @@ const Header = () => {
                 >
                   MY BOOKINGS
                 </Link>
-                <div className="flex items-center space-x-2 px-4">
-                  <User className={`w-5 h-5 ${textColor}`} />
-                  <span className={`${textColor} font-semibold`}>John Doe</span>
-                </div>
+                {isAuthenticated ? (
+                  <div className="px-4 space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <User className={`w-5 h-5 ${textColor}`} />
+                      <span className={`${textColor} font-semibold`}>
+                        {user?.name || user?.firstName || 'User'}
+                      </span>
+                    </div>
+                    
+                    {/* Mobile Dropdown Menu */}
+                    <div className="space-y-2">
+                      <button
+                        onClick={handleViewPublicProfile}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Eye className="w-4 h-4 text-gray-500" />
+                        <span>View Public Profile</span>
+                      </button>
+                      
+                      <button
+                        onClick={handleProfileSettings}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-gray-500" />
+                        <span>Profile Settings</span>
+                      </button>
+                      
+                      <button
+                        onClick={handleSupport}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Headphones className="w-4 h-4 text-gray-500" />
+                        <span>Support</span>
+                      </button>
+                      
+                      <button
+                        onClick={handleNotifications}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <Bell className="w-4 h-4 text-gray-500" />
+                        <span>Notifications</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          handleLogout()
+                          setIsMenuOpen(false)
+                        }}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-4 space-y-3">
+                    <Link
+                      to="/login"
+                      className="flex items-center space-x-3 px-3 py-2 text-left text-blue-600 hover:bg-blue-50 rounded-lg transition-colors w-full"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span className="font-medium">LOGIN</span>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}

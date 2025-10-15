@@ -39,6 +39,8 @@ import Profile from './pages/Profile'
 import Booking from './pages/Booking'
 import CustomTrip from './pages/CustomTrip'
 import NotFound from './pages/NotFound'
+import Notifications from './pages/Notifications'
+import Contact from './pages/Contact'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
@@ -253,6 +255,16 @@ function App() {
                     <MyBookings />
                   </ProtectedRoute>
                 } />
+                
+                {/* Notifications */}
+                <Route path="notifications" element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Contact/Support */}
+                <Route path="contact" element={<Contact />} />
                 
                 {/* Booking Flow */}
                 <Route path="booking/:tourId" element={
