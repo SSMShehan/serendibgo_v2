@@ -1,6 +1,7 @@
 const Vehicle = require('../../models/Vehicle');
 const asyncHandler = require('express-async-handler');
 const sampleVehicles = require('../../data/sampleVehicles');
+const { saveMemoryFilesToDisk, deleteFileFromDisk } = require('../../utils/fileUpload');
 
 // @desc    Get all vehicles
 // @route   GET /api/vehicles
@@ -512,12 +513,28 @@ const registerVehicle = asyncHandler(async (req, res) => {
   console.log('Parsed images:', parsedImages);
   console.log('Parsed documents:', parsedDocuments);
 
-  // Process images to match Vehicle model structure
-  const processedImages = Array.isArray(parsedImages) ? parsedImages.map((url, index) => ({
-    url: url,
-    caption: '',
-    isPrimary: index === 0 // First image is primary
-  })) : [];
+  // Process uploaded images
+  let processedImages = [];
+  
+  // Handle uploaded files from req.files
+  if (req.files && req.files.images && req.files.images.length > 0) {
+    console.log('Processing uploaded image files:', req.files.images.length);
+    const savedFiles = await saveMemoryFilesToDisk(req.files.images);
+    processedImages = savedFiles.map((file, index) => ({
+      url: file.url,
+      caption: file.originalName,
+      isPrimary: index === 0 // First image is primary
+    }));
+  }
+  // Fallback to parsed images (for backward compatibility)
+  else if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+    console.log('Processing parsed image URLs:', parsedImages.length);
+    processedImages = parsedImages.map((url, index) => ({
+      url: url,
+      caption: '',
+      isPrimary: index === 0 // First image is primary
+    }));
+  }
 
   console.log('Processed images:', processedImages);
 
