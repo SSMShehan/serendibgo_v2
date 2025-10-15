@@ -2,60 +2,39 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { 
   MapPin, 
-  Calendar, 
   Users, 
   Star, 
-  ArrowRight, 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
-  SlidersHorizontal,
-  Heart,
   Clock,
   Award,
-  ChevronDown,
-  X,
   Loader2,
-  Sparkles,
-  Shield,
-  Zap,
+  Search,
+  Filter,
   Eye,
   BookOpen
 } from 'lucide-react'
-import { useTour } from '../context/TourContext'
 import api from '../services/api'
+import BookingModal from '../components/BookingModal'
 
 const Tours = () => {
-  const { 
-    tours, 
-    isLoading, 
-    error, 
-    filters, 
-    pagination, 
-    setTours, 
-    setLoading, 
-    setError, 
-    setFilters,
-    clearFilters 
-  } = useTour()
-
+  const [tours, setTours] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [viewMode, setViewMode] = useState('grid')
-  const [showFilters, setShowFilters] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState('')
   const [sortBy, setSortBy] = useState('featured')
-  const [priceRange, setPriceRange] = useState([0, 1000])
-  const [selectedCategories, setSelectedCategories] = useState([])
+  const [showBookingModal, setShowBookingModal] = useState(false)
+  const [selectedTour, setSelectedTour] = useState(null)
 
   const categories = [
-    { value: 'adventure', label: 'Adventure', icon: '🏔️' },
-    { value: 'cultural', label: 'Cultural', icon: '🏛️' },
-    { value: 'nature', label: 'Nature', icon: '🌿' },
-    { value: 'beach', label: 'Beach', icon: '🏖️' },
-    { value: 'wildlife', label: 'Wildlife', icon: '🦁' },
-    { value: 'religious', icon: '🕉️', label: 'Religious' },
-    { value: 'historical', label: 'Historical', icon: '🏰' },
-    { value: 'culinary', label: 'Culinary', icon: '🍽️' }
+    { value: '', label: 'All Categories' },
+    { value: 'adventure', label: 'Adventure' },
+    { value: 'cultural', label: 'Cultural' },
+    { value: 'nature', label: 'Nature' },
+    { value: 'beach', label: 'Beach' },
+    { value: 'wildlife', label: 'Wildlife' },
+    { value: 'religious', label: 'Religious' },
+    { value: 'historical', label: 'Historical' },
+    { value: 'culinary', label: 'Culinary' }
   ]
 
   const sortOptions = [
@@ -67,358 +46,107 @@ const Tours = () => {
     { value: 'newest', label: 'Newest' }
   ]
 
-  // Sample tour data for demonstration
-  const sampleTours = [
-    {
-      _id: '1',
-      title: 'Sigiriya Rock Fortress Adventure',
-      shortDescription: 'Climb the ancient rock fortress and discover Sri Lanka\'s rich history',
-      images: [{ url: '/api/placeholder/400/300', alt: 'Sigiriya Rock', isPrimary: true }],
-      price: 299,
-      originalPrice: 399,
-      duration: 1,
-      maxParticipants: 15,
-      category: 'adventure',
-      difficulty: 'moderate',
-      location: { name: 'Sigiriya', city: 'Matale' },
-      rating: { average: 4.8, count: 127 },
-      isFeatured: true,
-      tags: ['UNESCO', 'Historical', 'Adventure']
-    },
-    {
-      _id: '2',
-      title: 'Tea Country Cultural Experience',
-      shortDescription: 'Explore the beautiful tea plantations and learn about Ceylon tea',
-      images: [{ url: '/api/placeholder/400/300', alt: 'Tea Plantations', isPrimary: true }],
-      price: 199,
-      originalPrice: null,
-      duration: 2,
-      maxParticipants: 12,
-      category: 'cultural',
-      difficulty: 'easy',
-      location: { name: 'Nuwara Eliya', city: 'Nuwara Eliya' },
-      rating: { average: 4.6, count: 89 },
-      isFeatured: false,
-      tags: ['Tea', 'Culture', 'Scenic']
-    },
-    {
-      _id: '3',
-      title: 'Yala National Park Safari',
-      shortDescription: 'Spot leopards, elephants, and other wildlife in their natural habitat',
-      images: [{ url: '/api/placeholder/400/300', alt: 'Yala Safari', isPrimary: true }],
-      price: 450,
-      originalPrice: 550,
-      duration: 1,
-      maxParticipants: 8,
-      category: 'wildlife',
-      difficulty: 'easy',
-      location: { name: 'Yala National Park', city: 'Hambantota' },
-      rating: { average: 4.9, count: 203 },
-      isFeatured: true,
-      tags: ['Wildlife', 'Safari', 'Photography']
-    },
-    {
-      _id: '4',
-      title: 'Galle Fort Heritage Walk',
-      shortDescription: 'Discover the colonial charm of Galle Fort with a guided walking tour',
-      images: [{ url: '/api/placeholder/400/300', alt: 'Galle Fort', isPrimary: true }],
-      price: 89,
-      originalPrice: null,
-      duration: 1,
-      maxParticipants: 20,
-      category: 'historical',
-      difficulty: 'easy',
-      location: { name: 'Galle Fort', city: 'Galle' },
-      rating: { average: 4.7, count: 156 },
-      isFeatured: false,
-      tags: ['UNESCO', 'Heritage', 'Walking']
-    },
-    {
-      _id: '5',
-      title: 'Ella Scenic Train Journey',
-      shortDescription: 'Experience one of the world\'s most beautiful train rides through tea country',
-      images: [{ url: '/api/placeholder/400/300', alt: 'Ella Train', isPrimary: true }],
-      price: 149,
-      originalPrice: 199,
-      duration: 1,
-      maxParticipants: 25,
-      category: 'nature',
-      difficulty: 'easy',
-      location: { name: 'Ella', city: 'Badulla' },
-      rating: { average: 4.8, count: 178 },
-      isFeatured: true,
-      tags: ['Train', 'Scenic', 'Nature']
-    },
-    {
-      _id: '6',
-      title: 'Mirissa Whale Watching',
-      shortDescription: 'Watch blue whales and dolphins in the deep waters off Mirissa',
-      images: [{ url: '/api/placeholder/400/300', alt: 'Whale Watching', isPrimary: true }],
-      price: 399,
-      originalPrice: null,
-      duration: 1,
-      maxParticipants: 30,
-      category: 'wildlife',
-      difficulty: 'easy',
-      location: { name: 'Mirissa', city: 'Matara' },
-      rating: { average: 4.5, count: 92 },
-      isFeatured: false,
-      tags: ['Whales', 'Marine', 'Photography']
-    }
-  ]
-
+  // Fetch tours from API
   useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await api.get('/tours')
+        if (response.data.success) {
+          setTours(response.data.data || [])
+        } else {
+          setError('Failed to fetch tours')
+        }
+      } catch (err) {
+        console.error('Error fetching tours:', err)
+        setError('Failed to load tours. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchTours()
   }, [])
 
-  const fetchTours = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const response = await api.get('/tours')
-      if (response.data.success) {
-        setTours(response.data.data)
-      } else {
-        setError('Failed to fetch tours')
-      }
-    } catch (err) {
-      console.error('Error fetching tours:', err)
-      setError('Failed to load tours. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    // Implement search logic
-    console.log('Searching for:', searchQuery)
-  }
-
-  const handleCategoryToggle = (category) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    )
-  }
-
-  const handleSortChange = (sortValue) => {
-    setSortBy(sortValue)
-    // Implement sorting logic
-  }
-
+  // Filter and sort tours
   const filteredTours = tours.filter(tour => {
-    const matchesSearch = tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tour.shortDescription.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(tour.category)
-    const matchesPrice = tour.price >= priceRange[0] && tour.price <= priceRange[1]
+    const matchesSearch = !searchQuery || 
+      tour.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tour.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tour.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (tour.location?.name && tour.location.name.toLowerCase().includes(searchQuery.toLowerCase()))
     
-    return matchesSearch && matchesCategory && matchesPrice
-  })
-
-  const sortedTours = [...filteredTours].sort((a, b) => {
+    const matchesCategory = !selectedCategory || tour.category === selectedCategory
+    
+    return matchesSearch && matchesCategory
+  }).sort((a, b) => {
     switch (sortBy) {
       case 'price-low':
         return a.price - b.price
       case 'price-high':
         return b.price - a.price
       case 'rating':
-        return b.rating.average - a.rating.average
+        return (b.rating?.average || 0) - (a.rating?.average || 0)
       case 'duration':
         return a.duration - b.duration
       case 'newest':
         return new Date(b.createdAt) - new Date(a.createdAt)
+      case 'featured':
       default:
-        return b.isFeatured - a.isFeatured
+        if (a.isFeatured && !b.isFeatured) return -1
+        if (!a.isFeatured && b.isFeatured) return 1
+        return (b.rating?.average || 0) - (a.rating?.average || 0)
     }
   })
 
-  const TourCard = ({ tour }) => (
-    <div className="group relative">
-      {/* Card Glow Effect */}
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-3xl blur opacity-0 group-hover:opacity-75 transition duration-300"></div>
-      
-      {/* Main Card */}
-      <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-100 group-hover:border-blue-200">
-        {/* Premium Badge */}
-        <div className="absolute top-4 right-4">
-          {tour.isFeatured && (
-            <div className="flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold shadow-lg">
-              <Award className="h-3 w-3 mr-1" />
-              FEATURED
-            </div>
-          )}
-          {tour.originalPrice && (
-            <div className="flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold shadow-lg mt-2">
-              -{Math.round(((tour.originalPrice - tour.price) / tour.originalPrice) * 100)}%
-            </div>
-          )}
-        </div>
+  const handleSearch = (e) => {
+    e.preventDefault()
+    // Search is handled by filteredTours
+  }
 
-        {/* Wishlist Button */}
-        <button className="absolute top-4 left-4 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors">
-          <Heart className="w-4 h-4 text-slate-600 hover:text-red-500" />
-        </button>
+  // Handle booking
+  const handleBookNow = (tour) => {
+    setSelectedTour(tour)
+    setShowBookingModal(true)
+  }
 
-        {/* Tour Image */}
-        <div className="aspect-[4/3] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center relative">
-          <MapPin className="w-16 h-16 text-blue-500/30" />
-          {/* Category Badge */}
-          <div className="absolute bottom-4 left-4">
-            <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold border border-slate-200">
-              {categories.find(c => c.value === tour.category)?.icon} {categories.find(c => c.value === tour.category)?.label}
-            </div>
-          </div>
-        </div>
+  const handleBookingSuccess = (booking) => {
+    console.log('Booking created successfully:', booking)
+    // You can add additional logic here, like showing a success message
+    // or redirecting to a confirmation page
+  }
 
-        {/* Tour Content */}
-        <div className="p-8">
-          <h3 className="text-2xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
-            {tour.title}
-          </h3>
-          
-          <p className="text-slate-600 text-sm leading-relaxed mb-4">
-            {tour.shortDescription}
-          </p>
+  const handleCloseBookingModal = () => {
+    setShowBookingModal(false)
+    setSelectedTour(null)
+  }
 
-          <div className="flex items-center gap-4 text-sm text-slate-600 mb-4">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4 text-blue-500" />
-              <span className="font-medium">{tour.location.name}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4 text-purple-500" />
-              <span className="font-medium">{tour.duration} day{tour.duration > 1 ? 's' : ''}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Users className="h-4 w-4 text-green-500" />
-              <span className="font-medium">Max {tour.maxParticipants}</span>
-            </div>
-          </div>
-
-          {/* Rating */}
-          <div className="flex items-center mb-4">
-            <div className="flex items-center">
-              {[...Array(5)].map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`h-5 w-5 ${i < Math.floor(tour.rating.average) ? 'text-yellow-400 fill-current' : 'text-slate-300'}`} 
-                />
-              ))}
-            </div>
-            <span className="ml-2 text-lg font-bold text-slate-700">{tour.rating.average}</span>
-            <span className="ml-2 text-sm text-slate-500 font-medium">({tour.rating.count} reviews)</span>
-          </div>
-
-          {/* Price */}
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center px-6 py-3 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
-              {tour.originalPrice && (
-                <div className="text-sm text-slate-500 line-through mr-2">${tour.originalPrice}</div>
-              )}
-              <div className="text-3xl font-bold text-green-600">${tour.price}</div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex space-x-4">
-            <Link 
-              to={`/tours/${tour._id}`} 
-              className="flex-1 px-6 py-4 border-2 border-slate-200 text-slate-700 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 font-semibold flex items-center justify-center group/btn"
-            >
-              <Eye className="h-5 w-5 mr-2 group-hover/btn:text-blue-500 transition-colors" />
-              View Details
-            </Link>
-            <button className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center group/btn">
-              <BookOpen className="h-5 w-5 mr-2 group-hover/btn:scale-110 transition-transform" />
-              Book Now
-            </button>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Tours</h3>
+          <p className="text-gray-600">Discovering amazing experiences for you...</p>
         </div>
       </div>
-    </div>
-  )
-
-  const TourListCard = ({ tour }) => (
-    <div className="card bg-base-100 shadow-lg card-hover">
-      <div className="card-body">
-        <div className="flex gap-6">
-          <div className="w-48 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-            <MapPin className="w-8 h-8 text-primary/30" />
-          </div>
-          
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="text-xl font-bold text-base-content mb-1">{tour.title}</h3>
-                <p className="text-base-content/70 text-sm mb-3">{tour.shortDescription}</p>
-              </div>
-              <div className="text-right">
-                {tour.originalPrice && (
-                  <div className="text-sm text-base-content/60 line-through">${tour.originalPrice}</div>
-                )}
-                <div className="text-2xl font-bold text-primary">${tour.price}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6 mb-4 text-sm text-base-content/60">
-              <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span>{tour.location.name}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                <span>{tour.duration} day{tour.duration > 1 ? 's' : ''}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>Max {tour.maxParticipants}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-accent fill-current" />
-                <span className="font-medium">{tour.rating.average}</span>
-                <span>({tour.rating.count})</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="badge badge-outline">
-                  {categories.find(c => c.value === tour.category)?.icon} {categories.find(c => c.value === tour.category)?.label}
-                </div>
-                {tour.isFeatured && (
-                  <div className="badge badge-primary">
-                    Featured
-                  </div>
-                )}
-              </div>
-              
-              <Link 
-                to={`/tours/${tour._id}`} 
-                className="btn btn-primary btn-sm"
-              >
-                View Details
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+    )
+  }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-base-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-error text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-base-content mb-2">Something went wrong</h2>
-          <p className="text-base-content/70 mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="btn btn-primary"
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Tours</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
           >
             Try Again
           </button>
@@ -428,195 +156,212 @@ const Tours = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-blue-900 to-blue-800">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-600/10 to-cyan-500/10"></div>
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 mb-6">
-              <Sparkles className="h-5 w-5 text-yellow-400 mr-2" />
-              <span className="text-white/90 font-medium">Premium Tour Experiences</span>
-            </div>
-            
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Discover Amazing
-              <span className="block bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                Sri Lankan Tours
-              </span>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Discover Sri Lanka
             </h1>
-            
-            <p className="text-xl md:text-2xl text-white/80 mb-12 max-w-4xl mx-auto leading-relaxed">
-              Experience breathtaking landscapes, <span className="font-semibold text-blue-300">rich culture</span>, 
-              and <span className="font-semibold text-cyan-300">unforgettable adventures</span> with our 
-              <span className="font-semibold text-blue-200">carefully curated</span> tour experiences.
+            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+              Embark on unforgettable adventures with our curated collection of tours and experiences
             </p>
             
-            {/* Search and Filter Section */}
-            <div className="max-w-5xl mx-auto">
-              <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Search */}
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative">
-                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 group-hover:text-blue-500 transition-colors" />
-                      <input
-                        type="text"
-                        placeholder="Search tours or destinations..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400 font-medium transition-all duration-200 hover:bg-white hover:shadow-lg"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Category Filter */}
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative">
-                      <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 group-hover:text-blue-500 transition-colors" />
-                      <select
-                        value={selectedCategories.length > 0 ? selectedCategories[0] : ''}
-                        onChange={(e) => setSelectedCategories(e.target.value ? [e.target.value] : [])}
-                        className="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white/80 backdrop-blur-sm text-slate-700 font-medium transition-all duration-200 hover:bg-white hover:shadow-lg"
-                      >
-                        <option value="">All Categories</option>
-                        {categories.map(category => (
-                          <option key={category.value} value={category.value}>
-                            {category.icon} {category.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 pointer-events-none" />
-                    </div>
-                  </div>
-                  
-                  {/* Price Filter */}
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative">
-                      <Zap className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 group-hover:text-blue-500 transition-colors" />
-                      <select
-                        value={priceRange[1] <= 200 ? 'budget' : priceRange[1] <= 500 ? 'mid' : 'luxury'}
-                        onChange={(e) => {
-                          const ranges = {
-                            budget: [0, 200],
-                            mid: [200, 500],
-                            luxury: [500, 1000]
-                          }
-                          setPriceRange(ranges[e.target.value])
-                        }}
-                        className="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white/80 backdrop-blur-sm text-slate-700 font-medium transition-all duration-200 hover:bg-white hover:shadow-lg"
-                      >
-                        <option value="budget">Budget ($0-200)</option>
-                        <option value="mid">Mid-range ($200-500)</option>
-                        <option value="luxury">Luxury ($500+)</option>
-                      </select>
-                      <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <input
+                  type="text"
+                  placeholder="Search tours, destinations, or experiences..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-xl border-0 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-white/20 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-50 transition-colors duration-200"
+                >
+                  Search
+                </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>
 
-      {/* Tours Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 border border-blue-200 mb-4">
-            <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
-            <span className="text-slate-700 font-semibold">
-              Showing {sortedTours.length} amazing tours
-            </span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filters and Controls */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filters:</span>
+              </div>
+              
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {categories.map(category => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {sortOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {isLoading ? (
-            // Loading skeleton
-            Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-3xl shadow-xl p-8 animate-pulse">
-                <div className="flex items-center mb-6">
-                  <div className="w-16 h-16 bg-slate-200 rounded-2xl mr-4"></div>
-                  <div className="flex-1">
-                    <div className="h-6 bg-slate-200 rounded mb-2"></div>
-                    <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+        {/* Results Summary */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Showing {filteredTours.length} of {tours.length} tours
+            {searchQuery && ` for "${searchQuery}"`}
+            {selectedCategory && ` in ${categories.find(c => c.value === selectedCategory)?.label}`}
+          </p>
+        </div>
+
+        {/* Tours Grid */}
+        {filteredTours.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MapPin className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Tours Found</h3>
+            <p className="text-gray-600 mb-4">
+              {searchQuery || selectedCategory 
+                ? 'Try adjusting your search criteria or filters' 
+                : 'No tours are currently available. Check back soon!'}
+            </p>
+            {(searchQuery || selectedCategory) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  setSelectedCategory('')
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredTours.map((tour) => (
+              <div key={tour._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                <div className="aspect-[4/3] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center relative">
+                  {tour.images && tour.images.length > 0 ? (
+                    <img
+                      src={tour.images[0].url || tour.images[0]}
+                      alt={tour.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <MapPin className="w-16 h-16 text-blue-500/30" />
+                  )}
+                  {/* Category Badge */}
+                  <div className="absolute bottom-4 left-4">
+                    <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-slate-700 text-xs font-semibold border border-slate-200">
+                      {categories.find(c => c.value === tour.category)?.label || tour.category}
+                    </div>
+                  </div>
+                  {/* Featured Badge */}
+                  {tour.isFeatured && (
+                    <div className="absolute top-4 right-4">
+                      <div className="px-2 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-semibold flex items-center gap-1">
+                        <Award className="w-3 h-3" />
+                        Featured
+                      </div>
+                    </div>
+                  )}
+                  {/* Price Badge */}
+                  <div className="absolute top-4 left-4">
+                    <div className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm text-slate-700 text-sm font-bold">
+                      LKR {tour.price?.toLocaleString() || '0'}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-3 mb-6">
-                  <div className="h-4 bg-slate-200 rounded"></div>
-                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-slate-900 mb-2 line-clamp-1">
+                        {tour.title}
+                      </h3>
+                      <p className="text-slate-600 text-sm line-clamp-2 mb-3">
+                        {tour.shortDescription || tour.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium">{tour.location?.name || tour.location || 'Location TBD'}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{tour.duration} day{tour.duration > 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span>Up to {tour.maxParticipants}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="ml-2 text-lg font-bold text-slate-700">{tour.rating?.average || 0}</span>
+                      <span className="ml-2 text-sm text-slate-500 font-medium">({tour.rating?.count || 0} reviews)</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/tours/${tour._id}`}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium text-center flex items-center justify-center gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </Link>
+                    <button
+                      onClick={() => handleBookNow(tour)}
+                      className="px-4 py-2 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors duration-200 font-medium flex items-center gap-2"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Book Now
+                    </button>
+                  </div>
                 </div>
-                <div className="h-12 bg-slate-200 rounded-2xl"></div>
               </div>
-            ))
-          ) : error ? (
-            // Error state
-            <div className="col-span-full text-center py-16">
-              <div className="bg-red-50 border border-red-200 rounded-3xl p-8 max-w-md mx-auto">
-                <div className="text-red-600 text-6xl mb-4">⚠️</div>
-                <h3 className="text-xl font-bold text-red-800 mb-2">Error Loading Tours</h3>
-                <p className="text-red-600 mb-6">{error}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors duration-200 font-semibold"
-                >
-                  Try Again
-                </button>
-              </div>
-            </div>
-          ) : sortedTours.length === 0 ? (
-            // No tours found
-            <div className="col-span-full text-center py-16">
-              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 max-w-md mx-auto">
-                <div className="text-slate-400 text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">No Tours Found</h3>
-                <p className="text-slate-600 mb-6">Try adjusting your search criteria or check back later.</p>
-                <button
-                  onClick={clearFilters}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors duration-200 font-semibold"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            </div>
-          ) : (
-            sortedTours.map((tour) => (
-              <TourCard key={tour._id} tour={tour} />
-            ))
-          )}
-        </div>
-        
-        {sortedTours.length === 0 && !isLoading && !error && (
-          <div className="text-center py-20">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl"></div>
-              <div className="relative bg-white rounded-3xl shadow-2xl p-12 max-w-md mx-auto border border-slate-100">
-                <div className="text-slate-400 mb-6">
-                  <MapPin className="h-20 w-20 mx-auto" />
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-3">No tours found</h3>
-                <p className="text-slate-600 mb-6">Try adjusting your search criteria or filters to find the perfect tour for your adventure.</p>
-                <button 
-                  onClick={clearFilters}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 font-semibold"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Booking Modal */}
+      <BookingModal
+        tour={selectedTour}
+        isOpen={showBookingModal}
+        onClose={handleCloseBookingModal}
+        onBookingSuccess={handleBookingSuccess}
+      />
     </div>
   )
 }
