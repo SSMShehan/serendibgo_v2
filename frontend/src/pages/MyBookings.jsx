@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon, Bed, AlertCircle } from 'lucide-react'
+import { Calendar, MapPin, Clock, Users, CreditCard, Sparkles, Eye, CheckCircle, XCircle, User, Building, Car, Phone, Star, MapPin as LocationIcon, Bed, AlertCircle, MessageSquare } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { bookingAPI } from '../services/hotels/hotelService'
 import { guideService } from '../services/guideService'
 import { toast } from 'react-hot-toast'
+import ReviewForm from '../components/reviews/ReviewForm'
 
 const MyBookings = () => {
   const { user } = useAuth()
@@ -17,6 +18,8 @@ const MyBookings = () => {
   const [activeTab, setActiveTab] = useState('bookings')
   const [selectedTrip, setSelectedTrip] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState(null)
 
   useEffect(() => {
     if (user) {
@@ -194,6 +197,19 @@ const MyBookings = () => {
   const closeDetailsModal = () => {
     setShowDetailsModal(false)
     setSelectedTrip(null)
+  }
+
+  const handleWriteReview = (booking) => {
+    setSelectedBookingForReview(booking)
+    setShowReviewForm(true)
+  }
+
+  const handleReviewSubmitted = () => {
+    setShowReviewForm(false)
+    setSelectedBookingForReview(null)
+    toast.success('Review submitted successfully!')
+    // Optionally refresh bookings to show updated status
+    fetchBookings()
   }
 
   const formatDate = (dateString) => {
@@ -672,6 +688,15 @@ const MyBookings = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </button>
+                          {booking.status === 'completed' && (
+                            <button 
+                              onClick={() => handleWriteReview(booking)}
+                              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                            >
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Write Review
+                            </button>
+                          )}
                           {booking.status === 'pending' && (
                             <button className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                               Cancel
@@ -1396,6 +1421,24 @@ const MyBookings = () => {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Form Modal */}
+      {showReviewForm && selectedBookingForReview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 my-4">
+            <ReviewForm
+              guideId={selectedBookingForReview.guide?._id || selectedBookingForReview.guide}
+              tourId={selectedBookingForReview.tour?._id || 'guide-service'} // Use guide service as tour for direct guide bookings
+              bookingId={selectedBookingForReview._id}
+              onReviewSubmitted={handleReviewSubmitted}
+              onCancel={() => {
+                setShowReviewForm(false)
+                setSelectedBookingForReview(null)
+              }}
+            />
           </div>
         </div>
       )}
