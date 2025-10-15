@@ -34,7 +34,8 @@ import {
   Square,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Car
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import staffService from '../../../services/staff/staffService';
@@ -48,7 +49,6 @@ const BookingManagement = () => {
   const [selectedBookings, setSelectedBookings] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [filters, setFilters] = useState({
@@ -160,75 +160,6 @@ const BookingManagement = () => {
     }
   };
 
-  // Test function to create a guide booking
-  const createTestGuideBooking = async () => {
-    try {
-      console.log('🧪 Creating test guide booking...');
-      
-      // First, get a guide
-      const guidesResponse = await fetch('/api/guides', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!guidesResponse.ok) {
-        throw new Error('Failed to fetch guides');
-      }
-      
-      const guidesData = await guidesResponse.json();
-      const guides = guidesData.data || [];
-      
-      if (guides.length === 0) {
-        toast.error('No guides found. Please create a guide first.');
-        return;
-      }
-      
-      const testGuide = guides[0];
-      console.log('📋 Using guide:', testGuide.firstName, testGuide.lastName);
-      
-      // Create test booking data
-      const testBookingData = {
-        guideId: testGuide.id,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-        duration: 'full-day',
-        groupSize: 2,
-        specialRequests: 'Test guide booking created from staff dashboard'
-      };
-      
-      console.log('📝 Test booking data:', testBookingData);
-      
-      // Create the guide booking
-      const response = await fetch('/api/bookings/guide', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(testBookingData)
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success('Test guide booking created successfully!');
-        console.log('✅ Test booking created:', result.data);
-        
-        // Refresh the bookings list
-        fetchBookings();
-        fetchStatistics();
-      } else {
-        toast.error('Failed to create test booking: ' + result.message);
-        console.error('❌ Test booking failed:', result);
-      }
-      
-    } catch (error) {
-      console.error('❌ Test booking error:', error);
-      toast.error('Failed to create test guide booking: ' + error.message);
-    }
-  };
 
   // Toggle selection
   const toggleSelection = (bookingId) => {
@@ -290,20 +221,6 @@ const BookingManagement = () => {
           <p className="text-slate-600">Manage all platform bookings and reservations</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Booking
-          </button>
-          <button
-            onClick={createTestGuideBooking}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Test Guide Booking
-          </button>
           <button
             onClick={fetchBookings}
             className="flex items-center px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
@@ -376,11 +293,11 @@ const BookingManagement = () => {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Guide Bookings</p>
-              <p className="text-2xl font-bold text-blue-600">{statistics.guideBookings || 0}</p>
+              <p className="text-sm font-medium text-slate-600">Vehicle Bookings</p>
+              <p className="text-2xl font-bold text-purple-600">{statistics.vehicleBookings || 0}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <User className="h-6 w-6 text-blue-600" />
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Car className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -556,14 +473,27 @@ const BookingManagement = () => {
                             </div>
                             <div>
                               <h3 className="font-semibold text-slate-900">
-                                {booking.tour?.title || (booking.guide ? `Guide Booking - ${booking.guide.firstName} ${booking.guide.lastName}` : 'Booking')}
+                                {booking.tour?.title || 
+                                 (booking.hotel ? `Hotel Booking - ${booking.hotel.name}` : 
+                                  (booking.vehicle ? `Vehicle Booking - ${booking.vehicle.make} ${booking.vehicle.model}` :
+                                   (booking.guide ? `Guide Booking - ${booking.guide.firstName} ${booking.guide.lastName}` : 'Booking')))}
                               </h3>
                               <p className="text-sm text-slate-600">
                                 {booking.user?.firstName} {booking.user?.lastName}
                               </p>
-                              {booking.guide && !booking.tour && (
+                              {booking.guide && !booking.tour && !booking.hotel && !booking.vehicle && (
                                 <p className="text-xs text-blue-600 font-medium">
                                   Direct Guide Booking
+                                </p>
+                              )}
+                              {booking.hotel && (
+                                <p className="text-xs text-green-600 font-medium">
+                                  Hotel Booking
+                                </p>
+                              )}
+                              {booking.vehicle && (
+                                <p className="text-xs text-purple-600 font-medium">
+                                  Vehicle Booking
                                 </p>
                               )}
                             </div>
@@ -587,7 +517,9 @@ const BookingManagement = () => {
                             </div>
                             <div className="flex items-center">
                               <Clock className="h-4 w-4 mr-2" />
-                              {booking.duration}
+                              {booking.duration || 
+                               (booking.hotel ? `${booking.room?.roomType || 'Room'}` : 
+                                (booking.vehicle ? `${booking.vehicle.type || 'Vehicle'}` : 'N/A'))}
                             </div>
                           </div>
 
