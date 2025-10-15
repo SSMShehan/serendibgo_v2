@@ -37,13 +37,16 @@ const createReview = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if tour exists
-    const tour = await Tour.findById(tourId);
-    if (!tour) {
-      return res.status(404).json({
-        success: false,
-        message: 'Tour not found'
-      });
+    // Check if tour exists (for direct guide bookings, tourId might be 'guide-service')
+    let tour = null;
+    if (tourId && tourId !== 'guide-service') {
+      tour = await Tour.findById(tourId);
+      if (!tour) {
+        return res.status(404).json({
+          success: false,
+          message: 'Tour not found'
+        });
+      }
     }
 
     // Check if guide exists
@@ -79,23 +82,24 @@ const createReview = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if user has already reviewed this tour
+    // Check if user has already reviewed this guide for this booking
     const existingReview = await Review.findOne({
       user: userId,
-      tour: tourId
+      guide: guideId,
+      booking: bookingId
     });
 
     if (existingReview) {
       return res.status(400).json({
         success: false,
-        message: 'You have already reviewed this tour'
+        message: 'You have already reviewed this guide for this booking'
       });
     }
 
     // Create review
     const review = new Review({
       user: userId,
-      tour: tourId,
+      tour: tourId !== 'guide-service' ? tourId : null, // Only set tour if it's a real tour
       guide: guideId,
       booking: bookingId,
       rating,
@@ -106,12 +110,18 @@ const createReview = asyncHandler(async (req, res) => {
     await review.save();
 
     // Populate the review for response
-    await review.populate([
+    const populateFields = [
       { path: 'user', select: 'firstName lastName avatar' },
-      { path: 'tour', select: 'title' },
       { path: 'guide', select: 'firstName lastName' },
       { path: 'booking', select: 'startDate endDate' }
-    ]);
+    ];
+    
+    // Only populate tour if it exists
+    if (review.tour) {
+      populateFields.push({ path: 'tour', select: 'title' });
+    }
+    
+    await review.populate(populateFields);
 
     res.status(201).json({
       success: true,
