@@ -103,7 +103,8 @@ app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:3002'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Type']
 }));
 
 // Body parsing middleware
@@ -209,7 +210,7 @@ const connectDB = async () => {
     console.error('Database connection error:', error);
     
     // Try alternative connection method if SRV fails
-    if (error.code === 'ENOTFOUND' && process.env.MONGODB_URI.includes('mongodb+srv://')) {
+    if (error.code === 'ENOTFOUND' && process.env.MONGODB_URI && process.env.MONGODB_URI.includes('mongodb+srv://')) {
       console.log('SRV record failed, trying alternative connection...');
       try {
         // Convert SRV URI to standard format

@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 import { 
   Users, 
   Calendar, 
@@ -8,42 +9,102 @@ import {
   TrendingUp, 
   Settings,
   Shield,
-  Activity
+  Activity,
+  AlertCircle
 } from 'lucide-react'
 
 const AdminDashboard = () => {
   const { user } = useAuth()
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const stats = [
+  useEffect(() => {
+    fetchDashboardStats()
+  }, [])
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await api.get('/admin/dashboard/stats')
+      setStats(response.data.data)
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err)
+      setError('Failed to load dashboard statistics')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatNumber = (num) => {
+    if (num === null || num === undefined) return '0'
+    return num.toLocaleString()
+  }
+
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined) return 'Rs. 0'
+    return `Rs. ${amount.toLocaleString()}`
+  }
+
+  const statsCards = stats ? [
     {
       title: 'Total Users',
-      value: '1,234',
-      change: '+12%',
+      value: formatNumber(stats.overview.totalUsers),
+      change: '+12%', // TODO: Calculate real change
       icon: Users,
       color: 'text-blue-600'
     },
     {
-      title: 'Active Bookings',
-      value: '89',
-      change: '+5%',
+      title: 'Total Hotels',
+      value: formatNumber(stats.overview.totalHotels),
+      change: '+3%', // TODO: Calculate real change
+      icon: Hotel,
+      color: 'text-orange-600'
+    },
+    {
+      title: 'Total Bookings',
+      value: formatNumber(stats.overview.totalBookings),
+      change: '+5%', // TODO: Calculate real change
       icon: Calendar,
       color: 'text-green-600'
     },
     {
-      title: 'Vehicles',
-      value: '156',
-      change: '+8%',
-      icon: Car,
+      title: 'Total Revenue',
+      value: formatCurrency(stats.revenue.totalRevenue),
+      change: '+8%', // TODO: Calculate real change
+      icon: TrendingUp,
       color: 'text-purple-600'
     },
     {
-      title: 'Hotels',
-      value: '45',
-      change: '+3%',
+      title: 'Active Staff',
+      value: formatNumber(stats.overview.totalStaff),
+      change: '0%',
+      icon: Shield,
+      color: 'text-red-600'
+    },
+    {
+      title: 'Pending Approvals',
+      value: formatNumber(stats.pending.pendingHotels + stats.pending.pendingUsers),
+      change: '0%',
+      icon: AlertCircle,
+      color: 'text-yellow-600'
+    },
+    {
+      title: 'Hotel Owners',
+      value: formatNumber(stats.overview.totalHotelOwners),
+      change: '2%',
       icon: Hotel,
-      color: 'text-orange-600'
+      color: 'text-indigo-600'
+    },
+    {
+      title: 'Tourists',
+      value: formatNumber(stats.overview.totalTourists),
+      change: '2%',
+      icon: Users,
+      color: 'text-teal-600'
     }
-  ]
+  ] : []
 
   const quickActions = [
     {
@@ -105,29 +166,60 @@ const AdminDashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon
-            return (
-              <div key={index} className="bg-base-200 rounded-lg p-6">
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="bg-base-200 rounded-lg p-6 animate-pulse">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-base-content/70">
-                      {stat.title}
-                    </p>
-                    <p className="text-2xl font-bold text-base-content">
-                      {stat.value}
-                    </p>
-                    <p className="text-sm text-green-600">
-                      {stat.change} from last month
-                    </p>
+                  <div className="flex-1">
+                    <div className="h-4 bg-base-300 rounded mb-2"></div>
+                    <div className="h-8 bg-base-300 rounded mb-2"></div>
+                    <div className="h-3 bg-base-300 rounded w-16"></div>
                   </div>
-                  <div className={`p-3 rounded-full bg-base-300`}>
-                    <Icon className={`w-6 h-6 ${stat.color}`} />
+                  <div className="p-3 rounded-full bg-base-300">
+                    <div className="w-6 h-6 bg-base-300 rounded"></div>
                   </div>
                 </div>
               </div>
-            )
-          })}
+            ))
+          ) : error ? (
+            // Error state
+            <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+              <p className="text-red-700 font-medium">{error}</p>
+              <button 
+                onClick={fetchDashboardStats}
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            // Actual stats
+            statsCards.map((stat, index) => {
+              const Icon = stat.icon
+              return (
+                <div key={index} className="bg-base-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-base-content/70">
+                        {stat.title}
+                      </p>
+                      <p className="text-2xl font-bold text-base-content">
+                        {stat.value}
+                      </p>
+                      <p className="text-sm text-green-600">
+                        {stat.change} from last month
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-full bg-base-300`}>
+                      <Icon className={`w-6 h-6 ${stat.color}`} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
 
         {/* Quick Actions */}

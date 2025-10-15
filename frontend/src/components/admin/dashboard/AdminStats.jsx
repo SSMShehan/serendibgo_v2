@@ -33,64 +33,64 @@ const AdminStats = ({ stats, loading = false }) => {
     {
       title: 'Total Users',
       value: stats?.totalUsers || 0,
-      change: stats?.totalUsers || 0,
-      changeLabel: 'Registered users',
+      change: stats?.totalUsersChange || 0,
+      changeLabel: 'vs last month',
       icon: Users,
       color: 'blue'
     },
     {
       title: 'Total Hotels',
       value: stats?.totalHotels || 0,
-      change: stats?.totalHotels || 0,
-      changeLabel: 'Registered hotels',
+      change: stats?.totalHotelsChange || 0,
+      changeLabel: 'vs last month',
       icon: Building2,
       color: 'green'
     },
     {
       title: 'Total Bookings',
       value: stats?.totalBookings || 0,
-      change: stats?.totalBookings || 0,
-      changeLabel: 'Total bookings',
+      change: stats?.totalBookingsChange || 0,
+      changeLabel: 'vs last month',
       icon: Calendar,
       color: 'purple'
     },
     {
       title: 'Total Revenue',
       value: `Rs. ${(stats?.totalRevenue || 0).toLocaleString()}`,
-      change: `Rs. ${(stats?.totalRevenue || 0).toLocaleString()}`,
-      changeLabel: 'Platform revenue',
+      change: stats?.totalRevenueChange || 0,
+      changeLabel: 'vs last month',
       icon: DollarSign,
       color: 'yellow'
     },
     {
       title: 'Active Staff',
       value: stats?.activeStaff || 0,
-      change: stats?.activeStaff || 0,
-      changeLabel: 'Active staff',
+      change: stats?.activeStaffChange || 0,
+      changeLabel: 'vs last month',
       icon: Users,
       color: 'indigo'
     },
     {
       title: 'Pending Approvals',
       value: stats?.pendingApprovals || 0,
-      change: stats?.pendingApprovals || 0,
-      changeLabel: 'Awaiting review',
+      change: stats?.pendingApprovalsChange || 0,
+      changeLabel: 'vs last month',
       icon: AlertCircle,
       color: 'orange'
     },
     {
       title: 'Hotel Owners',
-      value: 2, // From our created accounts
-      change: 2,
-      changeLabel: 'Registered owners',
+      value: stats?.hotelOwners || 0,
+      change: stats?.hotelOwnersChange || 0,
+      changeLabel: 'vs last month',
       icon: Building2,
       color: 'pink'
     },
     {
       title: 'Tourists',
-      value: 2, // From our created accounts
-      change: 2,
-      changeLabel: 'Registered tourists',
+      value: stats?.tourists || 0,
+      change: stats?.touristsChange || 0,
+      changeLabel: 'vs last month',
       icon: Users,
       color: 'red'
     }

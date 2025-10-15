@@ -4,7 +4,15 @@ const { protect, authorize } = require('../middleware/auth');
 const { handleValidationErrors, asyncHandler } = require('../middleware/errorHandler');
 
 // Import controllers
-const { getDashboardStats, getPlatformAnalytics } = require('../controllers/admin/adminController');
+const { 
+  getDashboardStats, 
+  getPlatformAnalytics,
+  getAllUsers,
+  getUserById,
+  updateUserRole,
+  toggleUserStatus,
+  createUser
+} = require('../controllers/admin/adminController');
 const {
   getStaff,
   getStaffStats,
@@ -14,6 +22,26 @@ const {
   deleteStaff,
   toggleStaffStatus
 } = require('../controllers/admin/staffController');
+const {
+  getPermissionTemplates,
+  createPermissionTemplate,
+  updatePermissionTemplate,
+  deletePermissionTemplate,
+  getStaffPermissions,
+  updateStaffPermissions,
+  applyPermissionTemplate
+} = require('../controllers/admin/permissionController');
+const {
+  getSettings,
+  updatePlatformSettings,
+  updateEmailSettings,
+  updatePaymentSettings,
+  updateSystemSettings,
+  resetSettings
+} = require('../controllers/admin/settingsController');
+const {
+  generatePDFReport
+} = require('../controllers/admin/reportController');
 const {
   getRecentUsers,
   getUnverifiedUsers,
@@ -41,6 +69,37 @@ router.use(authorize('admin'));
 // Dashboard routes
 router.get('/dashboard/stats', asyncHandler(getDashboardStats));
 router.get('/analytics', asyncHandler(getPlatformAnalytics));
+
+// Dashboard data routes - specific routes before parameterized routes
+router.get('/users/recent', asyncHandler(getRecentUsers));
+router.get('/users/unverified', asyncHandler(getUnverifiedUsers));
+router.get('/bookings/recent', asyncHandler(getRecentBookings));
+router.get('/hotels/recent', asyncHandler(getRecentHotels));
+router.get('/hotels/pending', asyncHandler(getPendingHotels));
+
+// User management routes - specific routes first
+router.get('/users', asyncHandler(getAllUsers));
+router.post('/users', [
+  body('firstName').notEmpty().withMessage('First name is required'),
+  body('lastName').notEmpty().withMessage('Last name is required'),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('role').isIn(['tourist', 'driver', 'guide', 'hotel_owner', 'staff', 'admin']).withMessage('Invalid role'),
+  handleValidationErrors
+], asyncHandler(createUser));
+router.get('/users/:id', asyncHandler(getUserById));
+router.put('/users/:id/role', [
+  body('role')
+    .isIn(['tourist', 'driver', 'guide', 'hotel_owner', 'staff', 'admin'])
+    .withMessage('Invalid role'),
+  handleValidationErrors
+], asyncHandler(updateUserRole));
+router.put('/users/:id/status', [
+  body('isActive')
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  handleValidationErrors
+], asyncHandler(toggleUserStatus));
 
 // Staff management routes
 router.get('/staff', asyncHandler(getStaff));
@@ -99,12 +158,14 @@ router.put('/staff/:id', [
 router.delete('/staff/:id', asyncHandler(deleteStaff));
 router.patch('/staff/:id/toggle-status', asyncHandler(toggleStaffStatus));
 
-// Dashboard data routes
-router.get('/users/recent', asyncHandler(getRecentUsers));
-router.get('/users/unverified', asyncHandler(getUnverifiedUsers));
-router.get('/bookings/recent', asyncHandler(getRecentBookings));
-router.get('/hotels/recent', asyncHandler(getRecentHotels));
-router.get('/hotels/pending', asyncHandler(getPendingHotels));
+// Permission management routes
+router.get('/permissions/templates', asyncHandler(getPermissionTemplates));
+router.post('/permissions/templates', asyncHandler(createPermissionTemplate));
+router.put('/permissions/templates/:id', asyncHandler(updatePermissionTemplate));
+router.delete('/permissions/templates/:id', asyncHandler(deletePermissionTemplate));
+router.get('/permissions/staff', asyncHandler(getStaffPermissions));
+router.put('/permissions/staff/:id', asyncHandler(updateStaffPermissions));
+router.post('/permissions/apply-template', asyncHandler(applyPermissionTemplate));
 
 // Vehicle management routes
 router.get('/vehicles', asyncHandler(getAdminVehicles));
@@ -118,6 +179,17 @@ router.put('/vehicles/bulk-status', [
 ], asyncHandler(bulkUpdateVehicleStatus));
 router.get('/vehicles/:id/history', asyncHandler(getVehicleHistory));
 router.get('/vehicles/export', asyncHandler(exportVehicles));
+
+// Settings management routes
+router.get('/settings', asyncHandler(getSettings));
+router.put('/settings/platform', asyncHandler(updatePlatformSettings));
+router.put('/settings/email', asyncHandler(updateEmailSettings));
+router.put('/settings/payment', asyncHandler(updatePaymentSettings));
+router.put('/settings/system', asyncHandler(updateSystemSettings));
+router.post('/settings/reset', asyncHandler(resetSettings));
+
+// Report generation routes
+router.post('/reports/generate', asyncHandler(generatePDFReport));
 
 module.exports = router;
 

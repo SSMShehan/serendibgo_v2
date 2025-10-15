@@ -43,7 +43,6 @@ import NotFound from './pages/NotFound'
 // Admin Pages
 import AdminDashboard from './pages/admin/dashboard/AdminDashboard'
 import AdminTours from './pages/admin/AdminTours'
-import AdminUsers from './pages/admin/AdminUsers'
 import AdminBookings from './pages/admin/AdminBookings'
 
 // Staff Pages
@@ -290,11 +289,6 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
-                <Route path="admin/users" element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminUsers />
-                  </ProtectedRoute>
-                } />
                 
                 <Route path="admin/bookings" element={
                   <ProtectedRoute allowedRoles={['admin', 'staff']}>
