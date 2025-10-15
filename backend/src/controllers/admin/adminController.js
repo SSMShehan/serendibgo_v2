@@ -37,6 +37,50 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       createdAt: { $gte: thirtyDaysAgo }
     });
 
+    // Get previous month data for comparison (30-60 days ago)
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    const previousMonthUsers = await User.countDocuments({
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+    });
+
+    const previousMonthHotels = await Hotel.countDocuments({
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+    });
+
+    const previousMonthBookings = await HotelBooking.countDocuments({
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+    });
+
+    const previousMonthStaff = await User.countDocuments({ 
+      role: 'staff',
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+    });
+
+    const previousMonthHotelOwners = await User.countDocuments({ 
+      role: 'hotel_owner',
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+    });
+
+    const previousMonthTourists = await User.countDocuments({ 
+      role: 'tourist',
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+    });
+
+    // Calculate percentage changes
+    const calculatePercentageChange = (current, previous) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    const usersChange = calculatePercentageChange(recentUsers, previousMonthUsers);
+    const hotelsChange = calculatePercentageChange(recentHotels, previousMonthHotels);
+    const bookingsChange = calculatePercentageChange(recentBookings, previousMonthBookings);
+    const staffChange = calculatePercentageChange(totalStaff, previousMonthStaff);
+    const hotelOwnersChange = calculatePercentageChange(totalHotelOwners, previousMonthHotelOwners);
+    const touristsChange = calculatePercentageChange(totalTourists, previousMonthTourists);
+
     // Get revenue data (last 30 days)
     const revenueData = await HotelBooking.aggregate([
       {
@@ -54,8 +98,26 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       }
     ]);
 
+    // Get previous month revenue for comparison
+    const previousMonthRevenueData = await HotelBooking.aggregate([
+      {
+        $match: {
+          status: 'confirmed',
+          createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$totalAmount' }
+        }
+      }
+    ]);
+
     const totalRevenue = revenueData.length > 0 ? revenueData[0].totalRevenue : 0;
     const averageBookingValue = revenueData.length > 0 ? revenueData[0].averageBookingValue : 0;
+    const previousMonthRevenue = previousMonthRevenueData.length > 0 ? previousMonthRevenueData[0].totalRevenue : 0;
+    const revenueChange = calculatePercentageChange(totalRevenue, previousMonthRevenue);
 
     // Get booking status distribution
     const bookingStatusStats = await HotelBooking.aggregate([
@@ -94,6 +156,16 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         revenue: {
           totalRevenue,
           averageBookingValue
+        },
+        changes: {
+          totalUsersChange: usersChange,
+          totalHotelsChange: hotelsChange,
+          totalBookingsChange: bookingsChange,
+          activeStaffChange: staffChange,
+          hotelOwnersChange: hotelOwnersChange,
+          touristsChange: touristsChange,
+          totalRevenueChange: revenueChange,
+          pendingApprovalsChange: 0 // This would need more complex logic
         },
         bookingStatusStats,
         activeHotels: hotelStatusStats
@@ -261,7 +333,282 @@ const getPlatformAnalytics = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get all users with pagination and filtering
+// @route   GET /api/admin/users
+// @access  Private (Admin only)
+const getAllUsers = asyncHandler(async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      search = '', 
+      role = '', 
+      status = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // Build query
+    const query = {};
+    
+    // Search by name or email
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Filter by role
+    if (role) {
+      query.role = role;
+    }
+    
+    // Filter by status (active/inactive)
+    if (status) {
+      if (status === 'active') {
+        query.isActive = true;
+      } else if (status === 'inactive') {
+        query.isActive = false;
+      }
+    }
+
+    // Build sort object
+    const sortObj = {};
+    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Execute query
+    const users = await User.find(query)
+      .select('-password') // Exclude password
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users,
+        pagination: {
+          current: parseInt(page),
+          pages: Math.ceil(total / limit),
+          total,
+          limit: parseInt(limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching users'
+    });
+  }
+});
+
+// @desc    Get single user by ID
+// @route   GET /api/admin/users/:id
+// @access  Private (Admin only)
+const getUserById = asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { user }
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user'
+    });
+  }
+});
+
+// @desc    Update user role
+// @route   PUT /api/admin/users/:id/role
+// @access  Private (Admin only)
+const updateUserRole = asyncHandler(async (req, res) => {
+  try {
+    const { role } = req.body;
+    
+    // Validate role
+    const validRoles = ['tourist', 'driver', 'guide', 'hotel_owner', 'staff', 'admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: ' + validRoles.join(', ')
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Prevent admin from changing their own role
+    if (user._id.toString() === req.user.id && role !== 'admin') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot change your own admin role'
+      });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'User role updated successfully',
+      data: { 
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating user role'
+    });
+  }
+});
+
+// @desc    Toggle user verification status
+// @route   PUT /api/admin/users/:id/status
+// @access  Private (Admin only)
+const toggleUserStatus = asyncHandler(async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'isActive must be a boolean value'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Prevent admin from deactivating themselves
+    if (user._id.toString() === req.user.id && !isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot deactivate your own account'
+      });
+    }
+
+    // Update both isActive and isVerified fields
+    user.isActive = isActive;
+    user.isVerified = isActive; // Verification status should match active status
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User ${isActive ? 'verified and activated' : 'unverified and deactivated'} successfully`,
+      data: { 
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          isActive: user.isActive,
+          isVerified: user.isVerified
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating user status'
+    });
+  }
+});
+
+// @desc    Create a new user
+// @route   POST /api/admin/users
+// @access  Private (Admin only)
+const createUser = asyncHandler(async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, role, password, isVerified, isActive } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Create new user
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      phone: phone || '',
+      role: role || 'tourist',
+      password,
+      isVerified: isVerified || false,
+      isActive: isActive !== undefined ? isActive : true
+    });
+
+    // Remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: userResponse
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating user',
+      error: error.message
+    });
+  }
+});
+
 module.exports = {
   getDashboardStats,
-  getPlatformAnalytics
+  getPlatformAnalytics,
+  getAllUsers,
+  getUserById,
+  updateUserRole,
+  toggleUserStatus,
+  createUser
 };

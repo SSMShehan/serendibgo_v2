@@ -172,8 +172,7 @@ const userSchema = new mongoose.Schema({
     vehicleTypes: [String],
     licenseNumber: String,
     
-    // For staff
-    permissions: [String],
+    // For staff - permissions are handled in profile.permissions above
     department: String,
     position: String,
     hireDate: Date,

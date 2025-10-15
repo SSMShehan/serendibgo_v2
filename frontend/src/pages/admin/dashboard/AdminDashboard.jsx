@@ -25,10 +25,15 @@ import {
   Headphones,
   Bell,
   MessageSquare,
-  Search
+  Search,
+  Mail,
+  Phone,
+  X,
+  XCircle
 } from 'lucide-react';
 import AdminStats from '../../../components/admin/dashboard/AdminStats';
 import staffService from '../../../services/admin/staffService';
+import api from '../../../services/api';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -53,6 +58,7 @@ const AdminDashboard = () => {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showViewUserModal, setShowViewUserModal] = useState(false);
 
   // Staff management state
   const [staffMembers, setStaffMembers] = useState([]);
@@ -64,6 +70,7 @@ const AdminDashboard = () => {
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [showEditStaffModal, setShowEditStaffModal] = useState(false);
+  const [showViewStaffModal, setShowViewStaffModal] = useState(false);
 
   // Payroll management state
   const [payrollData, setPayrollData] = useState([]);
@@ -75,6 +82,8 @@ const AdminDashboard = () => {
   const [showAddSalaryModal, setShowAddSalaryModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayroll, setSelectedPayroll] = useState(null);
+  const [showViewPayrollModal, setShowViewPayrollModal] = useState(false);
+  const [showEditPayrollModal, setShowEditPayrollModal] = useState(false);
 
   // Permissions management state
   const [permissions, setPermissions] = useState([]);
@@ -82,15 +91,6 @@ const AdminDashboard = () => {
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [selectedPermission, setSelectedPermission] = useState(null);
-
-  // Financial management state
-  const [financialData, setFinancialData] = useState([]);
-  const [financialStats, setFinancialStats] = useState({});
-  const [revenueData, setRevenueData] = useState([]);
-  const [expenseData, setExpenseData] = useState([]);
-  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
-  const [showFinancialReportModal, setShowFinancialReportModal] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
 
   // Analytics management state
   const [analyticsData, setAnalyticsData] = useState({});
@@ -120,7 +120,6 @@ const AdminDashboard = () => {
     console.log('Component mounted, loading initial data...');
     fetchPayrollData();
     fetchPermissionsData();
-    fetchFinancialData();
     fetchAnalyticsData();
     fetchSettingsData();
   }, []);
@@ -180,8 +179,35 @@ const AdminDashboard = () => {
       
       // Try to fetch admin dashboard stats, but don't fail if API doesn't exist
       try {
-      const statsResponse = await staffService.getDashboardStats();
-      setStats(statsResponse.data);
+        const statsResponse = await staffService.getDashboardStats();
+        
+        if (statsResponse.success) {
+          const { overview, pending, revenue, changes } = statsResponse.data;
+          
+          // Map backend data to frontend stats format
+          setStats({
+            totalUsers: overview.totalUsers || 0,
+            totalHotels: overview.totalHotels || 0,
+            totalBookings: overview.totalBookings || 0,
+            totalRevenue: revenue.totalRevenue || 0,
+            activeStaff: overview.totalStaff || 0,
+            pendingApprovals: (pending.pendingHotels || 0) + (pending.pendingUsers || 0),
+            hotelOwners: overview.totalHotelOwners || 0,
+            tourists: overview.totalTourists || 0,
+            guides: overview.totalGuides || 0,
+            // Add percentage changes
+            totalUsersChange: changes.totalUsersChange || 0,
+            totalHotelsChange: changes.totalHotelsChange || 0,
+            totalBookingsChange: changes.totalBookingsChange || 0,
+            totalRevenueChange: changes.totalRevenueChange || 0,
+            activeStaffChange: changes.activeStaffChange || 0,
+            pendingApprovalsChange: changes.pendingApprovalsChange || 0,
+            hotelOwnersChange: changes.hotelOwnersChange || 0,
+            touristsChange: changes.touristsChange || 0
+          });
+          
+          console.log('Dashboard stats loaded from database:', statsResponse.data);
+        }
       } catch (statsError) {
         console.log('Dashboard stats API not available, using fallback data');
         // Provide fallback stats
@@ -254,7 +280,6 @@ const AdminDashboard = () => {
     { id: 'staff', label: 'Staff', icon: Shield },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
     { id: 'permissions', label: 'Permissions', icon: Settings },
-    { id: 'financial', label: 'Financial', icon: BarChart3 },
     { id: 'analytics', label: 'Analytics', icon: PieChart },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
@@ -289,8 +314,7 @@ const AdminDashboard = () => {
 
   const handleViewStaff = (staff) => {
     setSelectedStaff(staff);
-    // You can implement a view modal here
-    console.log('View staff:', staff);
+    setShowViewStaffModal(true);
   };
 
   const handleEditStaff = (staff) => {
@@ -426,8 +450,7 @@ const AdminDashboard = () => {
 
   const handleViewUser = (user) => {
     setSelectedUser(user);
-    // You can implement a view modal here
-    console.log('View user:', user);
+    setShowViewUserModal(true);
   };
 
   const handleEditUser = (user) => {
@@ -437,18 +460,38 @@ const AdminDashboard = () => {
 
   const handleToggleUserStatus = async (user) => {
     try {
-      // This would need a proper API endpoint for updating user verification status
-      toast.success(`User ${user.isVerified ? 'unverified' : 'verified'} successfully`);
-      fetchUserData(); // Refresh the list
+      const response = await api.put(`/admin/users/${user._id}/status`, { 
+        isActive: !user.isVerified 
+      });
+      
+      if (response.status === 200) {
+        toast.success(`User ${user.isVerified ? 'unverified' : 'verified'} successfully`);
+        fetchUserData(); // Refresh the list
+      }
     } catch (error) {
       console.error('Error updating user status:', error);
       toast.error('Failed to update user status');
     }
   };
 
-  const handleAddUser = async (userData) => {
+  const handleAddUser = async (e) => {
+    e.preventDefault();
     try {
-      // This would need a proper API endpoint for creating users
+      const formData = new FormData(e.target);
+      const userData = {
+        firstName: formData.get('firstName'),
+        lastName: formData.get('lastName'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        role: formData.get('role'),
+        password: formData.get('password'),
+        isVerified: formData.get('isVerified') === 'true',
+        isActive: true
+      };
+
+      // Create user via API
+      await api.post('/admin/users', userData);
+      
       toast.success('User created successfully');
       setShowAddUserModal(false);
       fetchUserData(); // Refresh the list
@@ -460,7 +503,20 @@ const AdminDashboard = () => {
 
   const handleUpdateUser = async (userId, userData) => {
     try {
-      // This would need a proper API endpoint for updating users
+      // Update user role if it changed
+      if (userData.role) {
+        await api.put(`/admin/users/${userId}/role`, { 
+          role: userData.role 
+        });
+      }
+      
+      // Update user status if it changed
+      if (userData.isActive !== undefined) {
+        await api.put(`/admin/users/${userId}/status`, { 
+          isActive: userData.isActive 
+        });
+      }
+      
       toast.success('User updated successfully');
       setShowEditUserModal(false);
       setSelectedUser(null);
@@ -482,45 +538,56 @@ const AdminDashboard = () => {
   const fetchPayrollData = async () => {
     try {
       console.log('fetchPayrollData called');
-      // Mock payroll data - in real implementation, this would come from API
-      const mockPayrollData = [
-        {
-          _id: '1',
-          staffId: 'staff1',
-          staffName: 'John Smith',
-          position: 'Manager',
-          baseSalary: 50000,
-          allowances: 5000,
-          deductions: 2000,
-          netSalary: 53000,
-          status: 'paid',
-          payPeriod: '2024-01',
-          paymentDate: '2024-01-31',
-          paymentMethod: 'Bank Transfer'
-        },
-        {
-          _id: '2',
-          staffId: 'staff2',
-          staffName: 'Sarah Johnson',
-          position: 'Developer',
-          baseSalary: 45000,
-          allowances: 3000,
-          deductions: 1500,
-          netSalary: 46500,
-          status: 'pending',
-          payPeriod: '2024-01',
-          paymentDate: null,
-          paymentMethod: 'Bank Transfer'
-        }
-      ];
+      
+      // Fetch real staff data from the database
+      const staffResponse = await staffService.getStaffMembers({ limit: 100 });
+      const staffMembers = staffResponse.data.staff || [];
+      
+      // Generate payroll data based on real staff members
+      const payrollData = staffMembers.map((staff, index) => {
+        // Generate realistic salary data based on staff role/position
+        const baseSalary = staff.role === 'manager' ? 75000 : 
+                          staff.role === 'admin' ? 80000 :
+                          staff.role === 'supervisor' ? 65000 :
+                          staff.role === 'support' ? 45000 : 50000;
+        
+        const allowances = Math.floor(baseSalary * 0.1); // 10% allowances
+        const deductions = Math.floor(baseSalary * 0.05); // 5% deductions
+        const netSalary = baseSalary + allowances - deductions;
+        
+        // Generate pay period (current month)
+        const currentDate = new Date();
+        const payPeriod = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Random status for demonstration (in real app, this would come from database)
+        const status = Math.random() > 0.5 ? 'paid' : 'pending';
+        
+        return {
+          _id: staff._id,
+          staffId: staff._id,
+          staffName: `${staff.firstName} ${staff.lastName}`,
+          position: staff.role?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Staff Member',
+          baseSalary: baseSalary,
+          allowances: allowances,
+          deductions: deductions,
+          netSalary: netSalary,
+          status: status,
+          payPeriod: payPeriod,
+          paymentDate: status === 'paid' ? new Date().toISOString().split('T')[0] : null,
+          paymentMethod: 'Bank Transfer',
+          email: staff.email,
+          phone: staff.phone,
+          isActive: staff.isActive
+        };
+      });
 
-      console.log('Setting payroll data:', mockPayrollData);
-      setPayrollData(mockPayrollData);
+      console.log('Setting payroll data:', payrollData);
+      setPayrollData(payrollData);
       setPayrollStats({
-        totalStaff: mockPayrollData.length,
-        paidStaff: mockPayrollData.filter(p => p.status === 'paid').length,
-        pendingStaff: mockPayrollData.filter(p => p.status === 'pending').length,
-        totalPayroll: mockPayrollData.reduce((sum, p) => sum + p.netSalary, 0)
+        totalStaff: payrollData.length,
+        paidStaff: payrollData.filter(p => p.status === 'paid').length,
+        pendingStaff: payrollData.filter(p => p.status === 'pending').length,
+        totalPayroll: payrollData.reduce((sum, p) => sum + p.netSalary, 0)
       });
       console.log('Payroll data set successfully');
     } catch (error) {
@@ -531,9 +598,34 @@ const AdminDashboard = () => {
 
   const handleProcessPayment = async (payrollId) => {
     try {
-      // Mock payment processing
-      toast.success('Payment processed successfully');
-      fetchPayrollData(); // Refresh the list
+      // Find the payroll record
+      const payroll = payrollData.find(p => p._id === payrollId);
+      if (!payroll) {
+        toast.error('Payroll record not found');
+        return;
+      }
+
+      // Update the payroll status to paid
+      const updatedPayrollData = payrollData.map(p => 
+        p._id === payrollId 
+          ? { ...p, status: 'paid', paymentDate: new Date().toISOString().split('T')[0] }
+          : p
+      );
+      
+      setPayrollData(updatedPayrollData);
+      
+      // Update payroll stats
+      setPayrollStats(prev => ({
+        ...prev,
+        paidStaff: updatedPayrollData.filter(p => p.status === 'paid').length,
+        pendingStaff: updatedPayrollData.filter(p => p.status === 'pending').length
+      }));
+
+      toast.success(`Payment processed successfully for ${payroll.staffName}`);
+      
+      // In a real application, you would make an API call here:
+      // await api.put(`/admin/payroll/${payrollId}/process-payment`);
+      
     } catch (error) {
       console.error('Error processing payment:', error);
       toast.error('Failed to process payment');
@@ -554,18 +646,33 @@ const AdminDashboard = () => {
 
   const handleViewPayroll = (payroll) => {
     setSelectedPayroll(payroll);
-    console.log('View payroll:', payroll);
+    setShowViewPayrollModal(true);
   };
 
   const handleEditPayroll = (payroll) => {
     setSelectedPayroll(payroll);
-    console.log('Edit payroll:', payroll);
+    setShowEditPayrollModal(true);
   };
 
   // Permissions management functions
   const fetchPermissionsData = async () => {
     try {
-      // Mock permissions data
+      console.log('Fetching permissions data...');
+      
+      // Fetch permission templates
+      const templatesResponse = await api.get('/admin/permissions/templates');
+      setPermissionTemplates(templatesResponse.data.data.templates);
+      
+      // Fetch staff permissions
+      const staffResponse = await api.get('/admin/permissions/staff');
+      setPermissions(staffResponse.data.data.staff);
+      
+      console.log('Permissions data fetched successfully');
+    } catch (error) {
+      console.error('Error fetching permissions data:', error);
+      toast.error('Failed to load permissions data');
+      
+      // Fallback to mock data if API fails
       const mockPermissions = [
         {
           _id: '1',
@@ -573,10 +680,10 @@ const AdminDashboard = () => {
           staffName: 'John Smith',
           role: 'Manager',
           permissions: {
-            users: { view: true, create: true, edit: true, delete: false },
-            bookings: { view: true, create: false, edit: true, delete: false },
+            users: { view: true, create: true, edit: true, delete: true },
+            bookings: { view: true, create: true, edit: true, delete: true },
             vehicles: { view: true, create: true, edit: true, delete: true },
-            reports: { view: true, create: false, edit: false, delete: false }
+            reports: { view: true, create: true, edit: true, delete: true }
           }
         },
         {
@@ -600,7 +707,7 @@ const AdminDashboard = () => {
         {
           _id: 'template1',
           name: 'Manager Template',
-          description: 'Full access to all modules',
+          description: 'Full access to all modules and features.',
           permissions: {
             users: { view: true, create: true, edit: true, delete: true },
             bookings: { view: true, create: true, edit: true, delete: true },
@@ -611,26 +718,23 @@ const AdminDashboard = () => {
         {
           _id: 'template2',
           name: 'Staff Template',
-          description: 'Limited access for regular staff',
+          description: 'Limited access for general staff operations.',
           permissions: {
             users: { view: true, create: false, edit: false, delete: false },
             bookings: { view: true, create: false, edit: true, delete: false },
-            vehicles: { view: true, create: false, edit: false, delete: false },
-            reports: { view: false, create: false, edit: false, delete: false }
+            vehicles: { view: true, create: true, edit: false, delete: false },
+            reports: { view: true, create: false, edit: false, delete: false }
           }
         }
       ];
 
       setPermissionTemplates(mockTemplates);
-    } catch (error) {
-      console.error('Error fetching permissions data:', error);
-      toast.error('Failed to load permissions data');
     }
   };
 
   const handleUpdatePermissions = async (staffId, newPermissions) => {
     try {
-      // Mock permission update
+      await api.put(`/admin/permissions/staff/${staffId}`, { permissions: newPermissions });
       toast.success('Permissions updated successfully');
       setShowPermissionModal(false);
       fetchPermissionsData(); // Refresh the list
@@ -642,7 +746,7 @@ const AdminDashboard = () => {
 
   const handleCreateTemplate = async (templateData) => {
     try {
-      // Mock template creation
+      await api.post('/admin/permissions/templates', templateData);
       toast.success('Permission template created successfully');
       setShowTemplateModal(false);
       fetchPermissionsData(); // Refresh the list
@@ -652,72 +756,25 @@ const AdminDashboard = () => {
     }
   };
 
-  // Financial management functions
-  const fetchFinancialData = async () => {
+  const handleApplyTemplate = async (template) => {
     try {
-      // Mock financial data
-      const mockRevenueData = [
-        { month: 'Jan', revenue: 125000, bookings: 45, tours: 32, hotels: 28 },
-        { month: 'Feb', revenue: 142000, bookings: 52, tours: 38, hotels: 35 },
-        { month: 'Mar', revenue: 138000, bookings: 48, tours: 35, hotels: 31 },
-        { month: 'Apr', revenue: 156000, bookings: 58, tours: 42, hotels: 38 },
-        { month: 'May', revenue: 168000, bookings: 62, tours: 45, hotels: 42 },
-        { month: 'Jun', revenue: 175000, bookings: 68, tours: 48, hotels: 45 }
-      ];
-
-      const mockExpenseData = [
-        { id: '1', category: 'Staff Salaries', amount: 45000, date: '2024-01-15', description: 'Monthly staff salaries' },
-        { id: '2', category: 'Marketing', amount: 12000, date: '2024-01-20', description: 'Digital marketing campaigns' },
-        { id: '3', category: 'Operations', amount: 8500, date: '2024-01-25', description: 'Office rent and utilities' },
-        { id: '4', category: 'Technology', amount: 3500, date: '2024-01-30', description: 'Software subscriptions' }
-      ];
-
-      setRevenueData(mockRevenueData);
-      setExpenseData(mockExpenseData);
-
-      // Calculate financial stats
-      const totalRevenue = mockRevenueData.reduce((sum, item) => sum + item.revenue, 0);
-      const totalExpenses = mockExpenseData.reduce((sum, item) => sum + item.amount, 0);
-      const netProfit = totalRevenue - totalExpenses;
-      const growthRate = ((mockRevenueData[mockRevenueData.length - 1].revenue - mockRevenueData[mockRevenueData.length - 2].revenue) / mockRevenueData[mockRevenueData.length - 2].revenue) * 100;
-
-      setFinancialStats({
-        totalRevenue,
-        totalExpenses,
-        netProfit,
-        growthRate,
-        totalBookings: mockRevenueData.reduce((sum, item) => sum + item.bookings, 0),
-        totalTours: mockRevenueData.reduce((sum, item) => sum + item.tours, 0),
-        totalHotels: mockRevenueData.reduce((sum, item) => sum + item.hotels, 0)
+      // Get all staff IDs for now (in a real app, you'd have a selection mechanism)
+      const staffIds = permissions.map(p => p._id);
+      await api.post('/admin/permissions/apply-template', {
+        templateId: template._id,
+        staffIds: staffIds
       });
-
+      toast.success(`Template "${template.name}" applied to staff successfully`);
+      fetchPermissionsData(); // Refresh the list
     } catch (error) {
-      console.error('Error fetching financial data:', error);
-      toast.error('Failed to load financial data');
+      console.error('Error applying template:', error);
+      toast.error('Failed to apply template');
     }
   };
 
-  const handleAddExpense = async (expenseData) => {
-    try {
-      // Mock expense addition
-      toast.success('Expense added successfully');
-      setShowAddExpenseModal(false);
-      fetchFinancialData(); // Refresh the data
-    } catch (error) {
-      console.error('Error adding expense:', error);
-      toast.error('Failed to add expense');
-    }
-  };
-
-  const handleGenerateReport = async (period) => {
-    try {
-      // Mock report generation
-      toast.success(`${period} financial report generated successfully`);
-      setShowFinancialReportModal(false);
-    } catch (error) {
-      console.error('Error generating report:', error);
-      toast.error('Failed to generate report');
-    }
+  const handleEditTemplate = (template) => {
+    setSelectedPermission(template);
+    setShowTemplateModal(true);
   };
 
   // Analytics management functions
@@ -725,7 +782,67 @@ const AdminDashboard = () => {
     try {
       console.log('fetchAnalyticsData called');
       
-      // Mock user analytics data
+      // Fetch real analytics data from backend
+      const response = await api.get('/admin/analytics', {
+        params: { period: analyticsPeriod === '7days' ? '7d' : '30d' }
+      });
+
+      if (response.data.success) {
+        const { userTrends, bookingTrends, hotelTrends } = response.data.data;
+        
+        // Transform user trends data
+        const transformedUserAnalytics = userTrends.map(trend => ({
+          date: new Date(trend._id.year, trend._id.month - 1, trend._id.day).toISOString(),
+          newUsers: trend.count,
+          activeUsers: Math.floor(trend.count * 0.7), // Estimate active users
+          totalUsers: trend.count
+        }));
+
+        // Transform booking trends data
+        const transformedBookingAnalytics = bookingTrends.map(trend => ({
+          date: new Date(trend._id.year, trend._id.month - 1, trend._id.day).toISOString(),
+          tours: Math.floor(trend.count * 0.4), // Estimate tour bookings
+          hotels: Math.floor(trend.count * 0.3), // Estimate hotel bookings
+          vehicles: Math.floor(trend.count * 0.3), // Estimate vehicle bookings
+          total: trend.count,
+          revenue: trend.revenue || 0
+        }));
+
+        // Calculate analytics stats
+        const totalNewUsers = userTrends.reduce((sum, trend) => sum + trend.count, 0);
+        const avgActiveUsers = Math.floor(totalNewUsers * 0.7);
+        const totalBookings = bookingTrends.reduce((sum, trend) => sum + trend.count, 0);
+        const totalRevenue = bookingTrends.reduce((sum, trend) => sum + (trend.revenue || 0), 0);
+
+        // Calculate growth rates (mock calculation for now)
+        const userGrowthRate = 12.5;
+        const bookingGrowthRate = 8.3;
+        const revenueGrowthRate = 15.2;
+
+        setAnalyticsData({
+          totalNewUsers,
+          avgActiveUsers,
+          totalBookings,
+          totalRevenue,
+          userGrowthRate,
+          bookingGrowthRate,
+          revenueGrowthRate,
+          avgBookingValue: totalBookings > 0 ? Math.floor(totalRevenue / totalBookings) : 0
+        });
+
+        setUserAnalytics(transformedUserAnalytics);
+        setBookingAnalytics(transformedBookingAnalytics);
+        setRevenueAnalytics(transformedBookingAnalytics.map(item => ({
+          date: item.date,
+          revenue: item.revenue
+        })));
+
+        console.log('Analytics data set successfully from database');
+      }
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      
+      // Fallback to mock data if API fails
       const mockUserAnalytics = [
         { date: '2024-01-01', newUsers: 45, activeUsers: 120, totalUsers: 1250 },
         { date: '2024-01-02', newUsers: 52, activeUsers: 135, totalUsers: 1302 },
@@ -736,54 +853,36 @@ const AdminDashboard = () => {
         { date: '2024-01-07', newUsers: 43, activeUsers: 132, totalUsers: 1546 }
       ];
 
-      // Mock booking analytics data
       const mockBookingAnalytics = [
-        { date: '2024-01-01', tours: 12, hotels: 8, vehicles: 15, total: 35 },
-        { date: '2024-01-02', tours: 18, hotels: 12, vehicles: 22, total: 52 },
-        { date: '2024-01-03', tours: 15, hotels: 10, vehicles: 18, total: 43 },
-        { date: '2024-01-04', tours: 22, hotels: 15, vehicles: 25, total: 62 },
-        { date: '2024-01-05', tours: 19, hotels: 13, vehicles: 20, total: 52 },
-        { date: '2024-01-06', tours: 25, hotels: 18, vehicles: 28, total: 71 },
-        { date: '2024-01-07', tours: 16, hotels: 11, vehicles: 19, total: 46 }
+        { date: '2024-01-01', tours: 12, hotels: 8, vehicles: 15, total: 35, revenue: 45000 },
+        { date: '2024-01-02', tours: 18, hotels: 12, vehicles: 22, total: 52, revenue: 68000 },
+        { date: '2024-01-03', tours: 15, hotels: 10, vehicles: 18, total: 43, revenue: 55000 },
+        { date: '2024-01-04', tours: 22, hotels: 15, vehicles: 25, total: 62, revenue: 78000 },
+        { date: '2024-01-05', tours: 19, hotels: 13, vehicles: 20, total: 52, revenue: 65000 },
+        { date: '2024-01-06', tours: 25, hotels: 18, vehicles: 28, total: 71, revenue: 89000 },
+        { date: '2024-01-07', tours: 21, hotels: 14, vehicles: 23, total: 58, revenue: 72000 }
       ];
 
-      // Mock revenue analytics data
-      const mockRevenueAnalytics = [
-        { date: '2024-01-01', revenue: 12500, bookings: 35, avgBookingValue: 357 },
-        { date: '2024-01-02', revenue: 18600, bookings: 52, avgBookingValue: 358 },
-        { date: '2024-01-03', revenue: 15400, bookings: 43, avgBookingValue: 358 },
-        { date: '2024-01-04', revenue: 22100, bookings: 62, avgBookingValue: 356 },
-        { date: '2024-01-05', revenue: 18600, bookings: 52, avgBookingValue: 358 },
-        { date: '2024-01-06', revenue: 25300, bookings: 71, avgBookingValue: 356 },
-        { date: '2024-01-07', revenue: 16400, bookings: 46, avgBookingValue: 357 }
-      ];
+      setAnalyticsData({
+        totalNewUsers: 341,
+        avgActiveUsers: 134,
+        totalBookings: 361,
+        totalRevenue: 128900,
+        userGrowthRate: 12.5,
+        bookingGrowthRate: 8.3,
+        revenueGrowthRate: 15.2,
+        avgBookingValue: 357
+      });
 
       setUserAnalytics(mockUserAnalytics);
       setBookingAnalytics(mockBookingAnalytics);
-      setRevenueAnalytics(mockRevenueAnalytics);
+      setRevenueAnalytics(mockBookingAnalytics.map(item => ({
+        date: item.date,
+        revenue: item.revenue
+      })));
 
-      // Calculate analytics summary
-      const totalNewUsers = mockUserAnalytics.reduce((sum, item) => sum + item.newUsers, 0);
-      const avgActiveUsers = mockUserAnalytics.reduce((sum, item) => sum + item.activeUsers, 0) / mockUserAnalytics.length;
-      const totalBookings = mockBookingAnalytics.reduce((sum, item) => sum + item.total, 0);
-      const totalRevenue = mockRevenueAnalytics.reduce((sum, item) => sum + item.revenue, 0);
-      const avgBookingValue = totalRevenue / totalBookings;
-
-      setAnalyticsData({
-        totalNewUsers,
-        avgActiveUsers: Math.round(avgActiveUsers),
-        totalBookings,
-        totalRevenue,
-        avgBookingValue: Math.round(avgBookingValue),
-        userGrowthRate: 12.5,
-        bookingGrowthRate: 8.3,
-        revenueGrowthRate: 15.2
-      });
-
-      console.log('Analytics data set successfully');
-    } catch (error) {
-      console.error('Error fetching analytics data:', error);
-      toast.error('Failed to load analytics data');
+      console.log('Using fallback mock data');
+      toast.error('Failed to load analytics data from database');
     }
   };
 
@@ -803,7 +902,29 @@ const AdminDashboard = () => {
     try {
       console.log('fetchSettingsData called');
       
-      // Mock platform settings
+      // Fetch real settings data from backend
+      const response = await api.get('/admin/settings');
+
+      if (response.data.success) {
+        const { platform, email, payment, system, lastUpdated } = response.data.data;
+        
+        setPlatformSettings(platform);
+        setEmailSettings(email);
+        setPaymentSettings(payment);
+        setSettingsData({
+          lastUpdated,
+          version: system.version,
+          environment: system.environment,
+          databaseStatus: system.databaseStatus,
+          cacheStatus: system.cacheStatus
+        });
+
+        console.log('Settings data set successfully from database');
+      }
+    } catch (error) {
+      console.error('Error fetching settings data:', error);
+      
+      // Fallback to mock data if API fails
       const mockPlatformSettings = {
         siteName: 'SerendibGo',
         siteDescription: 'Your gateway to Sri Lankan adventures',
@@ -818,7 +939,6 @@ const AdminDashboard = () => {
         sessionTimeout: 30
       };
 
-      // Mock email settings
       const mockEmailSettings = {
         smtpHost: 'smtp.gmail.com',
         smtpPort: 587,
@@ -834,7 +954,6 @@ const AdminDashboard = () => {
         }
       };
 
-      // Mock payment settings
       const mockPaymentSettings = {
         stripeEnabled: true,
         stripePublicKey: 'pk_test_••••••••',
@@ -860,19 +979,22 @@ const AdminDashboard = () => {
         cacheStatus: 'active'
       });
 
-      console.log('Settings data set successfully');
-    } catch (error) {
-      console.error('Error fetching settings data:', error);
-      toast.error('Failed to load settings data');
+      console.log('Using fallback mock data');
+      toast.error('Failed to load settings data from database');
     }
   };
 
   const handleUpdateSettings = async (settingsType, newSettings) => {
     try {
-      // Mock settings update
-      toast.success(`${settingsType} settings updated successfully`);
-      setShowSettingsModal(false);
-      fetchSettingsData(); // Refresh the data
+      // Update settings via API
+      const endpoint = `/admin/settings/${settingsType}`;
+      const response = await api.put(endpoint, newSettings);
+
+      if (response.data.success) {
+        toast.success(`${settingsType} settings updated successfully`);
+        setShowSettingsModal(false);
+        fetchSettingsData(); // Refresh the data
+      }
     } catch (error) {
       console.error('Error updating settings:', error);
       toast.error('Failed to update settings');
@@ -881,12 +1003,76 @@ const AdminDashboard = () => {
 
   const handleResetSettings = async (settingsType) => {
     try {
-      // Mock settings reset
-      toast.success(`${settingsType} settings reset to defaults`);
-      fetchSettingsData(); // Refresh the data
+      // Reset settings via API
+      const response = await api.post('/admin/settings/reset', { settingsType });
+
+      if (response.data.success) {
+        toast.success(`${settingsType} settings reset to defaults`);
+        fetchSettingsData(); // Refresh the data
+      }
     } catch (error) {
       console.error('Error resetting settings:', error);
       toast.error('Failed to reset settings');
+    }
+  };
+
+  // PDF Report generation
+  const handleGeneratePDFReport = async (reportType = 'dashboard', period = '30d') => {
+    try {
+      toast.loading('Generating PDF report...', { id: 'pdf-report' });
+      
+      const response = await api.post('/admin/reports/generate', {
+        reportType,
+        period
+      });
+
+      if (response.data.success && response.data.data) {
+        console.log('Response data type:', typeof response.data.data);
+        console.log('Response data length:', response.data.data.length);
+        console.log('First 100 chars:', response.data.data.substring(0, 100));
+        
+        try {
+          // Convert base64 to blob using a more robust method
+          const base64Data = response.data.data;
+          
+          // Remove any whitespace or newlines
+          const cleanBase64 = base64Data.replace(/\s/g, '');
+          
+          // Convert base64 to binary string
+          const binaryString = atob(cleanBase64);
+          
+          // Convert binary string to Uint8Array
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          // Create blob
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          
+          console.log('Blob created successfully, size:', blob.size);
+          
+          // Create download link
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = response.data.filename || `serendibgo-report-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+
+          toast.success('PDF report generated successfully!', { id: 'pdf-report' });
+        } catch (decodeError) {
+          console.error('Error decoding base64 data:', decodeError);
+          throw new Error('Failed to decode PDF data: ' + decodeError.message);
+        }
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      toast.error('Failed to generate PDF report', { id: 'pdf-report' });
     }
   };
 
@@ -899,9 +1085,6 @@ const AdminDashboard = () => {
     } else if (activeTab === 'permissions') {
       console.log('Fetching permissions data...');
       fetchPermissionsData();
-    } else if (activeTab === 'financial') {
-      console.log('Fetching financial data...');
-      fetchFinancialData();
     } else if (activeTab === 'analytics') {
       console.log('Fetching analytics data...');
       fetchAnalyticsData();
@@ -935,7 +1118,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
@@ -1059,11 +1242,17 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                     <div className="flex space-x-3">
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('dashboard', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Generate Report
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => setActiveTab('settings')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <Settings className="h-5 w-5 mr-2" />
                         Settings
                       </button>
@@ -1157,11 +1346,11 @@ const AdminDashboard = () => {
             {activeTab === 'users' && (
               <div className="space-y-8">
                 {/* User Management Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl shadow-lg p-8 text-white">
+                <div className="rounded-2xl shadow-lg p-8 text-white" style={{ background: 'linear-gradient(to right, #339BAE, #E59B2C)' }}>
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-3xl font-bold mb-2">User Management</h2>
-                      <p className="text-blue-100 text-lg">
+                      <p className="text-lg" style={{ color: '#DFE2E5' }}>
                         Manage platform users, roles, and verification status
                       </p>
                     </div>
@@ -1173,7 +1362,10 @@ const AdminDashboard = () => {
                         <User className="h-5 w-5 mr-2" />
                         Add User
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('users', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Export
                       </button>
@@ -1183,47 +1375,47 @@ const AdminDashboard = () => {
 
                 {/* User Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                  <div className="rounded-2xl shadow-lg border p-6" style={{ backgroundColor: 'white', borderColor: '#7B8F9D' }}>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <Users className="h-6 w-6 text-blue-600" />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#DFE2E5' }}>
+                        <Users className="h-6 w-6" style={{ color: '#339BAE' }} />
                       </div>
                       <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">{userStats.totalUsers || 0}</p>
-                        <p className="text-sm text-slate-600">Total Users</p>
+                        <p className="text-2xl font-bold" style={{ color: '#272C2F' }}>{userStats.totalUsers || 0}</p>
+                        <p className="text-sm" style={{ color: '#7B8F9D' }}>Total Users</p>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                  <div className="rounded-2xl shadow-lg border p-6" style={{ backgroundColor: 'white', borderColor: '#7B8F9D' }}>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#DFE2E5' }}>
+                        <CheckCircle className="h-6 w-6" style={{ color: '#339BAE' }} />
                       </div>
                       <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">{userStats.verifiedUsers || 0}</p>
-                        <p className="text-sm text-slate-600">Verified</p>
+                        <p className="text-2xl font-bold" style={{ color: '#272C2F' }}>{userStats.verifiedUsers || 0}</p>
+                        <p className="text-sm" style={{ color: '#7B8F9D' }}>Verified</p>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                  <div className="rounded-2xl shadow-lg border p-6" style={{ backgroundColor: 'white', borderColor: '#7B8F9D' }}>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                        <Clock className="h-6 w-6 text-yellow-600" />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#DFE2E5' }}>
+                        <Clock className="h-6 w-6" style={{ color: '#E59B2C' }} />
                       </div>
                       <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">{userStats.unverifiedUsers || 0}</p>
-                        <p className="text-sm text-slate-600">Pending</p>
+                        <p className="text-2xl font-bold" style={{ color: '#272C2F' }}>{userStats.unverifiedUsers || 0}</p>
+                        <p className="text-sm" style={{ color: '#7B8F9D' }}>Pending</p>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
+                  <div className="rounded-2xl shadow-lg border p-6" style={{ backgroundColor: 'white', borderColor: '#7B8F9D' }}>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <User className="h-6 w-6 text-purple-600" />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#DFE2E5' }}>
+                        <User className="h-6 w-6" style={{ color: '#725241' }} />
                       </div>
                       <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">{userStats.tourists || 0}</p>
-                        <p className="text-sm text-slate-600">Tourists</p>
+                        <p className="text-2xl font-bold" style={{ color: '#272C2F' }}>{userStats.tourists || 0}</p>
+                        <p className="text-sm" style={{ color: '#7B8F9D' }}>Tourists</p>
                       </div>
                     </div>
                   </div>
@@ -1270,34 +1462,34 @@ const AdminDashboard = () => {
 
                   {/* User Table */}
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full" style={{ minWidth: '800px' }}>
                       <thead>
                         <tr className="border-b border-slate-200">
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Name</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Email</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Role</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Status</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Joined</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Actions</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/4">Name</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/5">Email</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Role</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Status</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Joined</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {users.map((user) => (
                           <tr key={user._id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-4 px-4">
+                            <td className="py-3 px-2">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                                  <User className="h-5 w-5 text-white" />
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                                  <User className="h-4 w-4 text-white" />
                                 </div>
-                                <div className="ml-3">
-                                  <p className="font-medium text-slate-900">{user.firstName} {user.lastName}</p>
-                                  <p className="text-sm text-slate-500">{user.role}</p>
+                                <div className="ml-2 min-w-0 flex-1">
+                                  <p className="font-medium text-slate-900 text-sm truncate">{user.firstName} {user.lastName}</p>
+                                  <p className="text-xs text-slate-500 truncate">{user.role}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-4 text-slate-600">{user.email}</td>
-                            <td className="py-4 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            <td className="py-3 px-2 text-slate-600 text-sm truncate" title={user.email}>{user.email}</td>
+                            <td className="py-3 px-2">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
                                 user.role === 'admin' ? 'bg-red-100 text-red-800' :
                                 user.role === 'staff' ? 'bg-blue-100 text-blue-800' :
                                 user.role === 'guide' ? 'bg-green-100 text-green-800' :
@@ -1308,53 +1500,48 @@ const AdminDashboard = () => {
                                 {user.role?.replace('_', ' ')}
                               </span>
                             </td>
-                            <td className="py-4 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            <td className="py-3 px-2">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
                                 user.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                               }`}>
                                 {user.isVerified ? 'Verified' : 'Pending'}
                               </span>
                             </td>
-                            <td className="py-4 px-4 text-slate-600">
+                            <td className="py-3 px-2 text-slate-600 text-sm">
                               {new Date(user.createdAt).toLocaleDateString()}
                             </td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center space-x-2">
-              <button 
+                            <td className="py-3 px-2">
+                              <div className="flex items-center space-x-1">
+                                <button 
                                   onClick={() => handleViewUser(user)}
-                                  className="flex items-center px-2 py-1 text-blue-600 hover:text-blue-900 transition-colors text-sm"
+                                  className="p-1 text-blue-600 hover:text-blue-900 transition-colors rounded hover:bg-blue-50"
+                                  title="View user"
                                 >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
+                                  <Eye className="h-3 w-3" />
                                 </button>
                                 <button
                                   onClick={() => handleEditUser(user)}
-                                  className="flex items-center px-2 py-1 text-green-600 hover:text-green-900 transition-colors text-sm"
+                                  className="p-1 text-green-600 hover:text-green-900 transition-colors rounded hover:bg-green-50"
+                                  title="Edit user"
                                 >
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  Edit
+                                  <Settings className="h-3 w-3" />
                                 </button>
                                 <button
                                   onClick={() => handleToggleUserStatus(user)}
-                                  className={`flex items-center px-2 py-1 transition-colors text-sm ${
+                                  className={`p-1 transition-colors rounded hover:bg-opacity-50 ${
                                     user.isVerified 
-                                      ? 'text-yellow-600 hover:text-yellow-900' 
-                                      : 'text-green-600 hover:text-green-900'
+                                      ? 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50' 
+                                      : 'text-green-600 hover:text-green-900 hover:bg-green-50'
                                   }`}
+                                  title={user.isVerified ? 'Unverify user' : 'Verify user'}
                                 >
                                   {user.isVerified ? (
-                                    <>
-                                      <Clock className="h-4 w-4 mr-1" />
-                                      Unverify
-                                    </>
+                                    <Clock className="h-3 w-3" />
                                   ) : (
-                                    <>
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Verify
-                                    </>
+                                    <CheckCircle className="h-3 w-3" />
                                   )}
                                 </button>
-                </div>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1406,14 +1593,17 @@ const AdminDashboard = () => {
                       </p>
                     </div>
                     <div className="flex space-x-3">
-              <button 
+                      <button 
                         onClick={() => setShowAddStaffModal(true)}
                         className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
                       >
                         <User className="h-5 w-5 mr-2" />
                         Add Staff
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('staff', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Export
                       </button>
@@ -1499,77 +1689,72 @@ const AdminDashboard = () => {
 
                   {/* Staff Table */}
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full" style={{ minWidth: '800px' }}>
                       <thead>
                         <tr className="border-b border-slate-200">
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Name</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Email</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Phone</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Status</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Joined</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Actions</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/4">Name</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/5">Email</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Phone</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Status</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Joined</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/6">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {staffMembers.map((staff) => (
                           <tr key={staff._id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-4 px-4">
+                            <td className="py-3 px-2">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                                  <User className="h-5 w-5 text-white" />
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                                  <User className="h-4 w-4 text-white" />
                                 </div>
-                                <div className="ml-3">
-                                  <p className="font-medium text-slate-900">{staff.firstName} {staff.lastName}</p>
-                                  <p className="text-sm text-slate-500">Staff Member</p>
+                                <div className="ml-2 min-w-0 flex-1">
+                                  <p className="font-medium text-slate-900 text-sm truncate">{staff.firstName} {staff.lastName}</p>
+                                  <p className="text-xs text-slate-500 truncate">Staff Member</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-4 text-slate-600">{staff.email}</td>
-                            <td className="py-4 px-4 text-slate-600">{staff.phone || 'N/A'}</td>
-                            <td className="py-4 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            <td className="py-3 px-2 text-slate-600 text-sm truncate" title={staff.email}>{staff.email}</td>
+                            <td className="py-3 px-2 text-slate-600 text-sm truncate" title={staff.phone || 'N/A'}>{staff.phone || 'N/A'}</td>
+                            <td className="py-3 px-2">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${
                                 staff.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                               }`}>
                                 {staff.isActive ? 'Active' : 'Inactive'}
                               </span>
                             </td>
-                            <td className="py-4 px-4 text-slate-600">
+                            <td className="py-3 px-2 text-slate-600 text-sm">
                               {new Date(staff.createdAt).toLocaleDateString()}
                             </td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center space-x-2">
+                            <td className="py-3 px-2">
+                              <div className="flex items-center space-x-1">
                                 <button
                                   onClick={() => handleViewStaff(staff)}
-                                  className="flex items-center px-2 py-1 text-blue-600 hover:text-blue-900 transition-colors text-sm"
+                                  className="p-1 text-blue-600 hover:text-blue-900 transition-colors rounded hover:bg-blue-50"
+                                  title="View staff"
                                 >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
-              </button>
+                                  <Eye className="h-3 w-3" />
+                                </button>
                                 <button
                                   onClick={() => handleEditStaff(staff)}
-                                  className="flex items-center px-2 py-1 text-green-600 hover:text-green-900 transition-colors text-sm"
+                                  className="p-1 text-green-600 hover:text-green-900 transition-colors rounded hover:bg-green-50"
+                                  title="Edit staff"
                                 >
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  Edit
+                                  <Settings className="h-3 w-3" />
                                 </button>
                                 <button
                                   onClick={() => handleToggleStaffStatus(staff)}
-                                  className={`flex items-center px-2 py-1 transition-colors text-sm ${
+                                  className={`p-1 transition-colors rounded hover:bg-opacity-50 ${
                                     staff.isActive 
-                                      ? 'text-red-600 hover:text-red-900' 
-                                      : 'text-green-600 hover:text-green-900'
+                                      ? 'text-red-600 hover:text-red-900 hover:bg-red-50' 
+                                      : 'text-green-600 hover:text-green-900 hover:bg-green-50'
                                   }`}
+                                  title={staff.isActive ? 'Deactivate staff' : 'Activate staff'}
                                 >
                                   {staff.isActive ? (
-                                    <>
-                                      <AlertCircle className="h-4 w-4 mr-1" />
-                                      Deactivate
-                                    </>
+                                    <AlertCircle className="h-3 w-3" />
                                   ) : (
-                                    <>
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Activate
-                                    </>
+                                    <CheckCircle className="h-3 w-3" />
                                   )}
                                 </button>
                               </div>
@@ -1631,8 +1816,11 @@ const AdminDashboard = () => {
                       >
                         <DollarSign className="h-5 w-5 mr-2" />
                         Add Salary
-              </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      </button>
+                      <button 
+                        onClick={() => handleGeneratePDFReport('payroll', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Export Report
                       </button>
@@ -1718,37 +1906,37 @@ const AdminDashboard = () => {
 
                   {/* Payroll Table */}
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full" style={{ minWidth: '800px' }}>
                       <thead>
                         <tr className="border-b border-slate-200">
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Staff</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Position</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Base Salary</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Net Salary</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Status</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Pay Period</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Actions</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/3">Staff</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Position</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Base Salary</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Net Salary</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Status</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Period</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {payrollData.map((payroll) => (
                           <tr key={payroll._id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-4 px-4">
+                            <td className="py-2 px-1">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                                  <User className="h-5 w-5 text-white" />
+                                <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded flex items-center justify-center flex-shrink-0">
+                                  <User className="h-3 w-3 text-white" />
                                 </div>
-                                <div className="ml-3">
-                                  <p className="font-medium text-slate-900">{payroll.staffName}</p>
-                                  <p className="text-sm text-slate-500">ID: {payroll.staffId}</p>
+                                <div className="ml-1 min-w-0 flex-1">
+                                  <p className="font-medium text-slate-900 text-xs truncate">{payroll.staffName}</p>
+                                  <p className="text-xs text-slate-500 truncate">ID: {payroll.staffId.slice(-8)}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-4 text-slate-600">{payroll.position}</td>
-                            <td className="py-4 px-4 text-slate-600">Rs. {payroll.baseSalary.toLocaleString()}</td>
-                            <td className="py-4 px-4 text-slate-600 font-semibold">Rs. {payroll.netSalary.toLocaleString()}</td>
-                            <td className="py-4 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            <td className="py-2 px-1 text-slate-600 text-xs truncate">{payroll.position}</td>
+                            <td className="py-2 px-1 text-slate-600 text-xs">Rs. {(payroll.baseSalary/1000).toFixed(0)}k</td>
+                            <td className="py-2 px-1 text-slate-600 text-xs font-semibold">Rs. {(payroll.netSalary/1000).toFixed(0)}k</td>
+                            <td className="py-2 px-1">
+                              <span className={`inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium ${
                                 payroll.status === 'paid' ? 'bg-green-100 text-green-800' : 
                                 payroll.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                 'bg-red-100 text-red-800'
@@ -1756,33 +1944,33 @@ const AdminDashboard = () => {
                                 {payroll.status.charAt(0).toUpperCase() + payroll.status.slice(1)}
                               </span>
                             </td>
-                            <td className="py-4 px-4 text-slate-600">{payroll.payPeriod}</td>
-                            <td className="py-4 px-4">
-                              <div className="flex items-center space-x-2">
-              <button 
+                            <td className="py-2 px-1 text-slate-600 text-xs">{payroll.payPeriod}</td>
+                            <td className="py-2 px-1">
+                              <div className="flex items-center space-x-0.5">
+                                <button 
                                   onClick={() => handleViewPayroll(payroll)}
-                                  className="flex items-center px-2 py-1 text-blue-600 hover:text-blue-900 transition-colors text-sm"
+                                  className="p-0.5 text-blue-600 hover:text-blue-900 transition-colors rounded hover:bg-blue-50"
+                                  title="View payroll"
                                 >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View
+                                  <Eye className="h-3 w-3" />
                                 </button>
                                 {payroll.status === 'pending' && (
                                   <button
                                     onClick={() => handleProcessPayment(payroll._id)}
-                                    className="flex items-center px-2 py-1 text-green-600 hover:text-green-900 transition-colors text-sm"
+                                    className="p-0.5 text-green-600 hover:text-green-900 transition-colors rounded hover:bg-green-50"
+                                    title="Process payment"
                                   >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Pay
+                                    <CheckCircle className="h-3 w-3" />
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handleEditPayroll(payroll)}
-                                  className="flex items-center px-2 py-1 text-purple-600 hover:text-purple-900 transition-colors text-sm"
+                                  className="p-0.5 text-purple-600 hover:text-purple-900 transition-colors rounded hover:bg-purple-50"
+                                  title="Edit payroll"
                                 >
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  Edit
+                                  <Settings className="h-3 w-3" />
                                 </button>
-                </div>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1793,28 +1981,30 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Analytics Management Tab */}
+            {/* Analytics Dashboard Tab */}
             {activeTab === 'analytics' && (
               <div className="space-y-8">
-                {console.log('Rendering analytics tab, analyticsData:', analyticsData)}
-                {/* Analytics Management Header */}
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl shadow-lg p-8 text-white">
+                {/* Analytics Dashboard Header */}
+                <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-3xl font-bold mb-2">Analytics Dashboard</h2>
-                      <p className="text-indigo-100 text-lg">
+                      <p className="text-purple-100 text-lg">
                         Comprehensive analytics and performance metrics
                       </p>
                     </div>
                     <div className="flex space-x-3">
                       <button 
-                        onClick={() => setShowAnalyticsReportModal(true)}
+                        onClick={() => handleGeneratePDFReport('analytics', analyticsPeriod === '7days' ? '7d' : '30d')}
                         className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
                       >
                         <FileText className="h-5 w-5 mr-2" />
                         Generate Report
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('analytics', analyticsPeriod === '7days' ? '7d' : '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <BarChart3 className="h-5 w-5 mr-2" />
                         Export Data
                       </button>
@@ -1822,8 +2012,9 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* Analytics Stats */}
+                {/* Key Metrics Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  {/* New Users Card */}
                   <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -1832,10 +2023,12 @@ const AdminDashboard = () => {
                       <div className="ml-4">
                         <p className="text-2xl font-bold text-slate-900">{analyticsData.totalNewUsers || 0}</p>
                         <p className="text-sm text-slate-600">New Users (7 days)</p>
-                        <p className="text-xs text-green-600">+{analyticsData.userGrowthRate || 0}%</p>
+                        <p className="text-xs text-green-600 font-medium">+{analyticsData.userGrowthRate || 0}%</p>
                       </div>
                     </div>
                   </div>
+
+                  {/* Avg Active Users Card */}
                   <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -1844,10 +2037,12 @@ const AdminDashboard = () => {
                       <div className="ml-4">
                         <p className="text-2xl font-bold text-slate-900">{analyticsData.avgActiveUsers || 0}</p>
                         <p className="text-sm text-slate-600">Avg Active Users</p>
-                        <p className="text-xs text-green-600">+{analyticsData.userGrowthRate || 0}%</p>
+                        <p className="text-xs text-green-600 font-medium">+{analyticsData.userGrowthRate || 0}%</p>
                       </div>
                     </div>
                   </div>
+
+                  {/* Total Bookings Card */}
                   <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -1856,10 +2051,12 @@ const AdminDashboard = () => {
                       <div className="ml-4">
                         <p className="text-2xl font-bold text-slate-900">{analyticsData.totalBookings || 0}</p>
                         <p className="text-sm text-slate-600">Total Bookings</p>
-                        <p className="text-xs text-green-600">+{analyticsData.bookingGrowthRate || 0}%</p>
+                        <p className="text-xs text-green-600 font-medium">+{analyticsData.bookingGrowthRate || 0}%</p>
                       </div>
                     </div>
                   </div>
+
+                  {/* Total Revenue Card */}
                   <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -1868,7 +2065,7 @@ const AdminDashboard = () => {
                       <div className="ml-4">
                         <p className="text-2xl font-bold text-slate-900">Rs. {(analyticsData.totalRevenue || 0).toLocaleString()}</p>
                         <p className="text-sm text-slate-600">Total Revenue</p>
-                        <p className="text-xs text-green-600">+{analyticsData.revenueGrowthRate || 0}%</p>
+                        <p className="text-xs text-green-600 font-medium">+{analyticsData.revenueGrowthRate || 0}%</p>
                       </div>
                     </div>
                   </div>
@@ -1876,7 +2073,7 @@ const AdminDashboard = () => {
 
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* User Analytics Chart */}
+                  {/* User Growth Chart */}
                   <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xl font-semibold text-slate-900">User Growth</h3>
@@ -1884,7 +2081,7 @@ const AdminDashboard = () => {
                         <button 
                           onClick={() => setAnalyticsPeriod('7days')}
                           className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                            analyticsPeriod === '7days' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                            analyticsPeriod === '7days' ? 'bg-slate-100 text-slate-600' : 'bg-purple-600 text-white'
                           }`}
                         >
                           7 Days
@@ -1892,7 +2089,7 @@ const AdminDashboard = () => {
                         <button 
                           onClick={() => setAnalyticsPeriod('30days')}
                           className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                            analyticsPeriod === '30days' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                            analyticsPeriod === '30days' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600'
                           }`}
                         >
                           30 Days
@@ -1900,9 +2097,9 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Simple Line Chart for Users */}
-                    <div className="h-64 flex items-end justify-between space-x-1">
-                      {userAnalytics.map((item, index) => (
+                    {/* User Growth Bar Chart */}
+                    <div className="h-64 flex items-end justify-between space-x-2">
+                      {userAnalytics.slice(0, 7).map((item, index) => (
                         <div key={index} className="flex flex-col items-center flex-1">
                           <div 
                             className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg w-full mb-2 transition-all duration-500 hover:from-blue-600 hover:to-blue-500"
@@ -1915,32 +2112,35 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Booking Analytics Chart */}
+                  {/* Booking Trends Chart */}
                   <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xl font-semibold text-slate-900">Booking Trends</h3>
                       <div className="flex space-x-2">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Tours</span>
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Hotels</span>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Vehicles</span>
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-lg font-medium">Tours</span>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-lg font-medium">Hotels</span>
+                        <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-lg font-medium">Vehicles</span>
                       </div>
                     </div>
 
-                    {/* Stacked Bar Chart for Bookings */}
-                    <div className="h-64 flex items-end justify-between space-x-1">
-                      {bookingAnalytics.map((item, index) => (
+                    {/* Booking Trends Bar Chart */}
+                    <div className="h-64 flex items-end justify-between space-x-2">
+                      {bookingAnalytics.slice(0, 7).map((item, index) => (
                         <div key={index} className="flex flex-col items-center flex-1">
                           <div className="w-full mb-2">
+                            {/* Vehicles (Purple) */}
                             <div 
                               className="bg-gradient-to-t from-purple-500 to-purple-400 rounded-t-lg w-full"
                               style={{ height: `${(item.vehicles / Math.max(...bookingAnalytics.map(d => d.total))) * 200}px` }}
                               title={`Vehicles: ${item.vehicles}`}
                             ></div>
+                            {/* Hotels (Green) */}
                             <div 
                               className="bg-gradient-to-t from-green-500 to-green-400 w-full"
                               style={{ height: `${(item.hotels / Math.max(...bookingAnalytics.map(d => d.total))) * 200}px` }}
                               title={`Hotels: ${item.hotels}`}
                             ></div>
+                            {/* Tours (Blue) */}
                             <div 
                               className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-b-lg w-full"
                               style={{ height: `${(item.tours / Math.max(...bookingAnalytics.map(d => d.total))) * 200}px` }}
@@ -2378,10 +2578,13 @@ const AdminDashboard = () => {
                         <Settings className="h-5 w-5 mr-2" />
                         Create Template
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('permissions', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Export
-              </button>
+                      </button>
             </div>
           </div>
         </div>
@@ -2397,42 +2600,52 @@ const AdminDashboard = () => {
                       <Settings className="h-4 w-4 mr-2" />
                       New Template
                     </button>
-      </div>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {permissionTemplates.map((template) => (
-                      <div key={template._id} className="border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+                      <div key={template._id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="text-lg font-semibold text-slate-900">{template.name}</h4>
-                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full font-medium">
                             Template
                           </span>
                         </div>
-                        <p className="text-slate-600 mb-4">{template.description}</p>
+                        <p className="text-slate-600 mb-6">{template.description}</p>
                         
-                        <div className="space-y-2">
-                          <h5 className="font-medium text-slate-700">Permissions:</h5>
+                        <div className="space-y-4 mb-6">
                           {Object.entries(template.permissions).map(([module, perms]) => (
-                            <div key={module} className="flex items-center justify-between text-sm">
-                              <span className="capitalize">{module.replace('_', ' ')}:</span>
+                            <div key={module} className="space-y-2">
+                              <h5 className="font-semibold text-slate-700 capitalize">{module}:</h5>
                               <div className="flex space-x-2">
                                 {Object.entries(perms).map(([action, allowed]) => (
-                                  <span key={action} className={`px-2 py-1 rounded text-xs ${
-                                    allowed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                                  }`}>
+                                  <button
+                                    key={action}
+                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                                      allowed 
+                                        ? 'bg-green-500 text-white hover:bg-green-600' 
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                    }`}
+                                  >
                                     {action}
-                                  </span>
+                                  </button>
                                 ))}
                               </div>
                             </div>
                           ))}
                         </div>
 
-                        <div className="flex space-x-2 mt-4">
-                          <button className="flex-1 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => handleApplyTemplate(template)}
+                            className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                          >
                             Apply to Staff
                           </button>
-                          <button className="px-3 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm">
+                          <button 
+                            onClick={() => handleEditTemplate(template)}
+                            className="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium"
+                          >
                             Edit
                           </button>
                         </div>
@@ -2448,43 +2661,43 @@ const AdminDashboard = () => {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full" style={{ minWidth: '900px' }}>
                       <thead>
                         <tr className="border-b border-slate-200">
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Staff</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Role</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Users</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Bookings</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Vehicles</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Reports</th>
-                          <th className="text-left py-3 px-4 font-semibold text-slate-900">Actions</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/4">Staff</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Role</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Users</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Bookings</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Vehicles</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Reports</th>
+                          <th className="text-left py-2 px-2 font-semibold text-slate-900 w-1/8">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {permissions.map((permission) => (
                           <tr key={permission._id} className="border-b border-slate-100 hover:bg-slate-50">
-                            <td className="py-4 px-4">
+                            <td className="py-3 px-2">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                                  <User className="h-5 w-5 text-white" />
+                                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <User className="h-4 w-4 text-white" />
                                 </div>
-                                <div className="ml-3">
-                                  <p className="font-medium text-slate-900">{permission.staffName}</p>
-                                  <p className="text-sm text-slate-500">ID: {permission.staffId}</p>
+                                <div className="ml-2 min-w-0 flex-1">
+                                  <p className="font-medium text-slate-900 text-sm truncate">{permission.staffName}</p>
+                                  <p className="text-xs text-slate-500 truncate">ID: {permission.staffId.slice(-8)}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-4 px-4">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            <td className="py-3 px-2">
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
                                 {permission.role}
                               </span>
                             </td>
                             {['users', 'bookings', 'vehicles', 'reports'].map((module) => (
-                              <td key={module} className="py-4 px-4">
-                                <div className="flex space-x-1">
+                              <td key={module} className="py-3 px-2">
+                                <div className="flex space-x-0.5">
                                   {Object.entries(permission.permissions[module] || {}).map(([action, allowed]) => (
-                                    <span key={action} className={`px-1 py-0.5 rounded text-xs ${
-                                      allowed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                    <span key={action} className={`px-1 py-0.5 rounded text-xs font-medium ${
+                                      allowed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
                                     }`}>
                                       {action.charAt(0)}
                                     </span>
@@ -2492,17 +2705,17 @@ const AdminDashboard = () => {
                                 </div>
                               </td>
                             ))}
-                            <td className="py-4 px-4">
-                              <div className="flex items-center space-x-2">
+                            <td className="py-3 px-2">
+                              <div className="flex items-center">
                                 <button
                                   onClick={() => {
                                     setSelectedPermission(permission);
                                     setShowPermissionModal(true);
                                   }}
-                                  className="flex items-center px-2 py-1 text-purple-600 hover:text-purple-900 transition-colors text-sm"
+                                  className="p-1 text-purple-600 hover:text-purple-900 transition-colors rounded hover:bg-purple-50"
+                                  title="Edit permissions"
                                 >
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  Edit
+                                  <Settings className="h-3 w-3" />
                                 </button>
                               </div>
                             </td>
@@ -2515,210 +2728,6 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Financial Management Tab */}
-            {activeTab === 'financial' && (
-              <div className="space-y-8">
-                {/* Financial Management Header */}
-                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl shadow-lg p-8 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-3xl font-bold mb-2">Financial Management</h2>
-                      <p className="text-emerald-100 text-lg">
-                        Monitor revenue, expenses, and financial performance
-                      </p>
-                    </div>
-                    <div className="flex space-x-3">
-                      <button 
-                        onClick={() => setShowAddExpenseModal(true)}
-                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                      >
-                        <DollarSign className="h-5 w-5 mr-2" />
-                        Add Expense
-                      </button>
-                      <button 
-                        onClick={() => setShowFinancialReportModal(true)}
-                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                      >
-                        <FileText className="h-5 w-5 mr-2" />
-                        Generate Report
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <TrendingUp className="h-6 w-6 text-green-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">Rs. {(financialStats.totalRevenue || 0).toLocaleString()}</p>
-                        <p className="text-sm text-slate-600">Total Revenue</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                        <TrendingDown className="h-6 w-6 text-red-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">Rs. {(financialStats.totalExpenses || 0).toLocaleString()}</p>
-                        <p className="text-sm text-slate-600">Total Expenses</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <DollarSign className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">Rs. {(financialStats.netProfit || 0).toLocaleString()}</p>
-                        <p className="text-sm text-slate-600">Net Profit</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <BarChart3 className="h-6 w-6 text-purple-600" />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-2xl font-bold text-slate-900">{(financialStats.growthRate || 0).toFixed(1)}%</p>
-                        <p className="text-sm text-slate-600">Growth Rate</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Revenue Chart */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-slate-900">Revenue Trend</h3>
-                    <div className="flex space-x-2">
-                      <button 
-                        onClick={() => setSelectedPeriod('monthly')}
-                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                          selectedPeriod === 'monthly' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        Monthly
-                      </button>
-                      <button 
-                        onClick={() => setSelectedPeriod('quarterly')}
-                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                          selectedPeriod === 'quarterly' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        Quarterly
-                      </button>
-                      <button 
-                        onClick={() => setSelectedPeriod('yearly')}
-                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                          selectedPeriod === 'yearly' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        Yearly
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Simple Bar Chart */}
-                  <div className="h-64 flex items-end justify-between space-x-2">
-                    {revenueData.map((item, index) => (
-                      <div key={index} className="flex flex-col items-center flex-1">
-                        <div 
-                          className="bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-t-lg w-full mb-2 transition-all duration-500 hover:from-emerald-600 hover:to-emerald-500"
-                          style={{ height: `${(item.revenue / Math.max(...revenueData.map(d => d.revenue))) * 200}px` }}
-                        ></div>
-                        <div className="text-xs text-slate-600 font-medium">{item.month}</div>
-                        <div className="text-xs text-slate-500">Rs. {(item.revenue / 1000).toFixed(0)}k</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Revenue Breakdown */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Revenue Sources */}
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                    <h3 className="text-xl font-semibold text-slate-900 mb-6">Revenue Sources</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
-                          <span className="text-slate-700">Bookings</span>
-                        </div>
-                        <span className="font-semibold text-slate-900">{financialStats.totalBookings || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
-                          <span className="text-slate-700">Tours</span>
-                        </div>
-                        <span className="font-semibold text-slate-900">{financialStats.totalTours || 0}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-4 h-4 bg-purple-500 rounded-full mr-3"></div>
-                          <span className="text-slate-700">Hotels</span>
-                        </div>
-                        <span className="font-semibold text-slate-900">{financialStats.totalHotels || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recent Expenses */}
-                  <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-xl font-semibold text-slate-900">Recent Expenses</h3>
-                      <button 
-                        onClick={() => setShowAddExpenseModal(true)}
-                        className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-                      >
-                        Add Expense
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      {expenseData.map((expense) => (
-                        <div key={expense.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <div>
-                            <p className="font-medium text-slate-900">{expense.category}</p>
-                            <p className="text-sm text-slate-600">{expense.description}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-slate-900">Rs. {expense.amount.toLocaleString()}</p>
-                            <p className="text-sm text-slate-600">{new Date(expense.date).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial Summary */}
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6">
-                  <h3 className="text-xl font-semibold text-slate-900 mb-6">Financial Summary</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-green-50 rounded-xl">
-                      <div className="text-2xl font-bold text-green-600 mb-2">Rs. {(financialStats.totalRevenue || 0).toLocaleString()}</div>
-                      <div className="text-sm text-green-700">Total Revenue</div>
-                    </div>
-                    <div className="text-center p-4 bg-red-50 rounded-xl">
-                      <div className="text-2xl font-bold text-red-600 mb-2">Rs. {(financialStats.totalExpenses || 0).toLocaleString()}</div>
-                      <div className="text-sm text-red-700">Total Expenses</div>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-xl">
-                      <div className="text-2xl font-bold text-blue-600 mb-2">Rs. {(financialStats.netProfit || 0).toLocaleString()}</div>
-                      <div className="text-sm text-blue-700">Net Profit</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
             </div>
           </div>
         </div>
@@ -2820,9 +2829,123 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* View Staff Modal */}
+      {showViewStaffModal && selectedStaff && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Staff Details
+              </h3>
+              <button
+                onClick={() => {
+                  setShowViewStaffModal(false);
+                  setSelectedStaff(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Staff Header */}
+            <div className="flex items-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-lg font-medium text-gray-900">
+                  {selectedStaff.firstName} {selectedStaff.lastName}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  ID: {selectedStaff._id}
+                </p>
+              </div>
+            </div>
+
+            {/* Staff Information */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center">
+                      <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                      <span className="text-gray-600">{selectedStaff.email}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                      <span className="text-gray-600">{selectedStaff.phone || 'Not provided'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Account Status</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Role:</span>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        Staff Member
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedStaff.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedStaff.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Account Information</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Joined:</span>
+                    <p className="font-medium">{new Date(selectedStaff.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Last Updated:</span>
+                    <p className="font-medium">{new Date(selectedStaff.updatedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowViewStaffModal(false);
+                  setSelectedStaff(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowViewStaffModal(false);
+                  setShowEditStaffModal(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Edit Staff
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Staff Modal */}
       {showEditStaffModal && selectedStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-slate-900">Edit Staff Member</h3>
@@ -2911,6 +3034,842 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View User Modal */}
+      {showViewUserModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                User Details
+              </h3>
+              <button
+                onClick={() => {
+                  setShowViewUserModal(false);
+                  setSelectedUser(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* User Header */}
+            <div className="flex items-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-lg font-medium text-gray-900">
+                  {selectedUser.firstName} {selectedUser.lastName}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  ID: {selectedUser._id}
+                </p>
+              </div>
+            </div>
+
+            {/* User Information */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center">
+                      <Mail className="w-4 h-4 text-gray-400 mr-2" />
+                      <span className="text-gray-600">{selectedUser.email}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="w-4 h-4 text-gray-400 mr-2" />
+                      <span className="text-gray-600">{selectedUser.phone || 'Not provided'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Account Status</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Role:</span>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedUser.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        selectedUser.role === 'staff' ? 'bg-blue-100 text-blue-800' :
+                        selectedUser.role === 'guide' ? 'bg-green-100 text-green-800' :
+                        selectedUser.role === 'hotel_owner' ? 'bg-purple-100 text-purple-800' :
+                        selectedUser.role === 'driver' ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedUser.role?.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedUser.isVerified 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {selectedUser.isVerified ? 'Verified' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Account Information</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Joined:</span>
+                    <p className="font-medium">{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Last Updated:</span>
+                    <p className="font-medium">{new Date(selectedUser.updatedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowViewUserModal(false);
+                  setSelectedUser(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowViewUserModal(false);
+                  setShowEditUserModal(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Edit User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Edit User: {selectedUser.firstName} {selectedUser.lastName}
+            </h3>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const userData = {
+                role: formData.get('role'),
+                isActive: formData.get('isActive') === 'true'
+              };
+              handleUpdateUser(selectedUser._id, userData);
+            }}>
+              <div className="space-y-4">
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role
+                  </label>
+                  <select
+                    name="role"
+                    defaultValue={selectedUser.role}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="tourist">Tourist</option>
+                    <option value="driver">Driver</option>
+                    <option value="guide">Guide</option>
+                    <option value="hotel_owner">Hotel Owner</option>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    name="isActive"
+                    defaultValue={selectedUser.isVerified ? 'true' : 'false'}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </div>
+
+                {/* User Info (Read-only) */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">User Information</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p><strong>Name:</strong> {selectedUser.firstName} {selectedUser.lastName}</p>
+                    <p><strong>Email:</strong> {selectedUser.email}</p>
+                    <p><strong>Phone:</strong> {selectedUser.phone || 'Not provided'}</p>
+                    <p><strong>Joined:</strong> {new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Add New User
+            </h3>
+            <form onSubmit={handleAddUser}>
+              <div className="space-y-4">
+                {/* First Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter first name"
+                  />
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter last name"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                {/* Role */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role *
+                  </label>
+                  <select
+                    name="role"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select a role</option>
+                    <option value="tourist">Tourist</option>
+                    <option value="hotel_owner">Hotel Owner</option>
+                    <option value="guide">Tour Guide</option>
+                    <option value="driver">Driver</option>
+                    <option value="staff">Staff</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Initial Status *
+                  </label>
+                  <select
+                    name="isVerified"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="true">Verified</option>
+                    <option value="false">Pending Verification</option>
+                  </select>
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    minLength="6"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter password (min 6 characters)"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Payroll Modal */}
+      {showViewPayrollModal && selectedPayroll && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Payroll Details
+              </h3>
+              <button
+                onClick={() => {
+                  setShowViewPayrollModal(false);
+                  setSelectedPayroll(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Staff Information */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                  <User className="h-6 w-6 text-white" />
+                </div>
+                <div className="ml-4">
+                  <h4 className="text-lg font-semibold text-gray-900">{selectedPayroll.staffName}</h4>
+                  <p className="text-sm text-gray-600">ID: {selectedPayroll.staffId}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payroll Information */}
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h5 className="font-semibold text-gray-900 mb-3">Salary Information</h5>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Position:</span>
+                    <p className="font-medium text-gray-900">{selectedPayroll.position}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Base Salary:</span>
+                    <p className="font-medium text-gray-900">Rs. {selectedPayroll.baseSalary.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Allowances:</span>
+                    <p className="font-medium text-gray-900">Rs. {selectedPayroll.allowances.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Deductions:</span>
+                    <p className="font-medium text-gray-900">Rs. {selectedPayroll.deductions.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Net Salary:</span>
+                    <p className="font-medium text-green-600 text-lg">Rs. {selectedPayroll.netSalary.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      selectedPayroll.status === 'paid' ? 'bg-green-100 text-green-800' : 
+                      selectedPayroll.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedPayroll.status.charAt(0).toUpperCase() + selectedPayroll.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h5 className="font-semibold text-gray-900 mb-3">Payment Information</h5>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Pay Period:</span>
+                    <p className="font-medium text-gray-900">{selectedPayroll.payPeriod}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Payment Method:</span>
+                    <p className="font-medium text-gray-900">{selectedPayroll.paymentMethod}</p>
+                  </div>
+                  {selectedPayroll.paymentDate && (
+                    <div>
+                      <span className="text-gray-600">Payment Date:</span>
+                      <p className="font-medium text-gray-900">{selectedPayroll.paymentDate}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowViewPayrollModal(false);
+                  setSelectedPayroll(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowViewPayrollModal(false);
+                  setShowEditPayrollModal(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Edit Payroll
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payroll Modal */}
+      {showEditPayrollModal && selectedPayroll && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Edit Payroll: {selectedPayroll.staffName}
+            </h3>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const updatedData = {
+                baseSalary: parseInt(formData.get('baseSalary')),
+                allowances: parseInt(formData.get('allowances')),
+                deductions: parseInt(formData.get('deductions')),
+                status: formData.get('status')
+              };
+              
+              // Update the payroll data
+              const updatedPayrollData = payrollData.map(p => 
+                p._id === selectedPayroll._id 
+                  ? { 
+                      ...p, 
+                      ...updatedData,
+                      netSalary: updatedData.baseSalary + updatedData.allowances - updatedData.deductions,
+                      paymentDate: updatedData.status === 'paid' ? new Date().toISOString().split('T')[0] : null
+                    }
+                  : p
+              );
+              
+              setPayrollData(updatedPayrollData);
+              
+              // Update payroll stats
+              setPayrollStats(prev => ({
+                ...prev,
+                paidStaff: updatedPayrollData.filter(p => p.status === 'paid').length,
+                pendingStaff: updatedPayrollData.filter(p => p.status === 'pending').length,
+                totalPayroll: updatedPayrollData.reduce((sum, p) => sum + p.netSalary, 0)
+              }));
+
+              toast.success('Payroll updated successfully');
+              setShowEditPayrollModal(false);
+              setSelectedPayroll(null);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Base Salary
+                  </label>
+                  <input
+                    type="number"
+                    name="baseSalary"
+                    defaultValue={selectedPayroll.baseSalary}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Allowances
+                  </label>
+                  <input
+                    type="number"
+                    name="allowances"
+                    defaultValue={selectedPayroll.allowances}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Deductions
+                  </label>
+                  <input
+                    type="number"
+                    name="deductions"
+                    defaultValue={selectedPayroll.deductions}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    defaultValue={selectedPayroll.status}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditPayrollModal(false);
+                    setSelectedPayroll(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {selectedPermission ? 'Edit Template' : 'Create New Template'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setSelectedPermission(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const templateData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                permissions: {
+                  users: {
+                    view: formData.get('users_view') === 'on',
+                    create: formData.get('users_create') === 'on',
+                    edit: formData.get('users_edit') === 'on',
+                    delete: formData.get('users_delete') === 'on'
+                  },
+                  bookings: {
+                    view: formData.get('bookings_view') === 'on',
+                    create: formData.get('bookings_create') === 'on',
+                    edit: formData.get('bookings_edit') === 'on',
+                    delete: formData.get('bookings_delete') === 'on'
+                  },
+                  vehicles: {
+                    view: formData.get('vehicles_view') === 'on',
+                    create: formData.get('vehicles_create') === 'on',
+                    edit: formData.get('vehicles_edit') === 'on',
+                    delete: formData.get('vehicles_delete') === 'on'
+                  },
+                  reports: {
+                    view: formData.get('reports_view') === 'on',
+                    create: formData.get('reports_create') === 'on',
+                    edit: formData.get('reports_edit') === 'on',
+                    delete: formData.get('reports_delete') === 'on'
+                  }
+                }
+              };
+              
+              handleCreateTemplate(templateData);
+            }}>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Template Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    defaultValue={selectedPermission?.name || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="e.g., Manager Template"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    defaultValue={selectedPermission?.description || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Describe the template's purpose..."
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Permissions
+                  </label>
+                  <div className="space-y-6">
+                    {['users', 'bookings', 'vehicles', 'reports'].map((module) => (
+                      <div key={module} className="border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3 capitalize">{module}</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {['view', 'create', 'edit', 'delete'].map((action) => (
+                            <label key={action} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                name={`${module}_${action}`}
+                                defaultChecked={selectedPermission?.permissions?.[module]?.[action] || false}
+                                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                              />
+                              <span className="ml-2 text-sm text-gray-700 capitalize">{action}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTemplateModal(false);
+                    setSelectedPermission(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  {selectedPermission ? 'Update Template' : 'Create Template'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Individual Staff Permission Edit Modal */}
+      {showPermissionModal && selectedPermission && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Edit Staff Permissions
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowPermissionModal(false);
+                    setSelectedPermission(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Staff Info */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                    <User className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="font-semibold text-gray-900">{selectedPermission.staffName}</h4>
+                    <p className="text-sm text-gray-600">Role: {selectedPermission.role}</p>
+                    <p className="text-xs text-gray-500">ID: {selectedPermission.staffId}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Permission Form */}
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                const newPermissions = {
+                  users: {
+                    view: formData.get('users_view') === 'on',
+                    create: formData.get('users_create') === 'on',
+                    edit: formData.get('users_edit') === 'on',
+                    delete: formData.get('users_delete') === 'on'
+                  },
+                  bookings: {
+                    view: formData.get('bookings_view') === 'on',
+                    create: formData.get('bookings_create') === 'on',
+                    edit: formData.get('bookings_edit') === 'on',
+                    delete: formData.get('bookings_delete') === 'on'
+                  },
+                  vehicles: {
+                    view: formData.get('vehicles_view') === 'on',
+                    create: formData.get('vehicles_create') === 'on',
+                    edit: formData.get('vehicles_edit') === 'on',
+                    delete: formData.get('vehicles_delete') === 'on'
+                  },
+                  reports: {
+                    view: formData.get('reports_view') === 'on',
+                    create: formData.get('reports_create') === 'on',
+                    edit: formData.get('reports_edit') === 'on',
+                    delete: formData.get('reports_delete') === 'on'
+                  }
+                };
+                
+                handleUpdatePermissions(selectedPermission.staffId, newPermissions);
+              }}>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-4">
+                      Permissions
+                    </label>
+                    <div className="space-y-6">
+                      {['users', 'bookings', 'vehicles', 'reports'].map((module) => (
+                        <div key={module} className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-900 mb-3 capitalize">{module}</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            {['view', 'create', 'edit', 'delete'].map((action) => (
+                              <label key={action} className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  name={`${module}_${action}`}
+                                  defaultChecked={selectedPermission.permissions?.[module]?.[action] || false}
+                                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                                />
+                                <span className="ml-2 text-sm text-gray-700 capitalize">{action}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPermissionModal(false);
+                      setSelectedPermission(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Update Permissions
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
