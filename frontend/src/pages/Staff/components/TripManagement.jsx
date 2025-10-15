@@ -124,20 +124,40 @@ const TripManagement = () => {
   const [newTrip, setNewTrip] = useState({
     title: '',
     description: '',
-    duration: '',
+    shortDescription: '',
+    duration: 1,
     price: 0,
     maxParticipants: 1,
-    category: 'Cultural',
-    location: '',
-    difficulty: 'Easy',
-    languages: ['English'],
+    minParticipants: 1,
+    category: 'cultural',
+    difficulty: 'easy',
+    guide: '',
+    locations: [
+      {
+        name: '',
+        city: '',
+        coordinates: [0, 0],
+        address: ''
+      }
+    ],
     highlights: [],
     included: [],
     excluded: [],
     requirements: '',
-    cancellationPolicy: '',
-    images: []
+    cancellationPolicy: 'moderate',
+    images: [
+      {
+        url: '',
+        alt: '',
+        isPrimary: true
+      }
+    ],
+    tags: [],
+    isFeatured: false
   });
+
+  const [availableGuides, setAvailableGuides] = useState([]);
+  const [loadingGuides, setLoadingGuides] = useState(false);
 
   // Fetch trips
   const fetchTrips = async () => {
@@ -176,11 +196,37 @@ const TripManagement = () => {
     }
   };
 
+  // Fetch available guides
+  const fetchGuides = async () => {
+    try {
+      setLoadingGuides(true);
+      const response = await fetch('/api/guides?limit=100', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableGuides(data.data || []);
+      } else {
+        console.error('Failed to fetch guides');
+        toast.error('Failed to load guides');
+      }
+    } catch (error) {
+      console.error('Fetch guides error:', error);
+      toast.error('Failed to load guides');
+    } finally {
+      setLoadingGuides(false);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
       fetchTrips();
       fetchStatistics();
+      fetchGuides();
     }
   }, [isAuthenticated, isLoading]);
 
@@ -233,19 +279,36 @@ const TripManagement = () => {
       setNewTrip({
         title: '',
         description: '',
-        duration: '',
+        shortDescription: '',
+        duration: 1,
         price: 0,
         maxParticipants: 1,
-        category: 'Cultural',
-        location: '',
-        difficulty: 'Easy',
-        languages: ['English'],
+        minParticipants: 1,
+        category: 'cultural',
+        difficulty: 'easy',
+        guide: '',
+        locations: [
+          {
+            name: '',
+            city: '',
+            coordinates: [0, 0],
+            address: ''
+          }
+        ],
         highlights: [],
         included: [],
         excluded: [],
         requirements: '',
-        cancellationPolicy: '',
-        images: []
+        cancellationPolicy: 'moderate',
+        images: [
+          {
+            url: '',
+            alt: '',
+            isPrimary: true
+          }
+        ],
+        tags: [],
+        isFeatured: false
       });
     } catch (error) {
       console.error('Save trip error:', error);
@@ -278,6 +341,87 @@ const TripManagement = () => {
     } else {
       setSelectedTrips(trips.map(trip => trip._id));
     }
+  };
+
+  // Handle multiple locations
+  const addLocation = () => {
+    setNewTrip({
+      ...newTrip,
+      locations: [...newTrip.locations, {
+        name: '',
+        city: '',
+        coordinates: [0, 0],
+        address: ''
+      }]
+    });
+  };
+
+  const removeLocation = (index) => {
+    if (newTrip.locations.length > 1) {
+      const updatedLocations = newTrip.locations.filter((_, i) => i !== index);
+      setNewTrip({
+        ...newTrip,
+        locations: updatedLocations
+      });
+    }
+  };
+
+  const updateLocation = (index, field, value) => {
+    const updatedLocations = [...newTrip.locations];
+    updatedLocations[index] = {
+      ...updatedLocations[index],
+      [field]: value
+    };
+    setNewTrip({
+      ...newTrip,
+      locations: updatedLocations
+    });
+  };
+
+  // Handle image management
+  const addImage = () => {
+    const newImage = { url: '', alt: '', isPrimary: newTrip.images.length === 0 };
+    setNewTrip({
+      ...newTrip,
+      images: [...newTrip.images, newImage]
+    });
+  };
+
+  const removeImage = (index) => {
+    const updatedImages = newTrip.images.filter((_, i) => i !== index);
+    
+    // If we removed the primary image and there are still images left, make the first one primary
+    if (newTrip.images[index].isPrimary && updatedImages.length > 0) {
+      updatedImages[0].isPrimary = true;
+    }
+    
+    setNewTrip({
+      ...newTrip,
+      images: updatedImages
+    });
+  };
+
+  const updateImage = (index, field, value) => {
+    const updatedImages = [...newTrip.images];
+    updatedImages[index] = {
+      ...updatedImages[index],
+      [field]: value
+    };
+    setNewTrip({
+      ...newTrip,
+      images: updatedImages
+    });
+  };
+
+  const setPrimaryImage = (index) => {
+    const updatedImages = newTrip.images.map((img, i) => ({
+      ...img,
+      isPrimary: i === index
+    }));
+    setNewTrip({
+      ...newTrip,
+      images: updatedImages
+    });
   };
 
   // Handle individual select
@@ -748,6 +892,453 @@ const TripManagement = () => {
                   Edit Trip
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Trip Modal */}
+      {(showCreateModal || showEditModal) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {showEditModal ? 'Edit Trip' : 'Create New Trip'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setShowEditModal(false);
+                    setSelectedTrip(null);
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveTrip(); }} className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Basic Information */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-gray-900">Basic Information</h4>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Trip Title *</label>
+                      <input
+                        type="text"
+                        value={newTrip.title}
+                        onChange={(e) => setNewTrip({...newTrip, title: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter trip title"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                      <textarea
+                        value={newTrip.description}
+                        onChange={(e) => setNewTrip({...newTrip, description: e.target.value})}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter trip description"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Short Description *</label>
+                      <textarea
+                        value={newTrip.shortDescription}
+                        onChange={(e) => setNewTrip({...newTrip, shortDescription: e.target.value})}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter short description (max 200 characters)"
+                        maxLength={200}
+                        required
+                      />
+                    </div>
+
+                    {/* Multiple Locations */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">Trip Locations *</label>
+                        <button
+                          type="button"
+                          onClick={addLocation}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          + Add Location
+                        </button>
+                      </div>
+                      {newTrip.locations.map((location, index) => (
+                        <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="text-sm font-medium text-gray-700">Location {index + 1}</h5>
+                            {newTrip.locations.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeLocation(index)}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Location Name *</label>
+                              <input
+                                type="text"
+                                value={location.name}
+                                onChange={(e) => updateLocation(index, 'name', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                placeholder="Enter location name"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                              <input
+                                type="text"
+                                value={location.city}
+                                onChange={(e) => updateLocation(index, 'city', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                placeholder="Enter city"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                              <input
+                                type="text"
+                                value={location.address}
+                                onChange={(e) => updateLocation(index, 'address', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                placeholder="Enter full address"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Duration (days) *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newTrip.duration}
+                          onChange={(e) => setNewTrip({...newTrip, duration: parseInt(e.target.value)})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Max Participants *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newTrip.maxParticipants}
+                          onChange={(e) => setNewTrip({...newTrip, maxParticipants: parseInt(e.target.value)})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Price (LKR) *</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newTrip.price}
+                          onChange={(e) => setNewTrip({...newTrip, price: parseFloat(e.target.value)})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                        <select
+                          value={newTrip.category}
+                          onChange={(e) => setNewTrip({...newTrip, category: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        >
+                          <option value="adventure">Adventure</option>
+                          <option value="cultural">Cultural</option>
+                          <option value="nature">Nature</option>
+                          <option value="beach">Beach</option>
+                          <option value="wildlife">Wildlife</option>
+                          <option value="religious">Religious</option>
+                          <option value="historical">Historical</option>
+                          <option value="culinary">Culinary</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                      <select
+                        value={newTrip.difficulty}
+                        onChange={(e) => setNewTrip({...newTrip, difficulty: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="easy">Easy</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="challenging">Challenging</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Guide *</label>
+                      {loadingGuides ? (
+                        <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 flex items-center">
+                          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></div>
+                          <span className="text-gray-500 text-sm">Loading guides...</span>
+                        </div>
+                      ) : (
+                        <select
+                          value={newTrip.guide || ''}
+                          onChange={(e) => setNewTrip({...newTrip, guide: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        >
+                          <option value="">Select a guide</option>
+                          {availableGuides.map((guide) => (
+                            <option key={guide.id || guide._id} value={guide.id || guide._id}>
+                              {guide.firstName} {guide.lastName} 
+                              {guide.profile?.location && ` - ${guide.profile.location}`}
+                              {guide.profile?.rating && ` (⭐ ${guide.profile.rating})`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {availableGuides.length === 0 && !loadingGuides 
+                          ? "No guides available. Please register guides first." 
+                          : "Select a registered guide for this tour."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-gray-900">Additional Information</h4>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Highlights</label>
+                      <textarea
+                        value={newTrip.highlights.join(', ')}
+                        onChange={(e) => setNewTrip({...newTrip, highlights: e.target.value.split(',').map(h => h.trim()).filter(h => h)})}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter highlights separated by commas"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Included</label>
+                      <textarea
+                        value={newTrip.included.join(', ')}
+                        onChange={(e) => setNewTrip({...newTrip, included: e.target.value.split(',').map(i => i.trim()).filter(i => i)})}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter what's included separated by commas"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Excluded</label>
+                      <textarea
+                        value={newTrip.excluded.join(', ')}
+                        onChange={(e) => setNewTrip({...newTrip, excluded: e.target.value.split(',').map(e => e.trim()).filter(e => e)})}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter what's excluded separated by commas"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Requirements</label>
+                      <textarea
+                        value={newTrip.requirements}
+                        onChange={(e) => setNewTrip({...newTrip, requirements: e.target.value})}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter any requirements or restrictions"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Cancellation Policy</label>
+                      <select
+                        value={newTrip.cancellationPolicy}
+                        onChange={(e) => setNewTrip({...newTrip, cancellationPolicy: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="flexible">Flexible</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="strict">Strict</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Featured Trip</label>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={newTrip.isFeatured}
+                          onChange={(e) => setNewTrip({...newTrip, isFeatured: e.target.checked})}
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label className="ml-2 text-sm text-gray-700">Mark as featured</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Images Section */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900">Trip Images</h4>
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Trip Images</label>
+                      <button
+                        type="button"
+                        onClick={addImage}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
+                      >
+                        <Camera className="w-4 h-4" />
+                        + Add Image
+                      </button>
+                    </div>
+                    
+                    {newTrip.images.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                        <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <div className="text-gray-500 mb-2">No images added yet</div>
+                        <button
+                          type="button"
+                          onClick={addImage}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2 mx-auto"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Add First Image
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {newTrip.images.map((image, index) => (
+                          <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="text-sm font-medium text-gray-700">Image {index + 1}</h5>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setPrimaryImage(index)}
+                                  className={`px-2 py-1 text-xs rounded ${
+                                    image.isPrimary 
+                                      ? 'bg-yellow-100 text-yellow-800' 
+                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  {image.isPrimary ? 'Primary' : 'Set Primary'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(index)}
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Image URL *</label>
+                                <input
+                                  type="url"
+                                  value={image.url}
+                                  onChange={(e) => updateImage(index, 'url', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  placeholder="https://example.com/image.jpg"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Alt Text</label>
+                                <input
+                                  type="text"
+                                  value={image.alt}
+                                  onChange={(e) => updateImage(index, 'alt', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  placeholder="Describe the image"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Image Preview */}
+                            {image.url && (
+                              <div className="mt-3">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Preview</label>
+                                <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden border">
+                                  <img
+                                    src={image.url}
+                                    alt={image.alt || `Trip image ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm" style={{display: 'none'}}>
+                                    Invalid image URL
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 mt-2">
+                      Add high-quality images of your trip destinations. The first image will be used as the main display image.
+                      <br />
+                      <strong>Tip:</strong> Use image hosting services like Imgur, Cloudinary, or your own server for reliable image URLs.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setShowEditModal(false);
+                      setSelectedTrip(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors rounded-xl hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                  >
+                    {showEditModal ? 'Update Trip' : 'Create Trip'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

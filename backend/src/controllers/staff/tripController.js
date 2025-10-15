@@ -12,7 +12,6 @@ const getTrips = asyncHandler(async (req, res) => {
     const {
       page = 1,
       limit = 10,
-      status = 'all',
       category = 'all',
       location = 'all',
       difficulty = 'all',
@@ -24,16 +23,12 @@ const getTrips = asyncHandler(async (req, res) => {
     // Build filter object
     const filter = {};
     
-    if (status !== 'all') {
-      filter.status = status;
-    }
-    
     if (category !== 'all') {
       filter.category = category;
     }
     
     if (location !== 'all') {
-      filter.location = { $regex: location, $options: 'i' };
+      filter['location.name'] = { $regex: location, $options: 'i' };
     }
     
     if (difficulty !== 'all') {
@@ -44,7 +39,7 @@ const getTrips = asyncHandler(async (req, res) => {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { 'location.name': { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -147,11 +142,19 @@ const getTripStatistics = asyncHandler(async (req, res) => {
 // @access  Private (Staff)
 const createTrip = asyncHandler(async (req, res) => {
   try {
-    const tripData = {
-      ...req.body,
-      createdBy: req.user.id,
-      status: 'draft' // Default to draft
-    };
+    // Handle multiple locations - use the first location as primary for backward compatibility
+    let tripData = { ...req.body };
+    
+    if (tripData.locations && Array.isArray(tripData.locations) && tripData.locations.length > 0) {
+      // Use the first location as the primary location for the Tour model
+      tripData.location = tripData.locations[0];
+      
+      // Store all locations in a custom field if needed
+      tripData.allLocations = tripData.locations;
+    }
+
+    tripData.isActive = true; // Set as active by default for staff-created trips
+    tripData.isFeatured = req.body.isFeatured || false;
 
     const trip = await Tour.create(tripData);
 
@@ -164,7 +167,8 @@ const createTrip = asyncHandler(async (req, res) => {
     console.error('Create trip error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error creating trip'
+      message: 'Server error creating trip',
+      error: error.message
     });
   }
 });

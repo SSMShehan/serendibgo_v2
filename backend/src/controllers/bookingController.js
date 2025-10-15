@@ -446,7 +446,7 @@ const cancelBooking = async (req, res) => {
 // @access  Private
 const createBooking = async (req, res) => {
   try {
-    const { tourId, startDate, endDate, groupSize, specialRequests } = req.body;
+    const { tourId, startDate, endDate, groupSize, specialRequests, contactInfo } = req.body;
 
     // Validate required fields
     if (!tourId || !startDate || !endDate || !groupSize) {
@@ -468,21 +468,34 @@ const createBooking = async (req, res) => {
     // Calculate duration and total amount
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    const totalAmount = tour.price * groupSize * duration;
+    const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const totalAmount = tour.price * groupSize * durationDays;
+
+    // Map duration to enum values
+    let durationEnum;
+    if (durationDays === 0.5) {
+      durationEnum = 'half-day';
+    } else if (durationDays === 1) {
+      durationEnum = 'full-day';
+    } else {
+      durationEnum = 'multi-day';
+    }
 
     // Create booking
     const booking = new Booking({
       user: req.user._id,
       tour: tourId,
+      guide: tour.guide, // Use the guide from the tour
+      bookingDate: new Date(), // Add missing bookingDate field
       startDate: start,
       endDate: end,
-      duration,
+      duration: durationEnum,
       groupSize,
       totalAmount,
       specialRequests,
       status: 'pending',
-      paymentStatus: 'pending'
+      paymentStatus: 'pending',
+      bookingReference: `BK-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
     });
 
     await booking.save();
@@ -490,6 +503,7 @@ const createBooking = async (req, res) => {
     // Populate the booking with tour and user details
     await booking.populate('tour', 'title description images duration price location');
     await booking.populate('user', 'firstName lastName email phone');
+    await booking.populate('guide', 'firstName lastName email phone');
 
     res.status(201).json({
       success: true,
