@@ -1118,7 +1118,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
@@ -1816,8 +1816,11 @@ const AdminDashboard = () => {
                       >
                         <DollarSign className="h-5 w-5 mr-2" />
                         Add Salary
-              </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      </button>
+                      <button 
+                        onClick={() => handleGeneratePDFReport('payroll', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Export Report
                       </button>
@@ -1998,7 +2001,10 @@ const AdminDashboard = () => {
                         <FileText className="h-5 w-5 mr-2" />
                         Generate Report
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('analytics', analyticsPeriod === '7days' ? '7d' : '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <BarChart3 className="h-5 w-5 mr-2" />
                         Export Data
                       </button>
@@ -2572,10 +2578,13 @@ const AdminDashboard = () => {
                         <Settings className="h-5 w-5 mr-2" />
                         Create Template
                       </button>
-                      <button className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors">
+                      <button 
+                        onClick={() => handleGeneratePDFReport('permissions', '30d')}
+                        className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                      >
                         <FileText className="h-5 w-5 mr-2" />
                         Export
-              </button>
+                      </button>
             </div>
           </div>
         </div>

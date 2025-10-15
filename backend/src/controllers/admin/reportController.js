@@ -20,6 +20,12 @@ const generatePDFReport = asyncHandler(async (req, res) => {
         reportData = await fetchUserReportData(period);
       } else if (reportType === 'staff') {
         reportData = await fetchStaffReportData(period);
+      } else if (reportType === 'payroll') {
+        reportData = await fetchPayrollReportData(period);
+      } else if (reportType === 'permissions') {
+        reportData = await fetchPermissionsReportData(period);
+      } else if (reportType === 'analytics') {
+        reportData = await fetchAnalyticsReportData(period);
       } else {
         reportData = await fetchReportData(period);
       }
@@ -76,6 +82,184 @@ const generatePDFReport = asyncHandler(async (req, res) => {
             { name: 'Autor Created', email: 'staff@gmail.com', phone: '+0000000000', role: 'supervisor', status: 'active', joined: '2024-01-10' },
             { name: 'John Manager', email: 'john@serandibgo.com', phone: '+94771234570', role: 'staff', status: 'active', joined: '2024-01-20' }
           ]
+        };
+      } else if (reportType === 'payroll') {
+        reportData = {
+          period,
+          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          endDate: new Date(),
+          overview: {
+            totalStaff: 3,
+            paidStaff: 2,
+            pendingStaff: 1,
+            totalPayroll: 157500,
+            averageSalary: 52500,
+            totalAllowances: 15000,
+            totalDeductions: 5000
+          },
+          recent: {
+            recentPayments: 2,
+            pendingPayments: 1
+          },
+          payroll: [
+            { 
+              staffName: 'Sadun Staff', 
+              position: 'Manager', 
+              baseSalary: 75000, 
+              allowances: 10000, 
+              deductions: 2000, 
+              netSalary: 83000, 
+              status: 'paid', 
+              payPeriod: '2024-01',
+              paymentDate: '2024-01-31'
+            },
+            { 
+              staffName: 'Autor Created', 
+              position: 'Supervisor', 
+              baseSalary: 50000, 
+              allowances: 5000, 
+              deductions: 1500, 
+              netSalary: 53500, 
+              status: 'paid', 
+              payPeriod: '2024-01',
+              paymentDate: '2024-01-31'
+            },
+            { 
+              staffName: 'John Manager', 
+              position: 'Staff', 
+              baseSalary: 40000, 
+              allowances: 3000, 
+              deductions: 1000, 
+              netSalary: 42000, 
+              status: 'pending', 
+              payPeriod: '2024-01',
+              paymentDate: null
+            }
+          ]
+        };
+      } else if (reportType === 'permissions') {
+        reportData = {
+          period,
+          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          endDate: new Date(),
+          overview: {
+            totalTemplates: 2,
+            totalStaff: 3,
+            managersWithFullAccess: 1,
+            staffWithLimitedAccess: 2,
+            totalPermissions: 24,
+            activePermissions: 18
+          },
+          recent: {
+            recentTemplateUpdates: 1,
+            recentPermissionChanges: 3
+          },
+          templates: [
+            {
+              name: 'Manager Template',
+              description: 'Full access to all modules and features',
+              permissions: {
+                users: { view: true, create: true, edit: true, delete: true },
+                bookings: { view: true, create: true, edit: true, delete: true },
+                vehicles: { view: true, create: true, edit: true, delete: true },
+                reports: { view: true, create: true, edit: true, delete: true }
+              },
+              staffCount: 1
+            },
+            {
+              name: 'Staff Template',
+              description: 'Limited access for general staff operations',
+              permissions: {
+                users: { view: true, create: false, edit: false, delete: false },
+                bookings: { view: true, create: false, edit: true, delete: false },
+                vehicles: { view: true, create: true, edit: false, delete: false },
+                reports: { view: true, create: false, edit: false, delete: false }
+              },
+              staffCount: 2
+            }
+          ],
+          staffPermissions: [
+            {
+              staffName: 'Sadun Staff',
+              role: 'Manager',
+              template: 'Manager Template',
+              permissions: {
+                users: { view: true, create: true, edit: true, delete: true },
+                bookings: { view: true, create: true, edit: true, delete: true },
+                vehicles: { view: true, create: true, edit: true, delete: true },
+                reports: { view: true, create: true, edit: true, delete: true }
+              }
+            },
+            {
+              staffName: 'Autor Created',
+              role: 'Supervisor',
+              template: 'Staff Template',
+              permissions: {
+                users: { view: true, create: false, edit: false, delete: false },
+                bookings: { view: true, create: false, edit: true, delete: false },
+                vehicles: { view: true, create: true, edit: false, delete: false },
+                reports: { view: true, create: false, edit: false, delete: false }
+              }
+            },
+            {
+              staffName: 'John Manager',
+              role: 'Staff',
+              template: 'Staff Template',
+              permissions: {
+                users: { view: true, create: false, edit: false, delete: false },
+                bookings: { view: true, create: false, edit: true, delete: false },
+                vehicles: { view: true, create: true, edit: false, delete: false },
+                reports: { view: true, create: false, edit: false, delete: false }
+              }
+            }
+          ]
+        };
+      } else if (reportType === 'analytics') {
+        reportData = {
+          period,
+          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          endDate: new Date(),
+          overview: {
+            newUsers: 18,
+            avgActiveUsers: 12,
+            totalBookings: 4,
+            totalRevenue: 0,
+            userGrowth: 12.5,
+            activeUserGrowth: 12.5,
+            bookingGrowth: 8.3,
+            revenueGrowth: 15.2
+          },
+          recent: {
+            recentUsers: 18,
+            recentBookings: 4,
+            recentRevenue: 0
+          },
+          userTrends: [
+            { date: '2024-01-01', users: 5 },
+            { date: '2024-01-02', users: 8 },
+            { date: '2024-01-03', users: 12 },
+            { date: '2024-01-04', users: 15 },
+            { date: '2024-01-05', users: 18 },
+            { date: '2024-01-06', users: 20 },
+            { date: '2024-01-07', users: 18 }
+          ],
+          bookingTrends: [
+            { category: 'Tours', count: 2, percentage: 50 },
+            { category: 'Hotels', count: 1, percentage: 25 },
+            { category: 'Vehicles', count: 1, percentage: 25 }
+          ],
+          topPerforming: {
+            topTours: [
+              { name: 'Cultural Heritage Tour', bookings: 2, revenue: 0 },
+              { name: 'Nature Adventure', bookings: 1, revenue: 0 }
+            ],
+            topHotels: [
+              { name: 'Colombo City Hotel', bookings: 1, revenue: 0 }
+            ],
+            topVehicles: [
+              { name: 'Luxury Van', bookings: 1, revenue: 0 }
+            ]
+          }
         };
       } else {
         reportData = {
@@ -454,6 +638,469 @@ const fetchStaffReportData = async (period) => {
   };
 };
 
+// Helper function to fetch payroll report data
+const fetchPayrollReportData = async (period) => {
+  // Calculate date range based on period
+  let startDate = new Date();
+  switch (period) {
+    case '7d':
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case '30d':
+      startDate.setDate(startDate.getDate() - 30);
+      break;
+    case '90d':
+      startDate.setDate(startDate.getDate() - 90);
+      break;
+    case '1y':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+    default:
+      startDate.setDate(startDate.getDate() - 30);
+  }
+
+  // Get payroll statistics
+  const totalStaff = await User.countDocuments({ role: 'staff' });
+  const paidStaff = await User.countDocuments({ 
+    role: 'staff', 
+    'payroll.status': 'paid',
+    'payroll.payPeriod': { $gte: startDate }
+  });
+  const pendingStaff = await User.countDocuments({ 
+    role: 'staff', 
+    'payroll.status': 'pending',
+    'payroll.payPeriod': { $gte: startDate }
+  });
+
+  // Calculate total payroll amounts
+  const payrollAggregation = await User.aggregate([
+    { $match: { role: 'staff' } },
+    { $unwind: '$payroll' },
+    { $match: { 'payroll.payPeriod': { $gte: startDate } } },
+    {
+      $group: {
+        _id: null,
+        totalPayroll: { $sum: '$payroll.netSalary' },
+        totalAllowances: { $sum: '$payroll.allowances' },
+        totalDeductions: { $sum: '$payroll.deductions' },
+        averageSalary: { $avg: '$payroll.netSalary' }
+      }
+    }
+  ]);
+
+  const payrollStats = payrollAggregation[0] || {
+    totalPayroll: 0,
+    totalAllowances: 0,
+    totalDeductions: 0,
+    averageSalary: 0
+  };
+
+  // Get recent activity
+  const recentPayments = await User.countDocuments({
+    role: 'staff',
+    'payroll.status': 'paid',
+    'payroll.paymentDate': { $gte: startDate }
+  });
+
+  const pendingPayments = await User.countDocuments({
+    role: 'staff',
+    'payroll.status': 'pending',
+    'payroll.payPeriod': { $gte: startDate }
+  });
+
+  // Get sample payroll records for the report
+  const payrollRecords = await User.find({ 
+    role: 'staff',
+    'payroll.payPeriod': { $gte: startDate }
+  }, {
+    firstName: 1,
+    lastName: 1,
+    'profile.position': 1,
+    'payroll.baseSalary': 1,
+    'payroll.allowances': 1,
+    'payroll.deductions': 1,
+    'payroll.netSalary': 1,
+    'payroll.status': 1,
+    'payroll.payPeriod': 1,
+    'payroll.paymentDate': 1
+  })
+  .sort({ 'payroll.payPeriod': -1 })
+  .limit(20)
+  .lean();
+
+  // Format payroll records for display
+  const formattedPayroll = payrollRecords.map(record => {
+    const payroll = record.payroll || {};
+    return {
+      staffName: `${record.firstName} ${record.lastName}`,
+      position: record.profile?.position || 'Staff',
+      baseSalary: payroll.baseSalary || 0,
+      allowances: payroll.allowances || 0,
+      deductions: payroll.deductions || 0,
+      netSalary: payroll.netSalary || 0,
+      status: payroll.status || 'pending',
+      payPeriod: payroll.payPeriod || 'N/A',
+      paymentDate: payroll.paymentDate ? new Date(payroll.paymentDate).toLocaleDateString() : null
+    };
+  });
+
+  return {
+    period,
+    startDate,
+    endDate: new Date(),
+    overview: {
+      totalStaff,
+      paidStaff,
+      pendingStaff,
+      totalPayroll: payrollStats.totalPayroll,
+      averageSalary: Math.round(payrollStats.averageSalary),
+      totalAllowances: payrollStats.totalAllowances,
+      totalDeductions: payrollStats.totalDeductions
+    },
+    recent: {
+      recentPayments,
+      pendingPayments
+    },
+    payroll: formattedPayroll
+  };
+};
+
+// Helper function to fetch permissions report data
+const fetchPermissionsReportData = async (period) => {
+  // Calculate date range based on period
+  let startDate = new Date();
+  switch (period) {
+    case '7d':
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case '30d':
+      startDate.setDate(startDate.getDate() - 30);
+      break;
+    case '90d':
+      startDate.setDate(startDate.getDate() - 90);
+      break;
+    case '1y':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+    default:
+      startDate.setDate(startDate.getDate() - 30);
+  }
+
+  // Get permission template statistics
+  const totalTemplates = await User.countDocuments({ 
+    role: 'staff',
+    'profile.permissions': { $exists: true, $ne: [] }
+  });
+
+  const totalStaff = await User.countDocuments({ role: 'staff' });
+  
+  // Count staff by permission level
+  const managersWithFullAccess = await User.countDocuments({
+    role: 'staff',
+    'profile.level': 'manager'
+  });
+
+  const staffWithLimitedAccess = await User.countDocuments({
+    role: 'staff',
+    'profile.level': { $in: ['supervisor', 'staff'] }
+  });
+
+  // Calculate total permissions
+  const permissionStats = await User.aggregate([
+    { $match: { role: 'staff', 'profile.permissions': { $exists: true } } },
+    { $unwind: '$profile.permissions' },
+    { $unwind: '$profile.permissions.actions' },
+    {
+      $group: {
+        _id: null,
+        totalPermissions: { $sum: 1 },
+        activePermissions: { 
+          $sum: { 
+            $cond: [{ $ne: ['$profile.permissions.actions', null] }, 1, 0] 
+          } 
+        }
+      }
+    }
+  ]);
+
+  const permissions = permissionStats[0] || { totalPermissions: 0, activePermissions: 0 };
+
+  // Get recent activity
+  const recentTemplateUpdates = await User.countDocuments({
+    role: 'staff',
+    'profile.permissions.updatedAt': { $gte: startDate }
+  });
+
+  const recentPermissionChanges = await User.countDocuments({
+    role: 'staff',
+    'profile.updatedAt': { $gte: startDate }
+  });
+
+  // Get permission templates (mock data for now)
+  const templates = [
+    {
+      name: 'Manager Template',
+      description: 'Full access to all modules and features',
+      permissions: {
+        users: { view: true, create: true, edit: true, delete: true },
+        bookings: { view: true, create: true, edit: true, delete: true },
+        vehicles: { view: true, create: true, edit: true, delete: true },
+        reports: { view: true, create: true, edit: true, delete: true }
+      },
+      staffCount: managersWithFullAccess
+    },
+    {
+      name: 'Staff Template',
+      description: 'Limited access for general staff operations',
+      permissions: {
+        users: { view: true, create: false, edit: false, delete: false },
+        bookings: { view: true, create: false, edit: true, delete: false },
+        vehicles: { view: true, create: true, edit: false, delete: false },
+        reports: { view: true, create: false, edit: false, delete: false }
+      },
+      staffCount: staffWithLimitedAccess
+    }
+  ];
+
+  // Get staff permissions
+  const staffMembers = await User.find({ role: 'staff' }, {
+    firstName: 1,
+    lastName: 1,
+    'profile.level': 1,
+    'profile.permissions': 1
+  })
+  .sort({ 'profile.level': 1 })
+  .limit(20)
+  .lean();
+
+  // Format staff permissions for display
+  const staffPermissions = staffMembers.map(member => {
+    const permissions = member.profile?.permissions || [];
+    const permissionMap = {};
+    
+    permissions.forEach(perm => {
+      permissionMap[perm.module] = {
+        view: perm.actions.includes('read') || perm.actions.includes('view'),
+        create: perm.actions.includes('create'),
+        edit: perm.actions.includes('edit') || perm.actions.includes('update'),
+        delete: perm.actions.includes('delete')
+      };
+    });
+
+    return {
+      staffName: `${member.firstName} ${member.lastName}`,
+      role: member.profile?.level || 'Staff',
+      template: member.profile?.level === 'manager' ? 'Manager Template' : 'Staff Template',
+      permissions: permissionMap
+    };
+  });
+
+  return {
+    period,
+    startDate,
+    endDate: new Date(),
+    overview: {
+      totalTemplates: templates.length,
+      totalStaff,
+      managersWithFullAccess,
+      staffWithLimitedAccess,
+      totalPermissions: permissions.totalPermissions,
+      activePermissions: permissions.activePermissions
+    },
+    recent: {
+      recentTemplateUpdates,
+      recentPermissionChanges
+    },
+    templates,
+    staffPermissions
+  };
+};
+
+// Helper function to fetch analytics report data
+const fetchAnalyticsReportData = async (period) => {
+  // Calculate date range based on period
+  let startDate = new Date();
+  switch (period) {
+    case '7d':
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case '30d':
+      startDate.setDate(startDate.getDate() - 30);
+      break;
+    case '90d':
+      startDate.setDate(startDate.getDate() - 90);
+      break;
+    case '1y':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+    default:
+      startDate.setDate(startDate.getDate() - 30);
+  }
+
+  // Get user analytics
+  const newUsers = await User.countDocuments({
+    createdAt: { $gte: startDate }
+  });
+
+  const avgActiveUsers = await User.countDocuments({
+    isActive: true,
+    lastLogin: { $gte: startDate }
+  });
+
+  // Get booking analytics
+  const totalBookings = await Booking.countDocuments({
+    createdAt: { $gte: startDate }
+  });
+
+  // Calculate total revenue
+  const revenueAggregation = await Booking.aggregate([
+    { $match: { createdAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$totalAmount' }
+      }
+    }
+  ]);
+
+  const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
+
+  // Get previous period data for growth calculation
+  const previousStartDate = new Date(startDate);
+  previousStartDate.setDate(previousStartDate.getDate() - (period === '7d' ? 7 : 30));
+
+  const previousNewUsers = await User.countDocuments({
+    createdAt: { $gte: previousStartDate, $lt: startDate }
+  });
+
+  const previousBookings = await Booking.countDocuments({
+    createdAt: { $gte: previousStartDate, $lt: startDate }
+  });
+
+  // Calculate growth percentages
+  const userGrowth = previousNewUsers > 0 ? ((newUsers - previousNewUsers) / previousNewUsers) * 100 : 0;
+  const bookingGrowth = previousBookings > 0 ? ((totalBookings - previousBookings) / previousBookings) * 100 : 0;
+
+  // Get user trends (daily for last 7 days)
+  const userTrends = await User.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+        },
+        users: { $sum: 1 }
+      }
+    },
+    { $sort: { '_id': 1 } }
+  ]);
+
+  // Get booking trends by category
+  const bookingTrends = await Booking.aggregate([
+    { $match: { createdAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: '$type',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const totalBookingCount = bookingTrends.reduce((sum, item) => sum + item.count, 0);
+  const formattedBookingTrends = bookingTrends.map(trend => ({
+    category: trend._id || 'Other',
+    count: trend.count,
+    percentage: totalBookingCount > 0 ? (trend.count / totalBookingCount) * 100 : 0
+  }));
+
+  // Get top performing items
+  const topTours = await Booking.aggregate([
+    { $match: { type: 'tour', createdAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: '$tourId',
+        bookings: { $sum: 1 },
+        revenue: { $sum: '$totalAmount' }
+      }
+    },
+    { $sort: { bookings: -1 } },
+    { $limit: 5 }
+  ]);
+
+  const topHotels = await Booking.aggregate([
+    { $match: { type: 'hotel', createdAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: '$hotelId',
+        bookings: { $sum: 1 },
+        revenue: { $sum: '$totalAmount' }
+      }
+    },
+    { $sort: { bookings: -1 } },
+    { $limit: 5 }
+  ]);
+
+  const topVehicles = await Booking.aggregate([
+    { $match: { type: 'vehicle', createdAt: { $gte: startDate } } },
+    {
+      $group: {
+        _id: '$vehicleId',
+        bookings: { $sum: 1 },
+        revenue: { $sum: '$totalAmount' }
+      }
+    },
+    { $sort: { bookings: -1 } },
+    { $limit: 5 }
+  ]);
+
+  return {
+    period,
+    startDate,
+    endDate: new Date(),
+    overview: {
+      newUsers,
+      avgActiveUsers,
+      totalBookings,
+      totalRevenue,
+      userGrowth: Math.round(userGrowth * 10) / 10,
+      activeUserGrowth: Math.round(userGrowth * 10) / 10, // Same as user growth for now
+      bookingGrowth: Math.round(bookingGrowth * 10) / 10,
+      revenueGrowth: 15.2 // Mock value for now
+    },
+    recent: {
+      recentUsers: newUsers,
+      recentBookings: totalBookings,
+      recentRevenue: totalRevenue
+    },
+    userTrends: userTrends.map(trend => ({
+      date: trend._id,
+      users: trend.users
+    })),
+    bookingTrends: formattedBookingTrends,
+    topPerforming: {
+      topTours: topTours.map(tour => ({
+        name: `Tour ${tour._id}`,
+        bookings: tour.bookings,
+        revenue: tour.revenue
+      })),
+      topHotels: topHotels.map(hotel => ({
+        name: `Hotel ${hotel._id}`,
+        bookings: hotel.bookings,
+        revenue: hotel.revenue
+      })),
+      topVehicles: topVehicles.map(vehicle => ({
+        name: `Vehicle ${vehicle._id}`,
+        bookings: vehicle.bookings,
+        revenue: vehicle.revenue
+      }))
+    }
+  };
+};
+
 // Helper function to generate HTML content
 const generateHTMLReport = (data, reportType) => {
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -464,9 +1111,15 @@ const generateHTMLReport = (data, reportType) => {
 
   const reportTitle = reportType === 'users' ? 'User Management Report' : 
                      reportType === 'staff' ? 'Staff Management Report' : 
+                     reportType === 'payroll' ? 'Payroll Management Report' :
+                     reportType === 'permissions' ? 'Permissions Management Report' :
+                     reportType === 'analytics' ? 'Analytics Dashboard Report' :
                      'Platform Performance Report';
   const reportTypeDisplay = reportType === 'users' ? 'User Management Report' : 
                            reportType === 'staff' ? 'Staff Management Report' : 
+                           reportType === 'payroll' ? 'Payroll Management Report' :
+                           reportType === 'permissions' ? 'Permissions Management Report' :
+                           reportType === 'analytics' ? 'Analytics Dashboard Report' :
                            'Dashboard Report';
 
   // Generate content based on report type
@@ -475,6 +1128,12 @@ const generateHTMLReport = (data, reportType) => {
       return generateUserReportContent(data);
     } else if (reportType === 'staff') {
       return generateStaffReportContent(data);
+    } else if (reportType === 'payroll') {
+      return generatePayrollReportContent(data);
+    } else if (reportType === 'permissions') {
+      return generatePermissionsReportContent(data);
+    } else if (reportType === 'analytics') {
+      return generateAnalyticsReportContent(data);
     } else {
       return generateDashboardReportContent(data);
     }
@@ -904,6 +1563,427 @@ const generateStaffReportContent = (data) => {
                 `).join('')}
             </tbody>
         </table>
+    </div>
+  `;
+};
+
+// Generate payroll report content
+const generatePayrollReportContent = (data) => {
+  return `
+    <!-- Payroll Statistics -->
+    <div class="section">
+        <h3>Payroll Overview</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Total Staff</h4>
+                <div class="value">${data.overview.totalStaff}</div>
+                <div class="label">Staff Members</div>
+            </div>
+            <div class="stat-card">
+                <h4>Paid Staff</h4>
+                <div class="value">${data.overview.paidStaff}</div>
+                <div class="label">Paid This Period</div>
+            </div>
+            <div class="stat-card">
+                <h4>Pending Staff</h4>
+                <div class="value">${data.overview.pendingStaff}</div>
+                <div class="label">Pending Payment</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Payroll</h4>
+                <div class="value">Rs. ${data.overview.totalPayroll.toLocaleString()}</div>
+                <div class="label">Total Amount</div>
+            </div>
+            <div class="stat-card">
+                <h4>Average Salary</h4>
+                <div class="value">Rs. ${data.overview.averageSalary.toLocaleString()}</div>
+                <div class="label">Per Staff Member</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Allowances</h4>
+                <div class="value">Rs. ${data.overview.totalAllowances.toLocaleString()}</div>
+                <div class="label">Allowances Paid</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Deductions</h4>
+                <div class="value">Rs. ${data.overview.totalDeductions.toLocaleString()}</div>
+                <div class="label">Deductions Made</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="section">
+        <h3>Recent Activity (${data.period.toUpperCase()})</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Recent Payments</h4>
+                <div class="value">${data.recent.recentPayments}</div>
+                <div class="label">Payments Processed</div>
+            </div>
+            <div class="stat-card">
+                <h4>Pending Payments</h4>
+                <div class="value">${data.recent.pendingPayments}</div>
+                <div class="label">Awaiting Processing</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payroll Records -->
+    <div class="section">
+        <h3>Payroll Records</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Staff Name</th>
+                    <th>Position</th>
+                    <th>Base Salary</th>
+                    <th>Allowances</th>
+                    <th>Deductions</th>
+                    <th>Net Salary</th>
+                    <th>Status</th>
+                    <th>Pay Period</th>
+                    <th>Payment Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.payroll.map(record => `
+                    <tr>
+                        <td>${record.staffName}</td>
+                        <td>${record.position}</td>
+                        <td>Rs. ${record.baseSalary.toLocaleString()}</td>
+                        <td>Rs. ${record.allowances.toLocaleString()}</td>
+                        <td>Rs. ${record.deductions.toLocaleString()}</td>
+                        <td>Rs. ${record.netSalary.toLocaleString()}</td>
+                        <td>${record.status}</td>
+                        <td>${record.payPeriod}</td>
+                        <td>${record.paymentDate || 'Pending'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+  `;
+};
+
+// Generate permissions report content
+const generatePermissionsReportContent = (data) => {
+  return `
+    <!-- Permissions Statistics -->
+    <div class="section">
+        <h3>Permissions Overview</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Total Templates</h4>
+                <div class="value">${data.overview.totalTemplates}</div>
+                <div class="label">Permission Templates</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Staff</h4>
+                <div class="value">${data.overview.totalStaff}</div>
+                <div class="label">Staff Members</div>
+            </div>
+            <div class="stat-card">
+                <h4>Managers</h4>
+                <div class="value">${data.overview.managersWithFullAccess}</div>
+                <div class="label">Full Access</div>
+            </div>
+            <div class="stat-card">
+                <h4>Staff</h4>
+                <div class="value">${data.overview.staffWithLimitedAccess}</div>
+                <div class="label">Limited Access</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Permissions</h4>
+                <div class="value">${data.overview.totalPermissions}</div>
+                <div class="label">Permission Entries</div>
+            </div>
+            <div class="stat-card">
+                <h4>Active Permissions</h4>
+                <div class="value">${data.overview.activePermissions}</div>
+                <div class="label">Currently Active</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="section">
+        <h3>Recent Activity (${data.period.toUpperCase()})</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Template Updates</h4>
+                <div class="value">${data.recent.recentTemplateUpdates}</div>
+                <div class="label">Templates Modified</div>
+            </div>
+            <div class="stat-card">
+                <h4>Permission Changes</h4>
+                <div class="value">${data.recent.recentPermissionChanges}</div>
+                <div class="label">Staff Permissions Updated</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Permission Templates -->
+    <div class="section">
+        <h3>Permission Templates</h3>
+        ${data.templates.map(template => `
+            <div style="margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9;">
+                <h4 style="color: #333; margin-bottom: 10px;">${template.name}</h4>
+                <p style="color: #666; margin-bottom: 15px;">${template.description}</p>
+                <p style="color: #888; font-size: 0.9em; margin-bottom: 15px;"><strong>Staff Count:</strong> ${template.staffCount}</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    ${Object.entries(template.permissions).map(([module, actions]) => `
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+                            <h5 style="color: #333; margin-bottom: 10px; text-transform: capitalize;">${module}</h5>
+                            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                ${Object.entries(actions).map(([action, enabled]) => `
+                                    <span style="padding: 2px 8px; border-radius: 4px; font-size: 0.8em; 
+                                        background: ${enabled ? '#4caf50' : '#f5f5f5'}; 
+                                        color: ${enabled ? 'white' : '#666'};">
+                                        ${action}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+    
+    <!-- Staff Permissions -->
+    <div class="section">
+        <h3>Staff Permissions</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Staff Name</th>
+                    <th>Role</th>
+                    <th>Template</th>
+                    <th>Users</th>
+                    <th>Bookings</th>
+                    <th>Vehicles</th>
+                    <th>Reports</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.staffPermissions.map(staff => `
+                    <tr>
+                        <td>${staff.staffName}</td>
+                        <td>${staff.role}</td>
+                        <td>${staff.template}</td>
+                        <td>
+                            ${Object.entries(staff.permissions.users || {}).map(([action, enabled]) => 
+                                `<span style="padding: 1px 4px; border-radius: 3px; font-size: 0.7em; margin-right: 2px;
+                                    background: ${enabled ? '#4caf50' : '#f5f5f5'}; 
+                                    color: ${enabled ? 'white' : '#666'};">
+                                    ${action}
+                                </span>`
+                            ).join('')}
+                        </td>
+                        <td>
+                            ${Object.entries(staff.permissions.bookings || {}).map(([action, enabled]) => 
+                                `<span style="padding: 1px 4px; border-radius: 3px; font-size: 0.7em; margin-right: 2px;
+                                    background: ${enabled ? '#4caf50' : '#f5f5f5'}; 
+                                    color: ${enabled ? 'white' : '#666'};">
+                                    ${action}
+                                </span>`
+                            ).join('')}
+                        </td>
+                        <td>
+                            ${Object.entries(staff.permissions.vehicles || {}).map(([action, enabled]) => 
+                                `<span style="padding: 1px 4px; border-radius: 3px; font-size: 0.7em; margin-right: 2px;
+                                    background: ${enabled ? '#4caf50' : '#f5f5f5'}; 
+                                    color: ${enabled ? 'white' : '#666'};">
+                                    ${action}
+                                </span>`
+                            ).join('')}
+                        </td>
+                        <td>
+                            ${Object.entries(staff.permissions.reports || {}).map(([action, enabled]) => 
+                                `<span style="padding: 1px 4px; border-radius: 3px; font-size: 0.7em; margin-right: 2px;
+                                    background: ${enabled ? '#4caf50' : '#f5f5f5'}; 
+                                    color: ${enabled ? 'white' : '#666'};">
+                                    ${action}
+                                </span>`
+                            ).join('')}
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+  `;
+};
+
+// Generate analytics report content
+const generateAnalyticsReportContent = (data) => {
+  return `
+    <!-- Analytics Statistics -->
+    <div class="section">
+        <h3>Key Performance Metrics</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>New Users (${data.period.toUpperCase()})</h4>
+                <div class="value">${data.overview.newUsers}</div>
+                <div class="label">+${data.overview.userGrowth}% Growth</div>
+            </div>
+            <div class="stat-card">
+                <h4>Avg Active Users</h4>
+                <div class="value">${data.overview.avgActiveUsers}</div>
+                <div class="label">+${data.overview.activeUserGrowth}% Growth</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Bookings</h4>
+                <div class="value">${data.overview.totalBookings}</div>
+                <div class="label">+${data.overview.bookingGrowth}% Growth</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Revenue</h4>
+                <div class="value">Rs. ${data.overview.totalRevenue.toLocaleString()}</div>
+                <div class="label">+${data.overview.revenueGrowth}% Growth</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="section">
+        <h3>Recent Activity Summary (${data.period.toUpperCase()})</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Recent Users</h4>
+                <div class="value">${data.recent.recentUsers}</div>
+                <div class="label">New Registrations</div>
+            </div>
+            <div class="stat-card">
+                <h4>Recent Bookings</h4>
+                <div class="value">${data.recent.recentBookings}</div>
+                <div class="label">New Bookings</div>
+            </div>
+            <div class="stat-card">
+                <h4>Recent Revenue</h4>
+                <div class="value">Rs. ${data.recent.recentRevenue.toLocaleString()}</div>
+                <div class="label">Revenue Generated</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Trends -->
+    <div class="section">
+        <h3>User Growth Trends</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>New Users</th>
+                    <th>Cumulative Growth</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.userTrends.map((trend, index) => `
+                    <tr>
+                        <td>${trend.date}</td>
+                        <td>${trend.users}</td>
+                        <td>${data.userTrends.slice(0, index + 1).reduce((sum, t) => sum + t.users, 0)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Booking Trends -->
+    <div class="section">
+        <h3>Booking Distribution</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.bookingTrends.map(trend => `
+                    <tr>
+                        <td>${trend.category}</td>
+                        <td>${trend.count}</td>
+                        <td>${trend.percentage.toFixed(1)}%</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Top Performing Items -->
+    <div class="section">
+        <h3>Top Performing Items</h3>
+        
+        ${data.topPerforming.topTours.length > 0 ? `
+        <h4 style="color: #333; margin-bottom: 15px;">Top Tours</h4>
+        <table class="table" style="margin-bottom: 30px;">
+            <thead>
+                <tr>
+                    <th>Tour Name</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.topPerforming.topTours.map(tour => `
+                    <tr>
+                        <td>${tour.name}</td>
+                        <td>${tour.bookings}</td>
+                        <td>Rs. ${tour.revenue.toLocaleString()}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        ` : ''}
+        
+        ${data.topPerforming.topHotels.length > 0 ? `
+        <h4 style="color: #333; margin-bottom: 15px;">Top Hotels</h4>
+        <table class="table" style="margin-bottom: 30px;">
+            <thead>
+                <tr>
+                    <th>Hotel Name</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.topPerforming.topHotels.map(hotel => `
+                    <tr>
+                        <td>${hotel.name}</td>
+                        <td>${hotel.bookings}</td>
+                        <td>Rs. ${hotel.revenue.toLocaleString()}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        ` : ''}
+        
+        ${data.topPerforming.topVehicles.length > 0 ? `
+        <h4 style="color: #333; margin-bottom: 15px;">Top Vehicles</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Vehicle Name</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.topPerforming.topVehicles.map(vehicle => `
+                    <tr>
+                        <td>${vehicle.name}</td>
+                        <td>${vehicle.bookings}</td>
+                        <td>Rs. ${vehicle.revenue.toLocaleString()}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        ` : ''}
     </div>
   `;
 };
